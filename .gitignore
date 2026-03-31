@@ -75,4 +75,4 @@ Plugins/**/Intermediate/*
 DerivedDataCache/*
 
 # Cache files for paid assets - Team1Used
-Content/AssetPaid/*
+Content/ED/Asset/IgnoredAsset/*
