@@ -3,14 +3,14 @@
 using UnrealBuildTool;
 using System.Collections.Generic;
 
-public class Team1_CH4_ProjectEditorTarget : TargetRules
+public class EternalDreamsEditorTarget : TargetRules
 {
-	public Team1_CH4_ProjectEditorTarget( TargetInfo Target) : base(Target)
+	public EternalDreamsEditorTarget( TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Editor;
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_5;
-		ExtraModuleNames.Add("Team1_CH4_Project");
+		ExtraModuleNames.Add("EternalDreams");
 		RegisterModulesCreatedByRider();
 	}
 

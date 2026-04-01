@@ -5,7 +5,7 @@
 	"Description": "",
 	"Modules": [
 		{
-			"Name": "Team1_CH4_Project",
+			"Name": "EternalDreams",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		},
