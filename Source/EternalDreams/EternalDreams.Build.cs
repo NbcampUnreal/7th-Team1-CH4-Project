@@ -9,6 +9,8 @@ public class EternalDreams : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput",
+			"NavigationSystem",
+			"AIModule",
 			"UMG",
 			"CommonUI",
 			"CommonInput",

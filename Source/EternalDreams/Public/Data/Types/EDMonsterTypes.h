@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include  "MonsterTypes.Generated.h"
+#include "EDMonsterTypes.Generated.h"
 
 /**
 *
