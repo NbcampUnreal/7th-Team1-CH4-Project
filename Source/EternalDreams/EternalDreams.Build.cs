@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class Team1_CH4_Project : ModuleRules
+public class EternalDreams : ModuleRules
 {
-	public Team1_CH4_Project(ReadOnlyTargetRules Target) : base(Target)
+	public EternalDreams(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
@@ -20,7 +20,7 @@ public class Team1_CH4_Project : ModuleRules
 			"GameplayTags", "GameplayTasks",
 		});
 		
-		PublicIncludePaths.AddRange(new string[] { "Team1_CH4_Project" });
+		PublicIncludePaths.AddRange(new string[] { "EternalDreams" });
 
 		// Uncomment if you are using Slate UI
 		// PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
