@@ -3,13 +3,13 @@
 using UnrealBuildTool;
 using System.Collections.Generic;
 
-public class Team1_CH4_ProjectTarget : TargetRules
+public class EternalDreamsTarget : TargetRules
 {
-	public Team1_CH4_ProjectTarget(TargetInfo Target) : base(Target)
+	public EternalDreamsTarget(TargetInfo Target) : base(Target)
 	{
 		Type = TargetType.Game;
 		DefaultBuildSettings = BuildSettingsVersion.V5;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Unreal5_5;
-		ExtraModuleNames.Add("Team1_CH4_Project");
+		ExtraModuleNames.Add("EternalDreams");
 	}
 }
