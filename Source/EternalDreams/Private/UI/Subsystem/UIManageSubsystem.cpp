@@ -4,6 +4,7 @@
 
 #include "Blueprint/UserWidget.h"
 #include "Engine/LocalPlayer.h"
+#include "GameFramework/PlayerController.h"
 
 void UUIManageSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -90,8 +91,14 @@ UHUDLayout* UUIManageSubsystem::CreateHUDInternal()
 		return nullptr;
 	}
 
-	// LocalPlayer 기준으로 HUD 생성
-	HUDLayoutInstance = CreateWidget<UHUDLayout>(LocalPlayer, HUDLayoutClass);
+	APlayerController* PlayerController = LocalPlayer->GetPlayerController(GetWorld());
+	if (!PlayerController)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UIManageSubsystem: PlayerController가 유효하지 않습니다."));
+		return nullptr;
+	}
+
+	HUDLayoutInstance = CreateWidget<UHUDLayout>(PlayerController, HUDLayoutClass);
 	if (!HUDLayoutInstance)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("UIManageSubsystem: HUDLayout 위젯 생성에 실패했습니다."));
