@@ -6,11 +6,11 @@
 
 namespace
 {
-bool ApplyEffectFromItemData(AActor* SourceActor, UAbilitySystemComponent* TargetASC, const UInventoryItemDataAsset* ItemData)
+FActiveGameplayEffectHandle ApplyEffectClass(AActor* SourceActor, UAbilitySystemComponent* TargetASC, TSubclassOf<UGameplayEffect> EffectClass)
 {
-    if (!TargetASC || !ItemData || !ItemData->ConsumableEffectClass)
+    if (!TargetASC || !EffectClass)
     {
-        return false;
+        return FActiveGameplayEffectHandle();
     }
 
     FGameplayEffectContextHandle EffectContext = TargetASC->MakeEffectContext();
@@ -19,23 +19,37 @@ bool ApplyEffectFromItemData(AActor* SourceActor, UAbilitySystemComponent* Targe
         EffectContext.AddSourceObject(SourceActor);
     }
 
-    const FGameplayEffectSpecHandle EffectSpec = TargetASC->MakeOutgoingSpec(ItemData->ConsumableEffectClass, 1.0f, EffectContext);
+    const FGameplayEffectSpecHandle EffectSpec = TargetASC->MakeOutgoingSpec(EffectClass, 1.0f, EffectContext);
     if (!EffectSpec.IsValid())
     {
-        return false;
+        return FActiveGameplayEffectHandle();
     }
 
-    const FActiveGameplayEffectHandle AppliedHandle = TargetASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
-    return AppliedHandle.WasSuccessfullyApplied();
+    return TargetASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
 }
 }
 
 bool UInventoryGASBridge::ApplyConsumableEffect(AActor* SourceActor, UAbilitySystemComponent* TargetASC, const UInventoryItemDataAsset* ItemData)
 {
-    return ApplyEffectFromItemData(SourceActor, TargetASC, ItemData);
+    if (!ItemData)
+    {
+        return false;
+    }
+
+    return ApplyEffectClass(SourceActor, TargetASC, ItemData->ConsumableEffectClass).WasSuccessfullyApplied();
 }
 
 bool UInventoryGASBridge::ApplyEquipEffect(AActor* SourceActor, UAbilitySystemComponent* TargetASC, const UInventoryItemDataAsset* ItemData)
 {
-    return ApplyEffectFromItemData(SourceActor, TargetASC, ItemData);
+    return ApplyEquipEffectWithHandle(SourceActor, TargetASC, ItemData).WasSuccessfullyApplied();
+}
+
+FActiveGameplayEffectHandle UInventoryGASBridge::ApplyEquipEffectWithHandle(AActor* SourceActor, UAbilitySystemComponent* TargetASC, const UInventoryItemDataAsset* ItemData)
+{
+    if (!ItemData)
+    {
+        return FActiveGameplayEffectHandle();
+    }
+
+    return ApplyEffectClass(SourceActor, TargetASC, ItemData->EquipEffectClass);
 }

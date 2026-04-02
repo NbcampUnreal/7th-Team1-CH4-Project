@@ -58,6 +58,13 @@ void UInventoryComponent::BeginPlay()
     {
         EnsureDefaultEquipment();
     }
+
+    if (GetOwner() && GetOwner()->HasAuthority() && bUseEquipmentSlots)
+    {
+        SyncEquipEffectForSlot(EEquippableType::Weapon);
+        SyncEquipEffectForSlot(EEquippableType::TopArmor);
+        SyncEquipEffectForSlot(EEquippableType::BottomArmor);
+    }
 }
 
 void UInventoryComponent::InitializeInventorySlots()
@@ -69,6 +76,84 @@ void UInventoryComponent::InitializeInventorySlots()
 
     InventorySlots.SetNum(MaxInventorySlots);
     OnInventoryChanged.Broadcast();
+}
+
+FEquipmentSlotData* UInventoryComponent::GetEquipmentSlotData(EEquippableType SlotType)
+{
+    switch (SlotType)
+    {
+    case EEquippableType::Weapon:
+        return &WeaponSlot;
+    case EEquippableType::TopArmor:
+        return &TopArmorSlot;
+    case EEquippableType::BottomArmor:
+        return &BottomArmorSlot;
+    default:
+        return nullptr;
+    }
+}
+
+FActiveGameplayEffectHandle* UInventoryComponent::GetEquipmentEffectHandle(EEquippableType SlotType)
+{
+    switch (SlotType)
+    {
+    case EEquippableType::Weapon:
+        return &WeaponEquipEffectHandle;
+    case EEquippableType::TopArmor:
+        return &TopArmorEquipEffectHandle;
+    case EEquippableType::BottomArmor:
+        return &BottomArmorEquipEffectHandle;
+    default:
+        return nullptr;
+    }
+}
+
+bool UInventoryComponent::SyncEquipEffectForSlot(EEquippableType SlotType)
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority())
+    {
+        return false;
+    }
+
+    FEquipmentSlotData* EquipmentSlot = GetEquipmentSlotData(SlotType);
+    FActiveGameplayEffectHandle* EffectHandle = GetEquipmentEffectHandle(SlotType);
+    if (!EquipmentSlot || !EffectHandle)
+    {
+        return false;
+    }
+
+    UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+    if (!ASC)
+    {
+        EffectHandle->Invalidate();
+        return false;
+    }
+
+    if (EffectHandle->IsValid())
+    {
+        ASC->RemoveActiveGameplayEffect(*EffectHandle);
+        EffectHandle->Invalidate();
+    }
+
+    if (!EquipmentSlot->EquippedItem.IsValid())
+    {
+        return true;
+    }
+
+    const UInventoryItemDataAsset* ItemData = ResolveItemData(EquipmentSlot->EquippedItem.ItemId);
+    if (!ItemData || !ItemData->EquipEffectClass)
+    {
+        return true;
+    }
+
+    *EffectHandle = UInventoryGASBridge::ApplyEquipEffectWithHandle(GetOwner(), ASC, ItemData);
+    if (!EffectHandle->WasSuccessfullyApplied())
+    {
+        EffectHandle->Invalidate();
+        return false;
+    }
+
+    return true;
 }
 
 bool UInventoryComponent::TryMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex)
@@ -225,6 +310,7 @@ bool UInventoryComponent::TryEquipItemFromSlot(int32 FromSlotIndex, EEquippableT
     const bool bSucceeded = FInventoryEquipmentService::EquipFromSlot(this, FromSlotIndex, TargetSlotType);
     if (bSucceeded)
     {
+        SyncEquipEffectForSlot(TargetSlotType);
         OnInventoryChanged.Broadcast();
     }
 
@@ -247,6 +333,7 @@ bool UInventoryComponent::TryUnequipTopArmor()
     const bool bSucceeded = FInventoryEquipmentService::UnequipTopArmor(this);
     if (bSucceeded)
     {
+        SyncEquipEffectForSlot(EEquippableType::TopArmor);
         OnInventoryChanged.Broadcast();
     }
 
@@ -269,6 +356,7 @@ bool UInventoryComponent::TryUnequipBottomArmor()
     const bool bSucceeded = FInventoryEquipmentService::UnequipBottomArmor(this);
     if (bSucceeded)
     {
+        SyncEquipEffectForSlot(EEquippableType::BottomArmor);
         OnInventoryChanged.Broadcast();
     }
 
@@ -350,6 +438,7 @@ bool UInventoryComponent::EnsureDefaultEquipment()
     const bool bSucceeded = FInventoryEquipmentService::EnsureDefaultWeapon(this);
     if (bSucceeded)
     {
+        SyncEquipEffectForSlot(EEquippableType::Weapon);
         OnInventoryChanged.Broadcast();
     }
 

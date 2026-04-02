@@ -47,6 +47,9 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Consumable", meta = (ClampMin = "0.0"))
     float ConsumableDuration = 0.0f;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Equip")
+    TSubclassOf<UGameplayEffect> EquipEffectClass;
+
     virtual FPrimaryAssetId GetPrimaryAssetId() const override
     {
         return ItemId;

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Inventory/Core/InventoryTypes.h"
+#include "GameplayEffectTypes.h"
 #include "InventoryComponent.generated.h"
 
 class UDataTable;
@@ -121,4 +122,12 @@ protected:
 
     UFUNCTION(Server, Reliable)
     void ServerTryConsumeItemAtSlot(int32 SlotIndex);
+
+    FEquipmentSlotData* GetEquipmentSlotData(EEquippableType SlotType);
+    FActiveGameplayEffectHandle* GetEquipmentEffectHandle(EEquippableType SlotType);
+    bool SyncEquipEffectForSlot(EEquippableType SlotType);
+
+    FActiveGameplayEffectHandle WeaponEquipEffectHandle;
+    FActiveGameplayEffectHandle TopArmorEquipEffectHandle;
+    FActiveGameplayEffectHandle BottomArmorEquipEffectHandle;
 };
