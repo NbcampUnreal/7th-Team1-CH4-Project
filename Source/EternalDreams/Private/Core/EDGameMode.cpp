@@ -14,5 +14,5 @@ AEDGameMode::AEDGameMode()
 
 void AEDGameMode::StartGame()
 {
-	GetWorld()->ServerTravel(TEXT("/Game/ED/Asset/IgnoredAsset/Test/GameMap"));
+	GetWorld()->ServerTravel(GameMapPath);
 }
