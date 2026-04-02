@@ -5,6 +5,7 @@
 #include "EDUIManageSubsystem.generated.h"
 
 class UEDHUDLayout;
+class UCommonActivatableWidget;
 
 UCLASS()
 class ETERNALDREAMS_API UEDUIManageSubsystem : public ULocalPlayerSubsystem
@@ -35,6 +36,26 @@ public:
 	UFUNCTION(BlueprintPure, Category = "UI")
 	UEDHUDLayout* GetHUDLayout() const;
 
+	// 패널 클래스 등록
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void RegisterPanelClass(FName PanelId, TSubclassOf<UCommonActivatableWidget> PanelClass);
+
+	// 패널 열기
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	UCommonActivatableWidget* OpenPanel(FName PanelId);
+
+	// 패널 닫기
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void ClosePanel(FName PanelId);
+
+	// 패널 토글
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void TogglePanel(FName PanelId);
+
+	// 패널 열림 여부 확인
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	bool IsPanelOpen(FName PanelId) const;
+
 protected:
 	// 실제로 생성된 HUD 위젯 인스턴스를 보관
 	UPROPERTY(Transient)
@@ -43,6 +64,14 @@ protected:
 	// 생성에 사용할 HUD 위젯 클래스를 보관
 	UPROPERTY(Transient)
 	TSubclassOf<UEDHUDLayout> HUDLayoutClass;
+
+	// 패널 ID별 클래스 보관
+	UPROPERTY(Transient)
+	TMap<FName, TSubclassOf<UCommonActivatableWidget>> RegisteredPanelClasses;
+
+	// 생성된 패널 인스턴스 보관
+	UPROPERTY(Transient)
+	TMap<FName, TObjectPtr<UCommonActivatableWidget>> PanelInstances;
 
 private:
 	// HUD 인스턴스가 이미 생성되어 있는지 확인
@@ -53,4 +82,7 @@ private:
 
 	// 서브시스템 종료 또는 재정리 시 HUD를 안전하게 제거
 	void CleanupHUD();
+
+	// 패널 없으면 생성
+	UCommonActivatableWidget* CreatePanelInstance(FName PanelId);
 };
