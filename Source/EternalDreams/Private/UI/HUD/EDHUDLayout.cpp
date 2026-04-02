@@ -1,9 +1,9 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
-#include "Public/UI/HUD/HUDLayout.h"
+#include "Public/UI/HUD/EDHUDLayout.h"
 
 #include "Components/PanelWidget.h"
 
-void UHUDLayout::NativeConstruct()
+void UEDHUDLayout::NativeConstruct()
 {
 	Super::NativeConstruct();
 
@@ -11,17 +11,17 @@ void UHUDLayout::NativeConstruct()
 	SetVisibility(ESlateVisibility::Visible);
 }
 
-void UHUDLayout::NativeDestruct()
+void UEDHUDLayout::NativeDestruct()
 {
 	Super::NativeDestruct();
 }
 
-void UHUDLayout::ShowLayout()
+void UEDHUDLayout::ShowLayout()
 {
 	SetVisibility(ESlateVisibility::Visible);
 }
 
-void UHUDLayout::HideLayout()
+void UEDHUDLayout::HideLayout()
 {
 	SetVisibility(ESlateVisibility::Collapsed);
 }

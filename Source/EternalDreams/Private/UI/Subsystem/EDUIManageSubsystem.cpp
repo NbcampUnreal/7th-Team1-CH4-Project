@@ -1,17 +1,17 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
-#include "Public/UI/Subsystem/UIManageSubsystem.h"
-#include "Public/UI/HUD/HUDLayout.h"
+#include "Public/UI/Subsystem/EDUIManageSubsystem.h"
+#include "Public/UI/HUD/EDHUDLayout.h"
 
 #include "Blueprint/UserWidget.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
 
-void UUIManageSubsystem::Initialize(FSubsystemCollectionBase& Collection)
+void UEDUIManageSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 }
 
-void UUIManageSubsystem::Deinitialize()
+void UEDUIManageSubsystem::Deinitialize()
 {
 	// 서브시스템이 내려갈 때 생성했던 HUD를 먼저 정리
 	CleanupHUD();
@@ -19,20 +19,20 @@ void UUIManageSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-void UUIManageSubsystem::SetHUDLayoutClass(TSubclassOf<UHUDLayout> InHUDLayoutClass)
+void UEDUIManageSubsystem::SetHUDLayoutClass(TSubclassOf<UEDHUDLayout> InHUDLayoutClass)
 {
 	// HUD 생성 이후, 클래스 교체로 인한 상태 꼬임 방지
 	if (IsHUDCreated())
 	{
 		UE_LOG(LogTemp, Warning,
-		       TEXT("UIManageSubsystem: HUD가 이미 생성되었습니다. SetHUDLayoutClass는 CreateHUD보다 먼저 호출되어야 합니다."));
+		       TEXT("EDUIManageSubsystem: HUD가 이미 생성되었습니다. SetHUDLayoutClass는 CreateHUD보다 먼저 호출되어야 합니다."));
 		return;
 	}
 
 	HUDLayoutClass = InHUDLayoutClass;
 }
 
-void UUIManageSubsystem::CreateHUD()
+void UEDUIManageSubsystem::CreateHUD()
 {
 	if (IsHUDCreated())
 	{
@@ -42,7 +42,7 @@ void UUIManageSubsystem::CreateHUD()
 	CreateHUDInternal();
 }
 
-void UUIManageSubsystem::ShowHUD()
+void UEDUIManageSubsystem::ShowHUD()
 {
 	// HUD가 아직 없으면 표시 요청 시점에 함께 생성
 	if (!IsHUDCreated())
@@ -56,7 +56,7 @@ void UUIManageSubsystem::ShowHUD()
 	}
 }
 
-void UUIManageSubsystem::HideHUD()
+void UEDUIManageSubsystem::HideHUD()
 {
 	if (!HUDLayoutInstance)
 	{
@@ -66,42 +66,42 @@ void UUIManageSubsystem::HideHUD()
 	HUDLayoutInstance->HideLayout();
 }
 
-UHUDLayout* UUIManageSubsystem::GetHUDLayout() const
+UEDHUDLayout* UEDUIManageSubsystem::GetHUDLayout() const
 {
 	return HUDLayoutInstance;
 }
 
-bool UUIManageSubsystem::IsHUDCreated() const
+bool UEDUIManageSubsystem::IsHUDCreated() const
 {
 	return HUDLayoutInstance != nullptr;
 }
 
-UHUDLayout* UUIManageSubsystem::CreateHUDInternal()
+UEDHUDLayout* UEDUIManageSubsystem::CreateHUDInternal()
 {
 	if (!HUDLayoutClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UIManageSubsystem: HUDLayoutClass가 설정되지 않았습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: HUDLayoutClass가 설정되지 않았습니다."));
 		return nullptr;
 	}
 
 	ULocalPlayer* LocalPlayer = GetLocalPlayer();
 	if (!LocalPlayer)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UIManageSubsystem: LocalPlayer가 유효하지 않습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: LocalPlayer가 유효하지 않습니다."));
 		return nullptr;
 	}
 
 	APlayerController* PlayerController = LocalPlayer->GetPlayerController(GetWorld());
 	if (!PlayerController)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UIManageSubsystem: PlayerController가 유효하지 않습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: PlayerController가 유효하지 않습니다."));
 		return nullptr;
 	}
 
-	HUDLayoutInstance = CreateWidget<UHUDLayout>(PlayerController, HUDLayoutClass);
+	HUDLayoutInstance = CreateWidget<UEDHUDLayout>(PlayerController, HUDLayoutClass);
 	if (!HUDLayoutInstance)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UIManageSubsystem: HUDLayout 위젯 생성에 실패했습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: HUDLayout 위젯 생성에 실패했습니다."));
 		return nullptr;
 	}
 
@@ -110,7 +110,7 @@ UHUDLayout* UUIManageSubsystem::CreateHUDInternal()
 	return HUDLayoutInstance;
 }
 
-void UUIManageSubsystem::CleanupHUD()
+void UEDUIManageSubsystem::CleanupHUD()
 {
 	if (!HUDLayoutInstance)
 	{

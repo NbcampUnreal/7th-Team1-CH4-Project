@@ -2,12 +2,12 @@
 
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
-#include "HUDLayout.generated.h"
+#include "EDHUDLayout.generated.h"
 
 class UPanelWidget;
 
 UCLASS()
-class ETERNALDREAMS_API UHUDLayout : public UCommonUserWidget
+class ETERNALDREAMS_API UEDHUDLayout : public UCommonUserWidget
 {
 	GENERATED_BODY()
 
