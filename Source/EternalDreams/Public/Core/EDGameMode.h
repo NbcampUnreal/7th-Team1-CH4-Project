@@ -13,4 +13,8 @@ class ETERNALDREAMS_API AEDGameMode : public AGameMode
 
 public:
 	AEDGameMode();
+
+	/** 서버에서 호출. 모든 플레이어를 GameMap으로 이동시킨다. */
+	UFUNCTION(BlueprintCallable, Category = "ED|GameMode")
+	void StartGame();
 };
