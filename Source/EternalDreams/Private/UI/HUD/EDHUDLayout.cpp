@@ -48,6 +48,13 @@ void UEDHUDLayout::CreatePlayerStatusWidget()
 		return;
 	}
 
+	PlayerStatusWidgetInstance = CreateWidget<UEDPlayerStatusWidget>(GetOwningPlayer(), PlayerStatusWidgetClass);
+	if (!PlayerStatusWidgetInstance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDHUDLayout: PlayerStatus 생성 실패"));
+		return;
+	}
+
 	PlayerStatusSlot->AddChild(PlayerStatusWidgetInstance);
 
 	UE_LOG(LogTemp, Log, TEXT("EDHUDLayout: PlayerStatus 생성 완료"));
