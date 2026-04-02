@@ -17,17 +17,18 @@ UCLASS()
 class ETERNALDREAMS_API UEDMonsterDataAsset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
-	
+
 public:
 	FText GetMonsterName() const { return MonsterName; }
 	UFUNCTION(BlueprintCallable)
 	EMonsterGrade GetGrade() const { return Grade; }
+
 	UFUNCTION(BlueprintCallable)
 	FMonsterStatRow GetStat() const { return StatData; }
+
 	UFUNCTION(BlueprintCallable)
 	virtual FPrimaryAssetId GetPrimaryAssetId() const override { return FPrimaryAssetId(TEXT("MonsterData"), GetFName()); }
 
-	
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
 	FText MonsterName;
@@ -39,9 +40,9 @@ protected:
 	TSoftObjectPtr<USkeletalMesh> Mesh;
 	// 임시 -> 추후 EDMonsterAnimInstance로 교체 예정
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
-	TSoftClassPtr<UAnimInstance> AnimInstance; 
+	TSoftClassPtr<UAnimInstance> AnimInstance;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
-	TSoftObjectPtr<UBehaviorTree> BehaviorTree; 
+	TSoftObjectPtr<UBehaviorTree> BehaviorTree;
 	// TODO
 	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
 	// TSubclassOf<UEDMonsterBase> MonsterClass;
