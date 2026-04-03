@@ -65,8 +65,7 @@ public:
 	 */
 	template<typename AssetType>
 	AssetType* LoadPrimaryAssetSync(const FPrimaryAssetId& PrimaryAssetId);
-
-
+	
 	/**
 	 * [동기] 여러 에셋 경로 TArray로 받아와서 한꺼번에 동기 로드
 	 * 
