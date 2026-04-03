@@ -11,6 +11,8 @@ class UCameraComponent;
 class USpringArmComponent;
 class UEDBaseAttributeSet;
 class UEDPlayerAttributeSet;
+class UIMCComponent;
+
 /*
  * [EDPlayerCharacter]
  * 체력, 방어력, 이동속도의 현재와 최대치(혹은 감소되기 전 값) Attribute를 관리하는 캐릭터, 몬스터의 공통된 AttributeSet
@@ -46,6 +48,8 @@ public:
 	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	
+
+	
 	
 protected:
 
@@ -56,10 +60,18 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	float SpringArmLength=1000.f;
 	
-	
+	//Components
+protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
+	TObjectPtr<UIMCComponent> IMCComponent;
+	
+
+	
+	
+protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeSet")
 	TObjectPtr<UEDPlayerAttributeSet> PlayerAttributeSet;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeSet")
@@ -71,5 +83,8 @@ protected:
 	TSubclassOf<UEDBaseAttributeSet> BPBaseAttributeSet;
 	
 	virtual void InitializeAbilitySystem();
+	
+	
+
 
 };

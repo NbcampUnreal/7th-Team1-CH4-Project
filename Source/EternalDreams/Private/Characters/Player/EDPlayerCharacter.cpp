@@ -4,10 +4,13 @@
 #include "Characters/Player/EDPlayerCharacter.h"
 
 #include "AbilitySystemComponent.h"
+#include "IMCComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Characters/Base/GAS/EDBaseAttributeSet.h"
+#include "Characters/Player/EDPlayerController.h"
 #include "Characters/Player/GAS/EDPlayerAttributeSet.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "EnhancedInputSubsystems.h"
 
 
 // Sets default values
@@ -28,6 +31,8 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 	
+	//IMC 컴포넌트 생성
+	IMCComponent=CreateDefaultSubobject<UIMCComponent>(TEXT("IMCComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -43,8 +48,18 @@ void AEDPlayerCharacter::BeginPlay()
 		PlayerAttributeSet=NewObject<UEDPlayerAttributeSet>();
 	}
 	
+	//AbilitySystem 초기화
 	InitializeAbilitySystem();
-
+	AEDPlayerController* PC = Cast<AEDPlayerController>(GetController());
+	if (IsValid(PC))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(PC->InputMappingContext, 0);  // Gameplay
+		}
+	}
+	
+	
 }
 
 // Called every frame
@@ -55,9 +70,13 @@ void AEDPlayerCharacter::Tick(float DeltaTime)
 
 // Called to bind functionality to input
 void AEDPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-}
+ {
+ 	Super::SetupPlayerInputComponent(PlayerInputComponent);
+ 	if (IsValid(IMCComponent))
+ 	{
+ 		IMCComponent->SetupPlayerInput(PlayerInputComponent);
+ 	}
+ }
 
 UAbilitySystemComponent* AEDPlayerCharacter::GetAbilitySystemComponent() const
 {
