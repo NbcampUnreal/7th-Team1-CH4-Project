@@ -43,7 +43,9 @@ void UEDAssetManager::LoadAssetsSync(const TArray<FSoftObjectPath>& AssetPaths, 
 		if (!AssetPath.IsValid())
 		{
 			UE_LOG(LogTemp, Warning, 
-				TEXT("[EDAssetManager] LoadAssetsSync - 유효하지 않은 경로 건너뜀 : %s"), *AssetPath.ToString());
+				TEXT("[EDAssetManager] LoadAssetsSync - 유효하지 않은 경로 건너뜀 : %s"), 
+				*AssetPath.ToString());
+			
 			OutAssets.Add(nullptr);
 			continue;
 		}
@@ -53,11 +55,59 @@ void UEDAssetManager::LoadAssetsSync(const TArray<FSoftObjectPath>& AssetPaths, 
 		if (!Loaded)
 		{
 			UE_LOG(LogTemp, Warning,
-				TEXT("[EDAssetManager] LoadAssetsSync - 에셋 로드 실패 : %s"), *AssetPath.ToString());
+				TEXT("[EDAssetManager] LoadAssetsSync - 에셋 로드 실패 : %s"), 
+				*AssetPath.ToString());
 		}
 		OutAssets.Add(Loaded);
 	}
 }
+
+TSharedPtr<FStreamableHandle> UEDAssetManager::LoadAssetAsync(const FSoftObjectPath& AssetPath,
+	FStreamableDelegate OnLoaded, TAsyncLoadPriority Priority)
+{
+	if (!AssetPath.IsValid())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[EDAssetManager] LoadAssetAsync - 유효하지 않은 에셋 경로입니다."));
+		return nullptr;
+	}
+	
+	/* 
+	 * 이미 로드된 에셋 최적화
+	 * 현재 메모리에서 에셋 찾음 -> 이미 로드되어있다면 콜백 실행
+	 */
+	if (AssetPath.ResolveObject() != nullptr)
+	{
+		UE_LOG(LogTemp, Verbose,
+			TEXT("[EDAssetManager] LoadAssetAsync - 이미 로드된 에셋, 콜백 즉시 실행: %s"),
+			*AssetPath.ToString());
+
+		// 콜백 실행
+		if (OnLoaded.IsBound())
+		{
+			OnLoaded.Execute();
+		}
+		
+		// 이미 로드된 에셋을 위한 동기 핸들 생성해서 반환해줌
+		// 호출자는 핸들을 통해 에셋을 GC로부터 보호가능
+		return GetStreamableManager().RequestSyncLoad(AssetPath);
+	}
+	
+	/* 
+	 * 비동기 로드 요청
+	 * AssetPath : 에셋 경로
+	 * OnLoaded : 완료 콜백
+	 * Priority : 우선순위
+	 * bManagerActiveHandle : false면 핸들 만료시 자동 정리
+	 */
+	return GetStreamableManager().RequestAsyncLoad(
+		AssetPath,
+		OnLoaded,
+		Priority,
+		false
+		);
+}
+
 
 
 
