@@ -91,14 +91,14 @@ public:
 	/**
 	 * [비동기] FSoftObjectPath 단일 에셋을 비동기로 로드 
 	 * 
-	 * 에셋이 이미 메모리에 있다 -> OnLoaded 즉시 호출
+	 * 에셋이 이미 메모리에 있다 -> OnLoaded 호출
 	 * 메모리에 없다 -> 백그라운드에서 I/O수행 -> 완료 시 OnLoaded콜백 호출
 	 * 
 	 * @param AssetPath		로드할 에셋의 소프트 경로
 	 * @param OnLoaded		로드 완료 시 호출될 FStreamableDelegate 콜백
 	 * @param Priority		우선순위 (높을수록 먼저 로드)
 	 * 
-	 * @return TSharedPtr<FStreamableHandle> 멤버 변수로 유지하기 (GC에게 제거당하지 않기위해), 유효하지 않은 경로면 nullptr 반환
+	 * @return TSharedPtr<FStreamableHandle> -> 호출한 클래스에서 멤버 변수로 유지하기
 	 */
 	TSharedPtr<FStreamableHandle> LoadAssetAsync(
 		const FSoftObjectPath& AssetPath,
@@ -109,7 +109,7 @@ public:
 	
 	/**
 	 * [비동기] FSoftObjectPath 배열의 여러 에셋을 비동기로 한꺼번에 로드
-	 * @param AssetPaths	로드할 에셋 경로 배열 (유효하지 않은 경로는 자동으로 필터링)
+	 * @param AssetPaths	로드할 에셋 경로 배열
 	 * @param OnAllLoaded	모든 에셋 로드 완료 시 호출될 콜백
 	 * @param Priority		스트리밍 우선순위
 	 * 
@@ -143,7 +143,8 @@ public:
 	 *   ItemHandle = UEDAssetManager::Get().LoadPrimaryAssetAsync(
 	 *       FPrimaryAssetId("ItemData", "Sword_001"),
 	 *       UIBundles,
-	 *       FStreamableDelegate::CreateUObject(this, &AMyActor::OnItemDataLoaded));
+	 *       FStreamableDelegate::CreateUObject(this, &AMyActor::OnItemDataLoaded)
+	 *       );
 	 *   void AMyActor::OnItemDataLoaded()
 	 *   {
 	 *       UMyItemData* Item = UEDAssetManager::Get()
@@ -226,3 +227,80 @@ public:
 	 */
 	bool IsPrimaryAssetLoaded(const FPrimaryAssetId& PrimaryAssetId) const;
 };
+
+// ================================================================
+// 템플릿 함수 구현
+// ================================================================
+
+template <typename AssetType>
+AssetType* UEDAssetManager::LoadAssetSync(const FSoftObjectPath& AssetPath)
+{
+	// 경로 유효성 검사
+	if (!AssetPath.IsValid())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[EDAssetManager] LoadAssetSync - 유효하지 않은 에셋 경로입니다."));
+		return nullptr;
+	}
+
+	/**
+	 * FStreamableManager를 통한 동기 로드
+	 * LoadSynchronous 내부 동작:
+	 * 이미 로드된 경우  → 바로 UObject* 반환
+	 * 로드 안되어 있던 경우 → 비동기 I/O 요청 → WaitUntilComplete()로 블로킹 대기
+	 *
+	 * 두 번째 인자 bErrorIfNotFound: false → 없어도 에러 없이 nullptr 반환
+	 */
+	UObject* LoadedObject = GetStreamableManager().LoadSynchronous(AssetPath, false);
+
+	if (!LoadedObject)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[EDAssetManager] LoadAssetSync - 에셋 로드 실패: %s"), *AssetPath.ToString());
+		return nullptr;
+	}
+
+	// 요청한 타입으로 캐스팅하여 반환, 타입안맞으면 nullptr
+	return Cast<AssetType>(LoadedObject);
+}
+
+template <typename AssetType>
+AssetType* UEDAssetManager::LoadPrimaryAssetSync(const FPrimaryAssetId& PrimaryAssetId)
+{
+	// ID 유효성 검사
+	if (!PrimaryAssetId.IsValid())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[EDAssetManager] LoadPrimaryAssetSync - 유효하지 않은 PrimaryAssetId입니다."));
+		return nullptr;
+	}
+
+	/** PrimaryAssetId → FSoftObjectPath 변환
+	 *  GetPrimaryAssetPath()는 Asset Manager 내부 등록 테이블을 조회
+	 *  Project Settings -> Asset Manager에 해당 타입이 등록되지 않았거나
+	 *  스캔 경로에 에셋이 없으면 빈 경로가 반환 IsValid로 검사
+	 */
+	FSoftObjectPath AssetPath = GetPrimaryAssetPath(PrimaryAssetId);
+
+	if (!AssetPath.IsValid())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[EDAssetManager] LoadPrimaryAssetSync - 경로 조회 실패 ID: %s"),
+			*PrimaryAssetId.ToString());
+		return nullptr;
+	}
+
+	// 경로를 사용해 동기 로드
+	return LoadAssetSync<AssetType>(AssetPath);
+}
+
+template <typename AssetType>
+AssetType* UEDAssetManager::GetPrimaryAsset(const FPrimaryAssetId& PrimaryAssetId)
+{
+	/* GetPrimaryAssetObject() 는 Asset Manager 내부 맵에서
+	* 현재 로드된 UObject*를 찾아 반환
+	* 로드되지 않은 에셋이면 nullptr이 반환
+	*/
+	UObject* FoundObject = GetPrimaryAssetObject(PrimaryAssetId);
+	return Cast<AssetType>(FoundObject);
+}
