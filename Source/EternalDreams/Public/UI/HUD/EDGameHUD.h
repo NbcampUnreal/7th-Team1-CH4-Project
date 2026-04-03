@@ -4,6 +4,7 @@
 #include "GameFramework/HUD.h"
 #include "EDGameHUD.generated.h"
 
+class UEDInventoryPanelWidget;
 class UEDHUDLayout;
 class UCommonActivatableWidget;
 
@@ -20,14 +21,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<UEDHUDLayout> HUDLayoutClass;
 	
-	// 테스트 패널 BP 지정용
+	// 인벤토리 패널 BP 지정용
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
-	TSubclassOf<UCommonActivatableWidget> TestPanelClass;
+	TSubclassOf<UEDInventoryPanelWidget> InventoryPanelClass;
 
 private:
 	// 로컬 플레이어 UI 초기화 요청용
 	void InitializeHUD() const;
 	
-	// 패널 Open/Close 테스트
-	void RunPanelOpenCloseTest() const;
+	// 인벤토리 패널 열기/닫기
+	void RunInventoryPanelOpenCloseTest() const;
 };
