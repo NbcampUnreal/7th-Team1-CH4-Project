@@ -7,6 +7,7 @@
 #include "TimerManager.h"
 #include "UI/HUD/EDHUDLayout.h"
 #include "UI/Subsystem/EDUIManageSubsystem.h"
+#include "UI/Types/EDUITypes.h"
 
 void AEDGameHUD::BeginPlay()
 {
@@ -89,7 +90,7 @@ void AEDGameHUD::RunPanelOpenCloseTest() const
 	}
 
 	// 테스트용 패널 클래스 등록
-	UIManageSubsystem->RegisterPanelClass(TEXT("Inventory"), TestPanelClass);
+	UIManageSubsystem->RegisterPanelClass(TEXT("Inventory"), EEDUILayer::Game, TestPanelClass);
 
 	// 등록 직후 패널 열기
 	UIManageSubsystem->OpenPanel(TEXT("Inventory"));

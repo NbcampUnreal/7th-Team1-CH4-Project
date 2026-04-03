@@ -1,7 +1,7 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "Public/UI/Subsystem/EDUIManageSubsystem.h"
-#include "Public/UI/HUD/EDHUDLayout.h"
 
+#include "UI/HUD/EDHUDLayout.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
@@ -72,24 +72,26 @@ UEDHUDLayout* UEDUIManageSubsystem::GetHUDLayout() const
 	return HUDLayoutInstance;
 }
 
-void UEDUIManageSubsystem::RegisterPanelClass(FName PanelId, TSubclassOf<UCommonActivatableWidget> PanelClass)
+void UEDUIManageSubsystem::RegisterPanelClass(FName PanelId, EEDUILayer Layer,
+                                              TSubclassOf<UCommonActivatableWidget> PanelClass)
 {
 	// 잘못된 등록 방지
 	if (PanelId.IsNone())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: PanelId가 없습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 패널 ID가 비어 있습니다."));
 		return;
 	}
 
 	if (!PanelClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: PanelClass가 없습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 등록할 패널 클래스가 없습니다."));
 		return;
 	}
 
 	RegisteredPanelClasses.Add(PanelId, PanelClass);
+	RegisteredPanelLayers.Add(PanelId, Layer);
 
-	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 새 패널 클래스 등록 완료"));
+	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널 클래스와 레이어 등록이 완료되었습니다. 패널 ID = %s"), *PanelId.ToString());
 }
 
 UCommonActivatableWidget* UEDUIManageSubsystem::OpenPanel(FName PanelId)
@@ -217,6 +219,18 @@ UCommonActivatableWidget* UEDUIManageSubsystem::CreatePanelInstance(FName PanelI
 		return nullptr;
 	}
 
+	if (!HUDLayoutInstance)
+	{
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널 생성을 위해 HUD를 먼저 생성합니다."));
+		CreateHUDInternal();
+	}
+
+	if (!HUDLayoutInstance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: HUD 생성에 실패하여 패널을 만들 수 없습니다."));
+		return nullptr;
+	}
+
 	ULocalPlayer* LocalPlayer = GetLocalPlayer();
 	if (!LocalPlayer)
 	{
@@ -234,16 +248,65 @@ UCommonActivatableWidget* UEDUIManageSubsystem::CreatePanelInstance(FName PanelI
 	UCommonActivatableWidget* PanelInstance = CreateWidget<UCommonActivatableWidget>(PlayerController, *FoundClass);
 	if (!PanelInstance)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 패널 생성 실패"));
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 패널 생성에 실패했습니다."));
 		return nullptr;
 	}
 
-	PanelInstance->AddToViewport();
-	PanelInstance->SetVisibility(ESlateVisibility::Collapsed);
+	if (!AttachPanelToLayer(PanelId, PanelInstance))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 패널을 레이어에 부착하지 못했습니다."));
+		return nullptr;
+	}
 
+	PanelInstance->SetVisibility(ESlateVisibility::Collapsed);
 	PanelInstances.Add(PanelId, PanelInstance);
 
-	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널 생성됨"));
-
+	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널 생성 및 레이어 부착이 완료되었습니다."));
 	return PanelInstance;
+}
+
+EEDUILayer UEDUIManageSubsystem::GetPanelLayer(FName PanelId) const
+{
+	const EEDUILayer* FoundLayer = RegisteredPanelLayers.Find(PanelId);
+	if (!FoundLayer)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 등록된 패널 레이어가 없습니다. 패널 ID = %s"), *PanelId.ToString());
+		return EEDUILayer::Game;
+	}
+
+	return *FoundLayer;
+}
+
+bool UEDUIManageSubsystem::AttachPanelToLayer(FName PanelId, UCommonActivatableWidget* PanelInstance)
+{
+	if (!PanelInstance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 레이어에 붙일 패널 인스턴스가 없습니다."));
+		return false;
+	}
+
+	if (!HUDLayoutInstance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: HUD 레이아웃이 생성되지 않았습니다."));
+		return false;
+	}
+
+	const EEDUILayer PanelLayer = GetPanelLayer(PanelId);
+	UPanelWidget* LayerSlot = HUDLayoutInstance->GetLayerSlot(PanelLayer);
+	if (!LayerSlot)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 레이어 슬롯을 찾을 수 없습니다. 패널 ID = %s"), *PanelId.ToString());
+		return false;
+	}
+
+	if (PanelInstance->GetParent())
+	{
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 이미 레이어에 부착된 패널입니다. 패널 ID = %s"), *PanelId.ToString());
+		return true;
+	}
+
+	LayerSlot->AddChild(PanelInstance);
+
+	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널을 레이어 슬롯에 부착했습니다. 패널 ID = %s"), *PanelId.ToString());
+	return true;
 }
