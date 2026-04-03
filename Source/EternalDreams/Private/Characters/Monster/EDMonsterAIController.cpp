@@ -84,7 +84,7 @@ ETeamAttitude::Type AEDMonsterAIController::GetTeamAttitudeTowards(const AActor&
 	? ETeamAttitude::Friendly 
 	: ETeamAttitude::Hostile;
 }
-
+// TODO: 비동기 로드로 교체 추후에
 void AEDMonsterAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
@@ -147,17 +147,33 @@ void AEDMonsterAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedA
 				if (IsValid(BB) == false)
 					continue;
 				BB->SetValueAsObject(TEXT("TargetActor"), Actor);
+				
+				// Ramda함수 안에서 안전하게 사용하기 위한 TWeakObjectPtr
+				TWeakObjectPtr<AEDMonsterAIController> WeakThis(this);
+				TWeakObjectPtr<AActor> WeakActor(Actor);
+				
 				// Team Sense로 주변 아군에게 타겟 공유
 				GetWorld()->GetTimerManager().SetTimer(TeamReportTimerHandle,
-					[this, Actor]()
+					[WeakThis, WeakActor]()
 					{
-						if (IsValid(this) == false || IsValid(GetWorld()) == false || IsValid(Actor) == false)
+						if (WeakThis.IsValid() == false)
 							return;
 						
-						UAIPerceptionSystem* PerceptionSystem = UAIPerceptionSystem::GetCurrent(GetWorld());
+						UWorld* World = WeakThis->GetWorld();
+						if (IsValid(World) == false)
+							return;
+						
+						if (WeakActor.IsValid() == false)
+						{
+							WeakThis->GetWorldTimerManager().ClearTimer(WeakThis->TeamReportTimerHandle);
+							return;
+						}
+						
+						UAIPerceptionSystem* PerceptionSystem = UAIPerceptionSystem::GetCurrent(World);
 						if (IsValid(PerceptionSystem) == false)
 							return;
-						FAITeamStimulusEvent Event = FAITeamStimulusEvent(this, Actor, Actor->GetActorLocation(), 1000.f);
+						
+						FAITeamStimulusEvent Event = FAITeamStimulusEvent(WeakThis.Get(), WeakActor.Get(), WeakActor->GetActorLocation(), 1000.f);
 						PerceptionSystem->OnEvent(Event);
 					},
 					2.f, true, 0.5f);
@@ -173,7 +189,7 @@ void AEDMonsterAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedA
 				BB->SetValueAsVector(TEXT("LastHearingLocation"), Actor->GetActorLocation());
 				BB->SetValueAsBool(TEXT("bIsTracking"), true);
 			}
-			// Team -> 아군으로부터 카겟 수신
+			// Team -> 아군으로부터 타겟 수신
 			else if (SenseClass == UAISense_Team::StaticClass())
 			{
 				UE_LOG(LogTemp, Warning, TEXT("[%s] Team: %s 정보 수신"), *GetName(), *Actor->GetName());
