@@ -7,6 +7,7 @@
 class UEDInventoryPanelWidget;
 class UEDHUDLayout;
 class UCommonActivatableWidget;
+class UEDPauseMenuWidget;
 
 UCLASS()
 class ETERNALDREAMS_API AEDGameHUD : public AHUD
@@ -24,6 +25,10 @@ protected:
 	// 인벤토리 패널 BP 지정용
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
 	TSubclassOf<UEDInventoryPanelWidget> InventoryPanelClass;
+	
+	// 일시정지 메뉴 지정용
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+	TSubclassOf<UEDPauseMenuWidget> PauseMenuPanelClass;
 
 private:
 	// 로컬 플레이어 UI 초기화 요청용
