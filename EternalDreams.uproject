@@ -45,10 +45,6 @@
 		{
 			"Name": "PCGBiomeCore",
 			"Enabled": true
-		},
-		{
-			"Name": "PCGBiomeSample",
-			"Enabled": true
 		}
 	]
 }
