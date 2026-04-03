@@ -7,6 +7,14 @@
 class UEDHUDLayout;
 class UCommonActivatableWidget;
 
+UENUM(BlueprintType)
+enum class EEDUILayer : uint8
+{
+	Game UMETA(DisplayName = "Game"),
+	Menu UMETA(DisplayName = "Menu"),
+	Modal UMETA(DisplayName = "Modal"),
+};
+
 UCLASS()
 class ETERNALDREAMS_API UEDUIManageSubsystem : public ULocalPlayerSubsystem
 {
