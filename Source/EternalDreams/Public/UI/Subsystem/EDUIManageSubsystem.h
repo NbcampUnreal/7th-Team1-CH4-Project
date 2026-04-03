@@ -2,18 +2,11 @@
 
 #include "CoreMinimal.h"
 #include "Subsystems/LocalPlayerSubsystem.h"
+#include "UI/Types/EDUITypes.h"
 #include "EDUIManageSubsystem.generated.h"
 
 class UEDHUDLayout;
 class UCommonActivatableWidget;
-
-UENUM(BlueprintType)
-enum class EEDUILayer : uint8
-{
-	Game UMETA(DisplayName = "Game"),
-	Menu UMETA(DisplayName = "Menu"),
-	Modal UMETA(DisplayName = "Modal"),
-};
 
 UCLASS()
 class ETERNALDREAMS_API UEDUIManageSubsystem : public ULocalPlayerSubsystem
@@ -46,7 +39,7 @@ public:
 
 	// 패널 클래스 등록
 	UFUNCTION(BlueprintCallable, Category = "UI")
-	void RegisterPanelClass(FName PanelId, TSubclassOf<UCommonActivatableWidget> PanelClass);
+	void RegisterPanelClass(FName PanelId, EEDUILayer Layer, TSubclassOf<UCommonActivatableWidget> PanelClass);
 
 	// 패널 열기
 	UFUNCTION(BlueprintCallable, Category = "UI")
@@ -81,6 +74,10 @@ protected:
 	UPROPERTY(Transient)
 	TMap<FName, TObjectPtr<UCommonActivatableWidget>> PanelInstances;
 
+	// 패널 ID별 레이어 정보 보관
+	UPROPERTY(Transient)
+	TMap<FName, EEDUILayer> RegisteredPanelLayers;
+
 private:
 	// HUD 인스턴스가 이미 생성되어 있는지 확인
 	bool IsHUDCreated() const;
@@ -93,4 +90,10 @@ private:
 
 	// 패널 없으면 생성
 	UCommonActivatableWidget* CreatePanelInstance(FName PanelId);
+	
+	// 패널 레이어 조회
+	EEDUILayer GetPanelLayer(FName PanelId) const;
+	
+	// 패널을 레이어 슬롯에 부착
+	bool AttachPanelToLayer(FName PanelId, UCommonActivatableWidget* PanelInstance);
 };
