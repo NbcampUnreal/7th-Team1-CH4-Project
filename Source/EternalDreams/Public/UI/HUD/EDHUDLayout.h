@@ -45,16 +45,16 @@ protected:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "HUD")
 	TObjectPtr<UEDPlayerStatusWidget> PlayerStatusWidgetInstance;
 
-	// 인게임 패널이 올라가는 레어이 슬롯
-	UPROPERTY(meta = (BindWidgetAnimOptional), BlueprintReadOnly, Category = "HUD|Layer")
+	// 인게임 패널이 올라가는 레이어 슬롯
+	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "HUD|Layer")
 	TObjectPtr<UPanelWidget> GameLayerSlot;
 
 	// 메뉴 계열 패널이 올라가는 레이어 슬롯
-	UPROPERTY(meta = (BindWidgetAnimOptional), BlueprintReadOnly, Category = "HUD|Layer")
+	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "HUD|Layer")
 	TObjectPtr<UPanelWidget> MenuLayerSlot;
 
 	// 확인창, 경고창 같은 최상위 패널이 올라가는 레이어 슬롯
-	UPROPERTY(meta = (BindWidgetAnimOptional), BlueprintReadOnly, Category = "HUD|Layer")
+	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "HUD|Layer")
 	TObjectPtr<UPanelWidget> ModalLayerSlot;
 
 private:
