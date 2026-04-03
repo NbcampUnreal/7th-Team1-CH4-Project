@@ -6,6 +6,7 @@
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
 #include "CommonActivatableWidget.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
 
 void UEDUIManageSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -107,6 +108,9 @@ UCommonActivatableWidget* UEDUIManageSubsystem::OpenPanel(FName PanelId)
 	PanelInstance->SetVisibility(ESlateVisibility::Visible);
 	PanelInstance->ActivateWidget();
 
+	// 패널이 열린 뒤 현재 UI 상태에 맞는 입력 모드로 갱신
+	RefreshInputMode();
+
 	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널 열림"));
 
 	return PanelInstance;
@@ -124,6 +128,9 @@ void UEDUIManageSubsystem::ClosePanel(FName PanelId)
 	// 비활성화 후 숨김 처리
 	(*FoundPanel)->DeactivateWidget();
 	(*FoundPanel)->SetVisibility(ESlateVisibility::Collapsed);
+
+	// 패널이 열린 뒤 현재 UI 상태에 맞는 입력 모드로 갱신
+	RefreshInputMode();
 
 	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널 닫힘"));
 }
@@ -148,6 +155,21 @@ bool UEDUIManageSubsystem::IsPanelOpen(FName PanelId) const
 	}
 
 	return (*FoundPanel)->IsActivated();
+}
+
+bool UEDUIManageSubsystem::HandleEscapeAction()
+{
+	const FName OpenPanelId = FindTopPriorityOpenPanel();
+	if (!OpenPanelId.IsNone())
+	{
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: ESC 입력으로 열린 패널을 닫습니다. 패널 ID = %s"), *OpenPanelId.ToString());
+		ClosePanel(OpenPanelId);
+		return true;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 열려 있는 패널이 없어 PauseMenu를 엽니다."));
+	OpenPanel(TEXT("PauseMenu"));
+	return true;
 }
 
 bool UEDUIManageSubsystem::IsHUDCreated() const
@@ -309,4 +331,99 @@ bool UEDUIManageSubsystem::AttachPanelToLayer(FName PanelId, UCommonActivatableW
 
 	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널을 레이어 슬롯에 부착했습니다. 패널 ID = %s"), *PanelId.ToString());
 	return true;
+}
+
+FName UEDUIManageSubsystem::FindOpenPanelInLayer(EEDUILayer Layer) const
+{
+	for (const TPair<FName, TObjectPtr<UCommonActivatableWidget>>& PanelPair : PanelInstances)
+	{
+		const FName PanelId = PanelPair.Key;
+		const TObjectPtr<UCommonActivatableWidget> PanelInstance = PanelPair.Value;
+
+		if (!PanelInstance)
+		{
+			continue;
+		}
+
+		if (GetPanelLayer(PanelId) != Layer)
+		{
+			continue;
+		}
+
+		if (PanelInstance->IsActivated())
+		{
+			return PanelId;
+		}
+	}
+
+	return NAME_None;
+}
+
+FName UEDUIManageSubsystem::FindTopPriorityOpenPanel() const
+{
+	FName FoundPanelId = FindOpenPanelInLayer(EEDUILayer::Modal);
+	if (!FoundPanelId.IsNone())
+	{
+		return FoundPanelId;
+	}
+
+	FoundPanelId = FindOpenPanelInLayer(EEDUILayer::Menu);
+	if (!FoundPanelId.IsNone())
+	{
+		return FoundPanelId;
+	}
+
+	FoundPanelId = FindOpenPanelInLayer(EEDUILayer::Game);
+	if (!FoundPanelId.IsNone())
+	{
+		return FoundPanelId;
+	}
+
+	return NAME_None;
+}
+
+void UEDUIManageSubsystem::RefreshInputMode()
+{
+	ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	if (!LocalPlayer)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 입력 모드를 갱신할 LocalPlayer가 없습니다."));
+		return;
+	}
+
+	APlayerController* PlayerController = LocalPlayer->GetPlayerController(GetWorld());
+	if (!PlayerController)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 입력 모드를 갱신할 PlayerController가 없습니다."));
+		return;
+	}
+
+	const FName OpenModalPanel = FindOpenPanelInLayer(EEDUILayer::Modal);
+	const FName OpenMenuPanel = FindOpenPanelInLayer(EEDUILayer::Menu);
+	const FName OpenGamePanel = FindOpenPanelInLayer(EEDUILayer::Game);
+
+	// Menu 또는 Modal 패널이 열려 있으면 UI 입력을 함께 받도록 유지
+	if (!OpenModalPanel.IsNone() || !OpenMenuPanel.IsNone())
+	{
+		UWidgetBlueprintLibrary::SetInputMode_GameAndUIEx(PlayerController, nullptr, EMouseLockMode::DoNotLock, false);
+		PlayerController->bShowMouseCursor = true;
+
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 메뉴 입력 모드로 전환했습니다."));
+		return;
+	}
+
+	// 현재 단계에서는 Game Layer 패널도 단축키 테스트를 위해 게임 입력을 유지
+	if (!OpenGamePanel.IsNone())
+	{
+		UWidgetBlueprintLibrary::SetInputMode_GameOnly(PlayerController);
+		PlayerController->bShowMouseCursor = false;
+
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 게임 레이어 패널이 열려 있어 게임 입력 모드를 유지합니다."));
+		return;
+	}
+
+	UWidgetBlueprintLibrary::SetInputMode_GameOnly(PlayerController);
+	PlayerController->bShowMouseCursor = false;
+
+	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 열린 패널이 없어 게임 입력 모드로 복귀했습니다."));
 }

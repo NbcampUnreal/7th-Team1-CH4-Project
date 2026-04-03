@@ -8,6 +8,7 @@
 #include "UI/Subsystem/EDUIManageSubsystem.h"
 #include "UI/Types/EDUITypes.h"
 #include "UI/Panel/EDInventoryPanelWidget.h"
+#include "UI/Panel/EDPauseMenuWidget.h"
 
 void AEDGameHUD::BeginPlay()
 {
@@ -88,31 +89,14 @@ void AEDGameHUD::RunInventoryPanelOpenCloseTest() const
 	}
 
 	UIManageSubsystem->RegisterPanelClass(TEXT("Inventory"), EEDUILayer::Game, InventoryPanelClass);
-	UIManageSubsystem->OpenPanel(TEXT("Inventory"));
-
-	UE_LOG(LogTemp, Log, TEXT("EDGameHUD: 인벤토리 패널 열기 테스트를 시작합니다."));
-
-	if (!GetWorld())
+	
+	if (PauseMenuPanelClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: World가 없어 인벤토리 테스트를 진행할 수 없습니다."));
-		return;
+		UIManageSubsystem->RegisterPanelClass(TEXT("PauseMenu"), EEDUILayer::Menu, PauseMenuPanelClass);
+		UE_LOG(LogTemp, Log, TEXT("EDGameHUD: PauseMenu 패널을 Menu 레이어에 등록했습니다."));
 	}
-
-	FTimerHandle ClosePanelTimerHandle;
-	GetWorld()->GetTimerManager().SetTimer(
-		ClosePanelTimerHandle,
-		FTimerDelegate::CreateWeakLambda(this, [UIManageSubsystem]()
-		{
-			if (!UIManageSubsystem)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: 인벤토리 패널 닫기 테스트에 실패했습니다."));
-				return;
-			}
-
-			UIManageSubsystem->ClosePanel(TEXT("Inventory"));
-			UE_LOG(LogTemp, Log, TEXT("EDGameHUD: 인벤토리 패널 닫기 테스트를 완료했습니다."));
-		}),
-		3.0f,
-		false
-	);
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: PauseMenuPanelClass가 설정되지 않았습니다."));
+	}
 }
