@@ -1,13 +1,13 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/HUD/EDGameHUD.h"
 
-#include "CommonActivatableWidget.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
 #include "TimerManager.h"
 #include "UI/HUD/EDHUDLayout.h"
 #include "UI/Subsystem/EDUIManageSubsystem.h"
 #include "UI/Types/EDUITypes.h"
+#include "UI/Panel/EDInventoryPanelWidget.h"
 
 void AEDGameHUD::BeginPlay()
 {
@@ -15,8 +15,7 @@ void AEDGameHUD::BeginPlay()
 
 	InitializeHUD();
 
-	// HUD 초기화 끝난 뒤 패널 Open/Close 테스트
-	RunPanelOpenCloseTest();
+	RunInventoryPanelOpenCloseTest();
 }
 
 void AEDGameHUD::InitializeHUD() const
@@ -59,51 +58,46 @@ void AEDGameHUD::InitializeHUD() const
 	UE_LOG(LogTemp, Log, TEXT("EDGameHUD: HUD 초기화 완료"));
 }
 
-void AEDGameHUD::RunPanelOpenCloseTest() const
+void AEDGameHUD::RunInventoryPanelOpenCloseTest() const
 {
-	// 테스트 패널 BP 없으면 테스트 하지 않음
-	if (!TestPanelClass)
+	if (!InventoryPanelClass)
 	{
-		UE_LOG(LogTemp, Log, TEXT("EDGameHUD: TestPanelClass 미설정"));
+		UE_LOG(LogTemp, Log, TEXT("EDGameHUD: InventoryPanelClass가 설정되지 않았습니다."));
 		return;
 	}
 
 	APlayerController* PlayerController = GetOwningPlayerController();
 	if (!PlayerController)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: 테스트용 PlayerController가 없습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: 인벤토리 테스트용 PlayerController가 없습니다."));
 		return;
 	}
 
 	ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer();
 	if (!LocalPlayer)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: 테스트용 LocalPlayer가 없습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: 인벤토리 테스트용 LocalPlayer가 없습니다."));
 		return;
 	}
 
 	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
 	if (!UIManageSubsystem)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: 테스트용 UIManageSubsystem이 없습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: 인벤토리 테스트용 UIManageSubsystem이 없습니다."));
 		return;
 	}
 
-	// 테스트용 패널 클래스 등록
-	UIManageSubsystem->RegisterPanelClass(TEXT("Inventory"), EEDUILayer::Game, TestPanelClass);
-
-	// 등록 직후 패널 열기
+	UIManageSubsystem->RegisterPanelClass(TEXT("Inventory"), EEDUILayer::Game, InventoryPanelClass);
 	UIManageSubsystem->OpenPanel(TEXT("Inventory"));
 
-	UE_LOG(LogTemp, Log, TEXT("EDGameHUD: 테스트 패널 열기 호출"));
+	UE_LOG(LogTemp, Log, TEXT("EDGameHUD: 인벤토리 패널 열기 테스트를 시작합니다."));
 
 	if (!GetWorld())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: World 없음"));
+		UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: World가 없어 인벤토리 테스트를 진행할 수 없습니다."));
 		return;
 	}
 
-	// 3초 뒤 닫아서 Open/Close 둘 다 확인
 	FTimerHandle ClosePanelTimerHandle;
 	GetWorld()->GetTimerManager().SetTimer(
 		ClosePanelTimerHandle,
@@ -111,13 +105,12 @@ void AEDGameHUD::RunPanelOpenCloseTest() const
 		{
 			if (!UIManageSubsystem)
 			{
-				UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: 테스트 패널 닫기 실패"));
+				UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: 인벤토리 패널 닫기 테스트에 실패했습니다."));
 				return;
 			}
 
 			UIManageSubsystem->ClosePanel(TEXT("Inventory"));
-
-			UE_LOG(LogTemp, Log, TEXT("EDGameHUD: 테스트 패널 닫기 호출"));
+			UE_LOG(LogTemp, Log, TEXT("EDGameHUD: 인벤토리 패널 닫기 테스트를 완료했습니다."));
 		}),
 		3.0f,
 		false
