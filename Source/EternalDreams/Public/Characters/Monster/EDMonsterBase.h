@@ -25,6 +25,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Data")
 	void InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset);
 	
+	UFUNCTION(BlueprintCallable, Category= "Data")
+	UEDMonsterDataAsset* GetDataAsset() const { return DataAsset; }
+	
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
