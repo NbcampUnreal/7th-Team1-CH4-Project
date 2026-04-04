@@ -165,10 +165,13 @@ TSharedPtr<FStreamableHandle> UEDAssetManager::LoadPrimaryAssetAsync(const FPrim
 	}
 	
 	/**
-	 *	Bundle -> UPROPERTY에 meta=(AssetBundles="UI") 처럼 태그하면 Bundle 등록
-	 *
+	 * 부모 클래스의 LoadPrimaryAsset 수행 -> 에셋들을 비동기로 가져오고 Handle반환
+	 * 빈 Bundles 배열 → Primary Asset만 도르
+	 * Bundles 지정 -> 해당 Bundles에 속한 Secondary Asset도 함께 로드
+	 * Bundle -> UPROPERTY에 meta=(AssetBundles="UI") 처럼 태그하면 Bundle 등록
 	 */
 	TSharedPtr<FStreamableHandle> Handle = LoadPrimaryAsset(PrimaryAssetId, Bundles, OnLoaded, Priority);
+	
 	if (!Handle.IsValid())
 	{
 		UE_LOG(LogTemp, Warning,
@@ -179,7 +182,56 @@ TSharedPtr<FStreamableHandle> UEDAssetManager::LoadPrimaryAssetAsync(const FPrim
 	return Handle;
 }
 
+TSharedPtr<FStreamableHandle> UEDAssetManager::LoadPrimaryAssetsAsync(
+	const TArray<FPrimaryAssetId>& PrimaryAssetIds,
+	const TArray<FName>&           Bundles,
+	FStreamableDelegate            OnAllLoaded,
+	TAsyncLoadPriority             Priority)
+{
+	// 유효성검사
+	if (PrimaryAssetIds.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[EDAssetManager] LoadPrimaryAssetsAsync - PrimaryAssetId 배열이 비어있습니다."));
+		return nullptr;
+	}
 
+	// 유효한 ID필터
+	TArray<FPrimaryAssetId> ValidIds;
+	ValidIds.Reserve(PrimaryAssetIds.Num());
 
+	for (const FPrimaryAssetId& Id : PrimaryAssetIds)
+	{
+		if (Id.IsValid())
+		{
+			ValidIds.Add(Id);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning,
+				TEXT("[EDAssetManager] LoadPrimaryAssetsAsync - 유효하지 않은 ID : %s"),
+				*Id.ToString());
+		}
+	}
 
+	if (ValidIds.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[EDAssetManager] LoadPrimaryAssetsAsync - 유효한 ID가 없습니다."));
+		return nullptr;
+	}
 
+	/*
+	 * 다중 Primary Asset 비동기 로드
+	 * 단일 RequestAsyncLoad 요청으로 묶어서 처리
+	 * 모든 에셋이 완료되면 OnAllLoaded가 호출
+	 */
+	return LoadPrimaryAssets(ValidIds, Bundles, OnAllLoaded, Priority);
+}
+
+// 현재 메모리에 에셋이 올라와있는지 확인하는 bool함수
+bool UEDAssetManager::IsPrimaryAssetLoaded(const FPrimaryAssetId& PrimaryAssetId) const
+{
+	// AssetManager내부 맵에서 현재 메모리에 올라와있는 UObject*를 찾아서 반환 없으면 nullptr
+	return GetPrimaryAssetObject(PrimaryAssetId) != nullptr;
+}
