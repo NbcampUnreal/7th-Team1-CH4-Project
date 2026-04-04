@@ -62,6 +62,7 @@ void UEDAssetManager::LoadAssetsSync(const TArray<FSoftObjectPath>& AssetPaths, 
 	}
 }
 
+// 비동기 로드
 TSharedPtr<FStreamableHandle> UEDAssetManager::LoadAssetAsync(const FSoftObjectPath& AssetPath,
 	FStreamableDelegate OnLoaded, TAsyncLoadPriority Priority)
 {
@@ -108,6 +109,50 @@ TSharedPtr<FStreamableHandle> UEDAssetManager::LoadAssetAsync(const FSoftObjectP
 		);
 }
 
+TSharedPtr<FStreamableHandle> UEDAssetManager::LoadAssetsAsync(
+	const TArray<FSoftObjectPath>& AssetPaths,
+	FStreamableDelegate OnAllLoaded,
+	TAsyncLoadPriority Priority)
+{
+	if (AssetPaths.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EDAssetManager] LoadAssetsAsync - 에셋 경로 배열이 비어있습니다."));
+		return nullptr;
+	}
+	
+	TArray<FSoftObjectPath> ValidPaths;
+	ValidPaths.Reserve(AssetPaths.Num());
+	
+	for (const FSoftObjectPath& AssetPath : AssetPaths)
+	{
+		if (AssetPath.IsValid())
+		{
+			ValidPaths.Add(AssetPath);
+		} else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[EDAssetManager] LoadAssetsAsync - 경로가 유효하지 않습니다. 경로 : %s"), 
+				*AssetPath.ToString());
+		}
+	}
+	
+	if (ValidPaths.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[EDAssetManager] LoadAssetsAsync - 유효한 경로가 없습니다."));
+		return nullptr;
+	}
+	
+	/**
+	 * 다중 에셋 비동기 로드
+	 * 여러 경로를 배열로 넘기면 단일 핸들로 묶어서 처리
+	 * 모든 에셋처리가 끝나면 OnAllLoaded 콜백 호출
+	 */
+	return GetStreamableManager().RequestAsyncLoad(
+		ValidPaths,
+		OnAllLoaded,
+		Priority,
+		false);
+}
 
 
 
