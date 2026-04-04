@@ -142,10 +142,11 @@ void AEDMonsterAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedA
 				SenseClass == UAISense_Touch::StaticClass())
 			{
 				UE_LOG(LogTemp, Warning, TEXT("[%s] 감지: %s (%s)"), *GetName(), *Actor->GetName(), *SenseClass->GetName());
-				// TODO: BB_Monster 생성 후 활성화
+				
 				UBlackboardComponent* BB = GetBlackboardComponent();
 				if (IsValid(BB) == false)
 					continue;
+				
 				BB->SetValueAsObject(TEXT("TargetActor"), Actor);
 				
 				// Ramda함수 안에서 안전하게 사용하기 위한 TWeakObjectPtr
@@ -208,6 +209,9 @@ void AEDMonsterAIController::OnPerceptionForgotten(AActor* Actor)
 	if (IsValid(Actor) == false)
 		return;
 	UE_LOG(LogTemp, Warning, TEXT("[%s] 잊혀진 액터: %s"), *GetName(),*Actor->GetName());
+	
+	GetWorldTimerManager().ClearTimer(TeamReportTimerHandle);
+	
 	UBlackboardComponent* BB = GetBlackboardComponent();
 	if (IsValid(BB) == false)
 		return;

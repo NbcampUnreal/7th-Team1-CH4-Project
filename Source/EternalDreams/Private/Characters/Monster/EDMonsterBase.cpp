@@ -3,6 +3,7 @@
 
 #include "Characters/Monster/EDMonsterBase.h"
 #include "AbilitySystemComponent.h"
+#include "Characters/Monster/EDMonsterAnimInstance.h"
 #include "Data/EDMonsterDataAsset.h"
 #include "Net/UnrealNetwork.h"
 
@@ -54,6 +55,11 @@ void AEDMonsterBase::OnRep_MonsterState()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[%s] Monster State: %d"), *GetName(), (int32)MonsterState);
 	// TODO: AnimInstance에 전달
+	UEDMonsterAnimInstance* Anim = Cast<UEDMonsterAnimInstance>(GetMesh()->GetAnimInstance());
+	if (IsValid(Anim) == false)
+		return;
+	
+	Anim->SetMonsterState(MonsterState);
 }
 
 
