@@ -154,5 +154,32 @@ TSharedPtr<FStreamableHandle> UEDAssetManager::LoadAssetsAsync(
 		false);
 }
 
+TSharedPtr<FStreamableHandle> UEDAssetManager::LoadPrimaryAssetAsync(const FPrimaryAssetId& PrimaryAssetId,
+	const TArray<FName>& Bundles, FStreamableDelegate OnLoaded, TAsyncLoadPriority Priority)
+{
+	if (!PrimaryAssetId.IsValid())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[EDAssetManager] LoadPrimaryAssetAsync - 유효하지 않은 PrimaryAssetId입니다."));
+		return nullptr;
+	}
+	
+	/**
+	 *	Bundle -> UPROPERTY에 meta=(AssetBundles="UI") 처럼 태그하면 Bundle 등록
+	 *
+	 */
+	TSharedPtr<FStreamableHandle> Handle = LoadPrimaryAsset(PrimaryAssetId, Bundles, OnLoaded, Priority);
+	if (!Handle.IsValid())
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[EDAssetManager] LoadPrimaryAssetAsync - 핸들 생성 실패. ID: %s"),
+			*PrimaryAssetId.ToString());
+	}
+	
+	return Handle;
+}
+
+
+
 
 
