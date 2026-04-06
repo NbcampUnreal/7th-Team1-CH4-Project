@@ -59,4 +59,7 @@ private:
 
 	// ESC 입력 시 패널 닫기 또는 Pause 메뉴 열기 처리
 	void HandleUIBack();
+
+	// 애플리케이션 복귀 시 현재 열린 UI 상태에 맞게 입력 모드와 포커스 복구를 요청
+	void HandleApplicationReactivated();
 };

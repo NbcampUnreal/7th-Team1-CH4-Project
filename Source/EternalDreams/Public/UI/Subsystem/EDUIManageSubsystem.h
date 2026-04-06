@@ -61,6 +61,10 @@ public:
 	// 닫을 패널이 없으면 Pause 메뉴 열기
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	bool HandleEscapeAction();
+	
+	// 현재 열린 패널 상태에 맞춰 입력 모드와 포커스를 다시 복구
+	UFUNCTION(BlueprintCallable, Category = "UI")
+	void RestoreUIFocus();
 
 protected:
 	// 실제로 생성된 HUD 위젯 인스턴스를 보관

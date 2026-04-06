@@ -173,6 +173,44 @@ bool UEDUIManageSubsystem::HandleEscapeAction()
 	return true;
 }
 
+void UEDUIManageSubsystem::RestoreUIFocus()
+{
+	UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: UI 포커스 복구를 시도합니다."));
+
+	RefreshInputMode();
+
+	const FName OpenModalPanel = FindOpenPanelInLayer(EEDUILayer::Modal);
+	const FName OpenMenuPanel = FindOpenPanelInLayer(EEDUILayer::Menu);
+
+	FName TargetPanelId = NAME_None;
+	if (!OpenModalPanel.IsNone())
+	{
+		TargetPanelId = OpenModalPanel;
+	}
+	else if (!OpenMenuPanel.IsNone())
+	{
+		TargetPanelId = OpenMenuPanel;
+	}
+
+	if (TargetPanelId.IsNone())
+	{
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 복구할 UI 포커스 대상이 없어 게임 뷰포트 포커스를 유지합니다."));
+		return;
+	}
+
+	const TObjectPtr<UCommonActivatableWidget>* FoundPanel = PanelInstances.Find(TargetPanelId);
+	if (!FoundPanel || !(*FoundPanel))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 포커스를 복구할 패널을 찾지 못했습니다. 패널 ID = %s"),
+		       *TargetPanelId.ToString());
+		return;
+	}
+
+	(*FoundPanel)->SetKeyboardFocus();
+
+	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: UI 포커스를 복구했습니다. 패널 ID = %s"), *TargetPanelId.ToString());
+}
+
 bool UEDUIManageSubsystem::IsHUDCreated() const
 {
 	return HUDLayoutInstance != nullptr;
@@ -369,7 +407,8 @@ FName UEDUIManageSubsystem::FindOpenPanelInLayer(EEDUILayer Layer) const
 			continue;
 		}
 
-		if (PanelInstance->IsActivated())
+		if (PanelInstance->IsActivated()
+			&& PanelInstance->GetVisibility() != ESlateVisibility::Collapsed)
 		{
 			return PanelId;
 		}
@@ -403,6 +442,8 @@ FName UEDUIManageSubsystem::FindTopPriorityOpenPanel() const
 
 void UEDUIManageSubsystem::RefreshInputMode()
 {
+	UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 입력 모드 갱신 시작"));
+
 	ULocalPlayer* LocalPlayer = GetLocalPlayer();
 	if (!LocalPlayer)
 	{
@@ -421,6 +462,10 @@ void UEDUIManageSubsystem::RefreshInputMode()
 	const FName OpenMenuPanel = FindOpenPanelInLayer(EEDUILayer::Menu);
 	const FName OpenGamePanel = FindOpenPanelInLayer(EEDUILayer::Game);
 
+	UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: OpenModalPanel = %s"), *OpenModalPanel.ToString());
+	UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: OpenMenuPanel = %s"), *OpenMenuPanel.ToString());
+	UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: OpenGamePanel = %s"), *OpenGamePanel.ToString());
+
 	// Menu 또는 Modal 패널이 열려 있으면 UI 입력을 함께 받도록 유지
 	if (!OpenModalPanel.IsNone() || !OpenMenuPanel.IsNone())
 	{
@@ -436,13 +481,15 @@ void UEDUIManageSubsystem::RefreshInputMode()
 	{
 		UWidgetBlueprintLibrary::SetInputMode_GameOnly(PlayerController);
 		PlayerController->bShowMouseCursor = false;
+		UWidgetBlueprintLibrary::SetFocusToGameViewport();
 
-		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 게임 레이어 패널이 열려 있어 게임 입력 모드를 유지합니다."));
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 게임 레이어 패널이 열려 있어 게임 입력 모드와 포커스를 유지합니다."));
 		return;
 	}
 
 	UWidgetBlueprintLibrary::SetInputMode_GameOnly(PlayerController);
 	PlayerController->bShowMouseCursor = false;
+	UWidgetBlueprintLibrary::SetFocusToGameViewport();
 
-	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 열린 패널이 없어 게임 입력 모드로 복귀했습니다."));
+	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 열린 패널이 없어 게임 입력 모드와 포커스를 게임 뷰포트로 복귀했습니다."));
 }
