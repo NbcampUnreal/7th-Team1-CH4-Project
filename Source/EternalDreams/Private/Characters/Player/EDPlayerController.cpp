@@ -2,3 +2,19 @@
 
 
 #include "Characters/Player/EDPlayerController.h"
+
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "Components/WidgetComponent.h"
+
+
+AEDPlayerController::AEDPlayerController()
+{
+
+}
+
+void AEDPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+
+}
+

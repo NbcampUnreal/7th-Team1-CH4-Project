@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "EDPlayerController.generated.h"
 
+class UWidgetComponent;
 class UInputMappingContext;
 class UInputAction;
 
@@ -16,6 +17,13 @@ UCLASS()
 class ETERNALDREAMS_API AEDPlayerController : public APlayerController
 {
 	GENERATED_BODY()
+	
+	AEDPlayerController();
+	
+	protected:
+	virtual void BeginPlay() override;
+
+	
 public:	
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
@@ -25,4 +33,6 @@ public:
 	TObjectPtr<UInputAction> MoveAction=nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> LookAction=nullptr;
+	
+
 };

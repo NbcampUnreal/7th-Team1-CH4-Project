@@ -6,12 +6,14 @@
 #include "SNegativeActionButton.h"
 #include "Characters/Player/EDPlayerCharacter.h"
 #include "Characters/Player/EDPlayerController.h"
+#include "Components/WidgetComponent.h"
 
 
 // Sets default values for this component's properties
 UIMCComponent::UIMCComponent()
 {
 
+	
 }
 
 
@@ -20,6 +22,7 @@ void UIMCComponent::BeginPlay()
 {
 	Super::BeginPlay();
 }
+
 
 void UIMCComponent::SetupPlayerInput(UInputComponent* PlayerInputComponent)
 {
@@ -71,6 +74,21 @@ void UIMCComponent::PlayerMove(const FInputActionValue& value)
 	PlayerCharacter->AddMovementInput(FVector(1,0,0), MoveInput.X);
 	PlayerCharacter->AddMovementInput(FVector(0,1,0), MoveInput.Y);
 	
+	//커서 컴포넌트 캐싱 및 위치 변경
+	FHitResult HitResult;
+	if (PlayerController->GetHitResultUnderCursor(ECC_Visibility,false, HitResult))
+	{
+		if (!IsValid(CursorWidget))
+		{
+			CursorWidget=GetOwner()->FindComponentByClass<UWidgetComponent>();
+			if (!IsValid(CursorWidget))
+			{
+				return;
+			}
+		}
+		CursorWidget->SetWorldLocation(HitResult.ImpactPoint);
+	}
+	
 }
 
 void UIMCComponent::PlayerLook(const FInputActionValue& value)
@@ -96,8 +114,20 @@ void UIMCComponent::PlayerLook(const FInputActionValue& value)
 		{
 			PlayerCharacter->GetMesh()->SetWorldRotation(LookAtRotation+FRotator(0,-90.f,0));
 		}
-
+		
+		//커서 컴포넌트 캐싱 및 위치 변경
+		if (!IsValid(CursorWidget))
+		{
+			CursorWidget=GetOwner()->FindComponentByClass<UWidgetComponent>();
+			if (!IsValid(CursorWidget))
+			{
+				return;
+			}
+		}
+		CursorWidget->SetWorldLocation(TargetLocation);
+		
 	}
+	
 }
 
 
