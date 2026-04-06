@@ -9,10 +9,24 @@ void AEDPlayerController_Temp::Server_RequestStartGame_Implementation()
 	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
 	if (!GM)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[PlayerController_Temp] Server_RequestStartGame 실패: GameMode nullptr."));
 		return;
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("[PlayerController_Temp] Server_RequestStartGame → GameMode::StartGame() 호출."));
 	GM->StartGame();
+}
+
+void AEDPlayerController_Temp::Server_RequestStartPhaseSequence_Implementation()
+{
+	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (!GM) return;
+
+	GM->StartPhaseSequence();
+}
+
+void AEDPlayerController_Temp::Server_RequestSkipPhase_Implementation()
+{
+	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (!GM) return;
+
+	GM->SkipToNextPhase();
 }

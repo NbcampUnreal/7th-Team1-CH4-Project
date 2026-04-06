@@ -11,13 +11,14 @@
 #include "Characters/Player/GAS/EDPlayerAttributeSet.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Blueprint/UserWidget.h"
+#include "Components/WidgetComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 
 // Sets default values
 AEDPlayerCharacter::AEDPlayerCharacter()
 {
-	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
 	
 	//Camera 관련 생성
 	SpringArm=CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
@@ -33,6 +34,9 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 	
 	//IMC 컴포넌트 생성
 	IMCComponent=CreateDefaultSubobject<UIMCComponent>(TEXT("IMCComponent"));
+	
+
+
 }
 
 // Called when the game starts or when spawned
@@ -62,11 +66,7 @@ void AEDPlayerCharacter::BeginPlay()
 	
 }
 
-// Called every frame
-void AEDPlayerCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-}
+
 
 // Called to bind functionality to input
 void AEDPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

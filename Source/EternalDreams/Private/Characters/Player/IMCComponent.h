@@ -7,8 +7,10 @@
 #include "IMCComponent.generated.h"
 
 
+class UWidgetComponent;
 class AEDPlayerController;
 class AEDPlayerCharacter;
+
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ETERNALDREAMS_API UIMCComponent : public UActorComponent
@@ -22,6 +24,7 @@ public:
 protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
+	
 
 	//콜백 함수
 public:
@@ -35,9 +38,14 @@ protected:
 	UPROPERTY()
 	TObjectPtr<AEDPlayerController> PlayerController;
 	
+	UPROPERTY()
+	TObjectPtr<UWidgetComponent> CursorWidget=nullptr;
+	
 	UFUNCTION()
 	void PlayerMove(const FInputActionValue& value);
 	UFUNCTION()
 	void PlayerLook(const FInputActionValue& value);
+	
+	
 
 };
