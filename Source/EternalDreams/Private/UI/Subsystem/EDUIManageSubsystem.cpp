@@ -7,6 +7,7 @@
 #include "GameFramework/PlayerController.h"
 #include "CommonActivatableWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Components/OverlaySlot.h"
 
 void UEDUIManageSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -327,7 +328,25 @@ bool UEDUIManageSubsystem::AttachPanelToLayer(FName PanelId, UCommonActivatableW
 		return true;
 	}
 
-	LayerSlot->AddChild(PanelInstance);
+	UPanelSlot* AddedSlot = LayerSlot->AddChild(PanelInstance);
+	if (!AddedSlot)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 패널을 레이어 슬롯에 추가하지 못했습니다. 패널 ID = %s"), *PanelId.ToString());
+		return false;
+	}
+
+	if (UOverlaySlot* OverlaySlot = Cast<UOverlaySlot>(AddedSlot))
+	{
+		OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+		OverlaySlot->SetVerticalAlignment(VAlign_Fill);
+
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: Overlay 슬롯 정렬을 화면 전체로 설정했습니다. 패널 ID = %s"),
+		       *PanelId.ToString());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: Overlay 슬롯 캐스팅에 실패했습니다. 패널 ID = %s"), *PanelId.ToString());
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널을 레이어 슬롯에 부착했습니다. 패널 ID = %s"), *PanelId.ToString());
 	return true;
