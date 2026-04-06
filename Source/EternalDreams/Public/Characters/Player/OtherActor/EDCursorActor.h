@@ -4,18 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-#include "CursorActor.generated.h"
+#include "EDCursorActor.generated.h"
 
 class UWidgetComponent;
 
 UCLASS()
-class ETERNALDREAMS_API ACursorActor : public AActor
+class ETERNALDREAMS_API AEDCursorActor : public AActor
 {
 	GENERATED_BODY()
 
 public:
 	// Sets default values for this actor's properties
-	ACursorActor();
+	AEDCursorActor();
 
 protected:
 	// Called when the game starts or when spawned

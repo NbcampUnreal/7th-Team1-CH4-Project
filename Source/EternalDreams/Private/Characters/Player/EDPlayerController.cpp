@@ -4,7 +4,8 @@
 #include "Characters/Player/EDPlayerController.h"
 
 #include "Blueprint/WidgetLayoutLibrary.h"
-#include "Characters/Player/CursorActor.h"
+#include "Characters/Player/OtherActor/EDCameraActor.h"
+#include "Characters/Player/OtherActor/EDCursorActor.h"
 #include "Components/WidgetComponent.h"
 
 
@@ -19,7 +20,10 @@ void AEDPlayerController::BeginPlay()
 	
 	if (IsLocalController())
 	{
-		CursorActor=GetWorld()->SpawnActor<ACursorActor>(CursorActorClass);
+		CursorActor=GetWorld()->SpawnActor<AEDCursorActor>(CursorActorClass);
+		CameraActor=GetWorld()->SpawnActor<AEDCameraActor>(CameraActorClass);
+		SetViewTargetWithBlend(CameraActor);
+
 	}
 }
 
