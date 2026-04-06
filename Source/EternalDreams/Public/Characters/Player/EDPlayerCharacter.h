@@ -85,10 +85,7 @@ protected:
 	
 	virtual void InitializeAbilitySystem();
 	
-	//커서 UI
-protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="UI")
-	TObjectPtr<UWidgetComponent> CursorWidget;
+
 
 	//캐싱
 protected:

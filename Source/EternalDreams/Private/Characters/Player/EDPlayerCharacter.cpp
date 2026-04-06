@@ -35,9 +35,7 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 	//IMC 컴포넌트 생성
 	IMCComponent=CreateDefaultSubobject<UIMCComponent>(TEXT("IMCComponent"));
 	
-	//위젯 컴포넌트 생성
-	CursorWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("CursorWidget"));
-	CursorWidget->SetWidgetSpace(EWidgetSpace::Screen);
+
 
 }
 

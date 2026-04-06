@@ -73,22 +73,6 @@ void UIMCComponent::PlayerMove(const FInputActionValue& value)
 	
 	PlayerCharacter->AddMovementInput(FVector(1,0,0), MoveInput.X);
 	PlayerCharacter->AddMovementInput(FVector(0,1,0), MoveInput.Y);
-	
-	//커서 컴포넌트 캐싱 및 위치 변경
-	FHitResult HitResult;
-	if (PlayerController->GetHitResultUnderCursor(ECC_Visibility,false, HitResult))
-	{
-		if (!IsValid(CursorWidget))
-		{
-			CursorWidget=GetOwner()->FindComponentByClass<UWidgetComponent>();
-			if (!IsValid(CursorWidget))
-			{
-				return;
-			}
-		}
-		CursorWidget->SetWorldLocation(HitResult.ImpactPoint);
-	}
-	
 }
 
 void UIMCComponent::PlayerLook(const FInputActionValue& value)
@@ -110,21 +94,7 @@ void UIMCComponent::PlayerLook(const FInputActionValue& value)
 		LookAtRotation.Pitch = 0.0f;
 		LookAtRotation.Roll = 0.0f;
 		
-		if (IsValid(PlayerCharacter->GetMesh()))
-		{
-			PlayerCharacter->GetMesh()->SetWorldRotation(LookAtRotation+FRotator(0,-90.f,0));
-		}
-		
-		//커서 컴포넌트 캐싱 및 위치 변경
-		if (!IsValid(CursorWidget))
-		{
-			CursorWidget=GetOwner()->FindComponentByClass<UWidgetComponent>();
-			if (!IsValid(CursorWidget))
-			{
-				return;
-			}
-		}
-		CursorWidget->SetWorldLocation(TargetLocation);
+		PlayerController->SetControlRotation(LookAtRotation);
 		
 	}
 	

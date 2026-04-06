@@ -6,6 +6,7 @@
 #include "GameFramework/PlayerController.h"
 #include "EDPlayerController.generated.h"
 
+class ACursorActor;
 class UWidgetComponent;
 class UInputMappingContext;
 class UInputAction;
@@ -34,5 +35,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> LookAction=nullptr;
 	
-
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="UIActor")
+	TSubclassOf<ACursorActor> CursorActorClass;
+	UPROPERTY()
+	TObjectPtr<ACursorActor> CursorActor;
 };
