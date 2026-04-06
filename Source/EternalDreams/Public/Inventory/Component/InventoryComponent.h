@@ -62,7 +62,13 @@ public:
     bool TryTransferItemAuto(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
+    bool TryTransferItemAutoDetailed(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EInventoryActionFailure& OutFailure);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool TryTransferItemToSlot(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory")
+    bool TryTransferItemToSlotDetailed(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool TryDropAllFromSlot(int32 FromSlotIndex);
@@ -82,8 +88,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory|Craft")
     bool TryCraftItem(FName RecipeId);
 
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Craft")
+    bool TryCraftItemDetailed(FName RecipeId, EInventoryActionFailure& OutFailure);
+
     UFUNCTION(BlueprintCallable, Category = "Inventory|Consumable")
     bool TryConsumeItemAtSlot(int32 SlotIndex);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Consumable")
+    bool TryConsumeItemAtSlotDetailed(int32 SlotIndex, EInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Init")
     bool EnsureDefaultEquipment();

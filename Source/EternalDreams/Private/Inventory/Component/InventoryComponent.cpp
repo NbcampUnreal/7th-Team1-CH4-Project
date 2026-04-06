@@ -180,8 +180,17 @@ bool UInventoryComponent::TryMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToS
 
 bool UInventoryComponent::TryTransferItemAuto(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity)
 {
+    EInventoryActionFailure Failure = EInventoryActionFailure::None;
+    return TryTransferItemAutoDetailed(ToInventory, FromSlotIndex, Quantity, Failure);
+}
+
+bool UInventoryComponent::TryTransferItemAutoDetailed(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EInventoryActionFailure& OutFailure)
+{
+    OutFailure = EInventoryActionFailure::None;
+
     if (!GetOwner())
     {
+        OutFailure = EInventoryActionFailure::InvalidInventory;
         return false;
     }
 
@@ -191,7 +200,7 @@ bool UInventoryComponent::TryTransferItemAuto(UInventoryComponent* ToInventory, 
         return true;
     }
 
-    const bool bSucceeded = FInventoryTransferService::TransferAuto(this, ToInventory, FromSlotIndex, Quantity);
+    const bool bSucceeded = FInventoryTransferService::TransferAuto(this, ToInventory, FromSlotIndex, Quantity, &OutFailure);
     if (bSucceeded)
     {
         OnInventoryChanged.Broadcast();
@@ -206,8 +215,17 @@ bool UInventoryComponent::TryTransferItemAuto(UInventoryComponent* ToInventory, 
 
 bool UInventoryComponent::TryTransferItemToSlot(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity)
 {
+    EInventoryActionFailure Failure = EInventoryActionFailure::None;
+    return TryTransferItemToSlotDetailed(ToInventory, FromSlotIndex, ToSlotIndex, Quantity, Failure);
+}
+
+bool UInventoryComponent::TryTransferItemToSlotDetailed(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EInventoryActionFailure& OutFailure)
+{
+    OutFailure = EInventoryActionFailure::None;
+
     if (!GetOwner())
     {
+        OutFailure = EInventoryActionFailure::InvalidInventory;
         return false;
     }
 
@@ -217,7 +235,7 @@ bool UInventoryComponent::TryTransferItemToSlot(UInventoryComponent* ToInventory
         return true;
     }
 
-    const bool bSucceeded = FInventoryTransferService::TransferToSlot(this, ToInventory, FromSlotIndex, ToSlotIndex, Quantity);
+    const bool bSucceeded = FInventoryTransferService::TransferToSlot(this, ToInventory, FromSlotIndex, ToSlotIndex, Quantity, &OutFailure);
     if (bSucceeded)
     {
         OnInventoryChanged.Broadcast();
@@ -365,8 +383,17 @@ bool UInventoryComponent::TryUnequipBottomArmor()
 
 bool UInventoryComponent::TryCraftItem(FName RecipeId)
 {
+    EInventoryActionFailure Failure = EInventoryActionFailure::None;
+    return TryCraftItemDetailed(RecipeId, Failure);
+}
+
+bool UInventoryComponent::TryCraftItemDetailed(FName RecipeId, EInventoryActionFailure& OutFailure)
+{
+    OutFailure = EInventoryActionFailure::None;
+
     if (!GetOwner())
     {
+        OutFailure = EInventoryActionFailure::InvalidInventory;
         return false;
     }
 
@@ -376,9 +403,15 @@ bool UInventoryComponent::TryCraftItem(FName RecipeId)
         return true;
     }
 
-    const bool bSucceeded = FInventoryCraftService::TryCraftByRecipeId(this, RecipeId);
+    const bool bSucceeded = FInventoryCraftService::TryCraftByRecipeId(this, RecipeId, &OutFailure);
     if (bSucceeded)
     {
+        if (bUseEquipmentSlots)
+        {
+            SyncEquipEffectForSlot(EEquippableType::Weapon);
+            SyncEquipEffectForSlot(EEquippableType::TopArmor);
+            SyncEquipEffectForSlot(EEquippableType::BottomArmor);
+        }
         OnInventoryChanged.Broadcast();
     }
 
@@ -387,8 +420,17 @@ bool UInventoryComponent::TryCraftItem(FName RecipeId)
 
 bool UInventoryComponent::TryConsumeItemAtSlot(int32 SlotIndex)
 {
+    EInventoryActionFailure Failure = EInventoryActionFailure::None;
+    return TryConsumeItemAtSlotDetailed(SlotIndex, Failure);
+}
+
+bool UInventoryComponent::TryConsumeItemAtSlotDetailed(int32 SlotIndex, EInventoryActionFailure& OutFailure)
+{
+    OutFailure = EInventoryActionFailure::None;
+
     if (!GetOwner())
     {
+        OutFailure = EInventoryActionFailure::InvalidInventory;
         return false;
     }
 
@@ -398,13 +440,20 @@ bool UInventoryComponent::TryConsumeItemAtSlot(int32 SlotIndex)
         return true;
     }
 
-    if (!InventorySlots.IsValidIndex(SlotIndex) || InventorySlots[SlotIndex].IsEmpty())
+    if (!InventorySlots.IsValidIndex(SlotIndex))
     {
+        OutFailure = EInventoryActionFailure::InvalidSlot;
+        return false;
+    }
+
+    if (InventorySlots[SlotIndex].IsEmpty())
+    {
+        OutFailure = EInventoryActionFailure::EmptySlot;
         return false;
     }
 
     const UInventoryItemDataAsset* ItemData = ResolveItemData(InventorySlots[SlotIndex].Item.ItemId);
-    if (!FInventoryValidationService::CanConsumeItem(ItemData, GetOwner()))
+    if (!FInventoryValidationService::CanConsumeItem(ItemData, GetOwner(), &OutFailure))
     {
         return false;
     }
@@ -414,6 +463,7 @@ bool UInventoryComponent::TryConsumeItemAtSlot(int32 SlotIndex)
         UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
         if (!UInventoryGASBridge::ApplyConsumableEffect(GetOwner(), ASC, ItemData))
         {
+            OutFailure = EInventoryActionFailure::EffectApplyFailed;
             return false;
         }
     }

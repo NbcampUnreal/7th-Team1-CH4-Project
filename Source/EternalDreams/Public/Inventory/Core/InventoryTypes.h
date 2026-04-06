@@ -16,6 +16,25 @@ enum class EInventoryDropReason : uint8
     System
 };
 
+UENUM(BlueprintType)
+enum class EInventoryActionFailure : uint8
+{
+    None,
+    InvalidInventory,
+    InvalidSlot,
+    EmptySlot,
+    InvalidQuantity,
+    SlotConflict,
+    NoSpace,
+    StackLimit,
+    MissingData,
+    InvalidRecipe,
+    MissingIngredient,
+    NotConsumable,
+    HealthAlreadyFull,
+    EffectApplyFailed
+};
+
 USTRUCT(BlueprintType)
 struct ETERNALDREAMS_API FInventorySlotData
 {

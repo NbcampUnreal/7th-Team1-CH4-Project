@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Inventory/Core/InventoryTypes.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "InventoryBlueprintLibrary.generated.h"
 
@@ -18,5 +19,10 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Inventory")
     static bool IsValidInventorySlotIndex(const UInventoryComponent* InventoryComponent, int32 SlotIndex);
-};
 
+    UFUNCTION(BlueprintPure, Category = "Inventory|Failure")
+    static bool IsInventoryActionSuccess(EInventoryActionFailure Failure);
+
+    UFUNCTION(BlueprintPure, Category = "Inventory|Failure")
+    static FText GetInventoryActionFailureText(EInventoryActionFailure Failure);
+};
