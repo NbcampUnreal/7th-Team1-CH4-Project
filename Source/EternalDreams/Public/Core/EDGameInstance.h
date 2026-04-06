@@ -3,8 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/EngineBaseTypes.h"
 #include "Engine/GameInstance.h"
 #include "EDGameInstance.generated.h"
+
+class UNetDriver;
 
 /**
  * UEDGameInstance
@@ -48,5 +51,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ED|GameInstance")
 	void JoinGame(const FString& ServerIP);
 
-
+private:
+	void HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& ErrorString);
+	void HandleTravelFailure(UWorld* World, ETravelFailure::Type FailureType, const FString& ErrorString);
 };
