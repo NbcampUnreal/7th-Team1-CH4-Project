@@ -45,20 +45,20 @@ struct FMonsterStatRow
 {
 	GENERATED_BODY()
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float MaxHP;
+	float MaxHP = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float Def;
+	float Def = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float Atk;
+	float Atk = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float MoveSpeed;
+	float MoveSpeed = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float DetectRange;
+	float DetectRange = 0.f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stat")
-	float AtkRange;
+	float AtkRange = 0.f;
 };
