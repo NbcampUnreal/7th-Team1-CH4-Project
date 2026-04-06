@@ -14,7 +14,7 @@
 
 namespace
 {
-const UInventoryItemDataAsset* ResolveItemData(const FPrimaryAssetId& ItemId)
+const UInventoryItemDataAsset* ResolveItemData_Component(const FPrimaryAssetId& ItemId)
 {
     if (!ItemId.IsValid())
     {
@@ -140,7 +140,7 @@ bool UInventoryComponent::SyncEquipEffectForSlot(EEquippableType SlotType)
         return true;
     }
 
-    const UInventoryItemDataAsset* ItemData = ResolveItemData(EquipmentSlot->EquippedItem.ItemId);
+    const UInventoryItemDataAsset* ItemData = ResolveItemData_Component(EquipmentSlot->EquippedItem.ItemId);
     if (!ItemData || !ItemData->EquipEffectClass)
     {
         return true;
@@ -452,7 +452,7 @@ bool UInventoryComponent::TryConsumeItemAtSlotDetailed(int32 SlotIndex, EInvento
         return false;
     }
 
-    const UInventoryItemDataAsset* ItemData = ResolveItemData(InventorySlots[SlotIndex].Item.ItemId);
+    const UInventoryItemDataAsset* ItemData = ResolveItemData_Component(InventorySlots[SlotIndex].Item.ItemId);
     if (!FInventoryValidationService::CanConsumeItem(ItemData, GetOwner(), &OutFailure))
     {
         return false;

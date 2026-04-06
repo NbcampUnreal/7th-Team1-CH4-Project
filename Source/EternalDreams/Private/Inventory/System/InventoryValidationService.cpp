@@ -7,7 +7,7 @@
 
 namespace
 {
-void SetFailure(EInventoryActionFailure* OutFailure, EInventoryActionFailure Failure)
+void SetFailure_Validation(EInventoryActionFailure* OutFailure, EInventoryActionFailure Failure)
 {
     if (OutFailure)
     {
@@ -38,23 +38,23 @@ bool FInventoryValidationService::CanEquipToSlot(const UInventoryItemDataAsset* 
 
 bool FInventoryValidationService::CanConsumeItem(const UInventoryItemDataAsset* ItemData, const AActor* OwnerActor, EInventoryActionFailure* OutFailure)
 {
-    SetFailure(OutFailure, EInventoryActionFailure::None);
+    SetFailure_Validation(OutFailure, EInventoryActionFailure::None);
 
     if (!ItemData)
     {
-        SetFailure(OutFailure, EInventoryActionFailure::MissingData);
+        SetFailure_Validation(OutFailure, EInventoryActionFailure::MissingData);
         return false;
     }
 
     if (ItemData->ItemType != EInventoryItemType::Consumable)
     {
-        SetFailure(OutFailure, EInventoryActionFailure::NotConsumable);
+        SetFailure_Validation(OutFailure, EInventoryActionFailure::NotConsumable);
         return false;
     }
 
     if (!OwnerActor)
     {
-        SetFailure(OutFailure, EInventoryActionFailure::InvalidInventory);
+        SetFailure_Validation(OutFailure, EInventoryActionFailure::InvalidInventory);
         return false;
     }
 
@@ -69,7 +69,7 @@ bool FInventoryValidationService::CanConsumeItem(const UInventoryItemDataAsset* 
 
     if (HealthConsumableTag.IsValid() && HealthFullTag.IsValid() && ItemData->ItemTags.HasTag(HealthConsumableTag) && ASC->HasMatchingGameplayTag(HealthFullTag))
     {
-        SetFailure(OutFailure, EInventoryActionFailure::HealthAlreadyFull);
+        SetFailure_Validation(OutFailure, EInventoryActionFailure::HealthAlreadyFull);
         return false;
     }
 

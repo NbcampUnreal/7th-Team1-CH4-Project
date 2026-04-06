@@ -7,7 +7,7 @@
 
 namespace
 {
-const UInventoryItemDataAsset* ResolveItemData(const FPrimaryAssetId& ItemId)
+const UInventoryItemDataAsset* ResolveItemData_Equipment(const FPrimaryAssetId& ItemId)
 {
     if (!ItemId.IsValid())
     {
@@ -27,7 +27,7 @@ const UInventoryItemDataAsset* ResolveItemData(const FPrimaryAssetId& ItemId)
     return Cast<UInventoryItemDataAsset>(ItemObject);
 }
 
-FEquipmentSlotData* GetEquipmentSlot(UInventoryComponent* InventoryComponent, EEquippableType SlotType)
+FEquipmentSlotData* GetEquipmentSlot_Equipment(UInventoryComponent* InventoryComponent, EEquippableType SlotType)
 {
     if (!InventoryComponent)
     {
@@ -93,13 +93,13 @@ bool FInventoryEquipmentService::EquipFromSlot(UInventoryComponent* InventoryCom
         return false;
     }
 
-    const UInventoryItemDataAsset* ItemData = ResolveItemData(SourceSlot.Item.ItemId);
+    const UInventoryItemDataAsset* ItemData = ResolveItemData_Equipment(SourceSlot.Item.ItemId);
     if (!FInventoryValidationService::CanEquipToSlot(ItemData, TargetSlotType))
     {
         return false;
     }
 
-    FEquipmentSlotData* EquipmentSlot = GetEquipmentSlot(InventoryComponent, TargetSlotType);
+    FEquipmentSlotData* EquipmentSlot = GetEquipmentSlot_Equipment(InventoryComponent, TargetSlotType);
     if (!EquipmentSlot)
     {
         return false;
