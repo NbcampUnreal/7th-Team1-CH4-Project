@@ -1,8 +1,8 @@
-#include "Inventory/GAS/InventoryGASBridge.h"
+#include "Inventory/GAS/EDInventoryGASBridge.h"
 
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
-#include "Item/Data/InventoryItemDataAsset.h"
+#include "Item/Data/EDInventoryItemDataAsset.h"
 
 namespace
 {
@@ -29,7 +29,7 @@ FActiveGameplayEffectHandle ApplyEffectClass(AActor* SourceActor, UAbilitySystem
 }
 }
 
-bool UInventoryGASBridge::ApplyConsumableEffect(AActor* SourceActor, UAbilitySystemComponent* TargetASC, const UInventoryItemDataAsset* ItemData)
+bool UEDInventoryGASBridge::ApplyConsumableEffect(AActor* SourceActor, UAbilitySystemComponent* TargetASC, const UEDInventoryItemDataAsset* ItemData)
 {
     if (!ItemData)
     {
@@ -39,12 +39,12 @@ bool UInventoryGASBridge::ApplyConsumableEffect(AActor* SourceActor, UAbilitySys
     return ApplyEffectClass(SourceActor, TargetASC, ItemData->ConsumableEffectClass).WasSuccessfullyApplied();
 }
 
-bool UInventoryGASBridge::ApplyEquipEffect(AActor* SourceActor, UAbilitySystemComponent* TargetASC, const UInventoryItemDataAsset* ItemData)
+bool UEDInventoryGASBridge::ApplyEquipEffect(AActor* SourceActor, UAbilitySystemComponent* TargetASC, const UEDInventoryItemDataAsset* ItemData)
 {
     return ApplyEquipEffectWithHandle(SourceActor, TargetASC, ItemData).WasSuccessfullyApplied();
 }
 
-FActiveGameplayEffectHandle UInventoryGASBridge::ApplyEquipEffectWithHandle(AActor* SourceActor, UAbilitySystemComponent* TargetASC, const UInventoryItemDataAsset* ItemData)
+FActiveGameplayEffectHandle UEDInventoryGASBridge::ApplyEquipEffectWithHandle(AActor* SourceActor, UAbilitySystemComponent* TargetASC, const UEDInventoryItemDataAsset* ItemData)
 {
     if (!ItemData)
     {
