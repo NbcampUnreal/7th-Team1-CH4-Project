@@ -7,6 +7,8 @@
 #include "AbilitySystemInterface.h"
 #include "EDPlayerCharacter.generated.h"
 
+class AEDPlayerController;
+class UWidgetComponent;
 class UCameraComponent;
 class USpringArmComponent;
 class UEDBaseAttributeSet;
@@ -31,8 +33,6 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
-	// Called every frame
-	virtual void Tick(float DeltaTime) override;
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -60,6 +60,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
 	float SpringArmLength=1000.f;
 	
+	
 	//Components
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
@@ -84,7 +85,11 @@ protected:
 	
 	virtual void InitializeAbilitySystem();
 	
-	
+
+
+	//캐싱
+protected:
+	TObjectPtr<AEDPlayerController> EDPC=nullptr;
 
 
 };
