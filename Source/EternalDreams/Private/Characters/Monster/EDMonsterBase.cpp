@@ -3,6 +3,7 @@
 
 #include "Characters/Monster/EDMonsterBase.h"
 #include "AbilitySystemComponent.h"
+#include "Abilities/GameplayAbility.h"
 #include "Characters/Monster/EDMonsterAnimInstance.h"
 #include "Data/EDMonsterDataAsset.h"
 #include "Net/UnrealNetwork.h"
@@ -20,6 +21,8 @@ AEDMonsterBase::AEDMonsterBase()
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 	// Idle상태로 시작
 	MonsterState = EMonsterState::Idle;
+	
+	BaseAttributeSet = CreateDefaultSubobject<UEDBaseAttributeSet>(TEXT("BaseAttributeSet"));
 }
 
 // Called when the game starts or when spawned
@@ -30,6 +33,20 @@ void AEDMonsterBase::BeginPlay()
 	if (IsValid(AbilitySystemComponent) == false)
 		return;
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	
+	OriginLocation = GetActorLocation();
+	
+	if (HasAuthority() == false)
+		return;
+	if (IsValid(DataAsset) == false)
+		return;
+	
+	for (const TSubclassOf<UGameplayAbility>& AbilityClass : DataAsset->GetDefaultAbilities())
+	{
+		if (IsValid(AbilityClass) == false)
+			continue;
+		AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityClass));
+	}
 }
 
 void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
@@ -41,6 +58,14 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	const FMonsterStatRow& Stat = InDataAsset->GetStat();
 	UE_LOG(LogTemp, Warning, TEXT("[%s] InitializeFromDataAsset - MaxHP: %.1f, Atk: %.1f"),
 		*GetName(), Stat.MaxHP, Stat.Atk)
+	if (IsValid(BaseAttributeSet) == false)
+		return;
+	BaseAttributeSet->InitMaxHealth(Stat.MaxHP);
+	BaseAttributeSet->InitHealth(Stat.MaxHP);
+	BaseAttributeSet->InitMaxDefensive(Stat.Def);
+	BaseAttributeSet->InitMaxWalkSpeed(Stat.MoveSpeed);
+	BaseAttributeSet->InitWalkSpeed(Stat.MoveSpeed);
+	
 	// TODO : AttributeSet 연결 후 Stat적용 
 	// TODO : Mesh, AnimInstance, BT - DataAsset에 getter 추가 후 비동기 로드
 }

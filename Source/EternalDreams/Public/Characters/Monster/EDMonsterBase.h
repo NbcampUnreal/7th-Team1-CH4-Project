@@ -5,8 +5,11 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
+#include "Characters/Base/GAS/EDBaseAttributeSet.h"
 #include "Data/Types/EDMonsterTypes.h"
 #include "EDMonsterBase.generated.h"
+
+DECLARE_MULTICAST_DELEGATE(FOnAttackFinished);
 
 class UAbilitySystemComponent;
 class UEDMonsterDataAsset;
@@ -28,6 +31,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category= "Data")
 	UEDMonsterDataAsset* GetDataAsset() const { return DataAsset; }
 	
+	FVector GetOriginLocation() const { return OriginLocation;}
+	
+	FOnAttackFinished OnAttackFinished;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -48,4 +54,9 @@ private:
 
 	UPROPERTY(ReplicatedUsing = OnRep_MonsterState)
 	EMonsterState MonsterState;
+	
+	UPROPERTY()
+	TObjectPtr<UEDBaseAttributeSet> BaseAttributeSet;
+	
+	FVector OriginLocation;
 };
