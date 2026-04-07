@@ -1,5 +1,4 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
-#include "Public/UI/Subsystem/EDUIManageSubsystem.h"
+﻿#include "Public/UI/Subsystem/EDUIManageSubsystem.h"
 
 #include "UI/HUD/EDHUDLayout.h"
 #include "Blueprint/UserWidget.h"
