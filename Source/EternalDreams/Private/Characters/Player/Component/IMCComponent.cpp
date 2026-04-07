@@ -27,13 +27,18 @@ void UIMCComponent::BeginPlay()
 void UIMCComponent::SetupPlayerInput(UInputComponent* PlayerInputComponent)
 {
 	UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent);
-	if (!EnhancedInputComponent) return;
-	
 	PlayerCharacter = Cast<AEDPlayerCharacter>(GetOwner());
-	if (!PlayerCharacter) return;
-
+	if (!EnhancedInputComponent||!PlayerCharacter)
+	{
+		return;
+	}
+	
+	
 	PlayerController = Cast<AEDPlayerController>(PlayerCharacter->GetController());
-	if (!PlayerController) return;
+	if (!PlayerController)
+	{
+		return;
+	}
 	
 	
 	if (UEnhancedInputComponent* InputComponents = Cast<UEnhancedInputComponent>(PlayerInputComponent))
