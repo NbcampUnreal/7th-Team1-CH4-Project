@@ -80,20 +80,35 @@ void AEDLobbyGameMode::TryStartGame()
 
 int32 AEDLobbyGameMode::GetTeamWithFewerPlayers() const
 {
-	int32 TeamACount = 0;
-	int32 TeamBCount = 0;
+	int32 Counts[EDTeam::PlayerTeamCount] = {};
 
 	AGameStateBase* GS = GetWorld()->GetGameState();
-	if (!GS) return 0;
+	if (!GS) return EDTeam::TeamA;
 
 	for (APlayerState* BasePS : GS->PlayerArray)
 	{
 		AEDPlayerState* PS = Cast<AEDPlayerState>(BasePS);
 		if (!PS) continue;
 
-		if (PS->TeamId == 0) TeamACount++;
-		else if (PS->TeamId == 1) TeamBCount++;
+		for (int32 i = 0; i < EDTeam::PlayerTeamCount; ++i)
+		{
+			if (PS->TeamId == EDTeam::PlayerTeams[i])
+			{
+				Counts[i]++;
+				break;
+			}
+		}
 	}
 
-	return (TeamACount <= TeamBCount) ? 0 : 1;
+	// 가장 인원 적은 팀 반환
+	int32 MinIndex = 0;
+	for (int32 i = 1; i < EDTeam::PlayerTeamCount; ++i)
+	{
+		if (Counts[i] < Counts[MinIndex])
+		{
+			MinIndex = i;
+		}
+	}
+
+	return EDTeam::PlayerTeams[MinIndex];
 }

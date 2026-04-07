@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Core/EDPlayerState.h"
 #include "GameFramework/GameState.h"
 #include "EDLobbyGameState.generated.h"
 
@@ -25,9 +26,7 @@ public:
 	/** PlayerArray를 순회하여 팀 인원 갱신 (서버에서 호출) */
 	void UpdateTeamCounts();
 
+	/** 팀별 인원 수 (인덱스 0 = TeamA, 1 = TeamB, 2 = TeamC) */
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "ED|Lobby")
-	int32 TeamACount = 0;
-
-	UPROPERTY(Replicated, BlueprintReadOnly, Category = "ED|Lobby")
-	int32 TeamBCount = 0;
+	TArray<int32> TeamCounts;
 };

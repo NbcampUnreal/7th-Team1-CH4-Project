@@ -6,32 +6,38 @@
 
 AEDLobbyGameState::AEDLobbyGameState()
 {
+	TeamCounts.SetNum(EDTeam::PlayerTeamCount);
 }
 
 void AEDLobbyGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	DOREPLIFETIME(AEDLobbyGameState, TeamACount);
-	DOREPLIFETIME(AEDLobbyGameState, TeamBCount);
+	DOREPLIFETIME(AEDLobbyGameState, TeamCounts);
 }
 
 void AEDLobbyGameState::UpdateTeamCounts()
 {
 	if (!HasAuthority()) return;
 
-	int32 CountA = 0;
-	int32 CountB = 0;
+	TeamCounts.SetNum(EDTeam::PlayerTeamCount);
+	for (int32& Count : TeamCounts)
+	{
+		Count = 0;
+	}
 
 	for (APlayerState* BasePS : PlayerArray)
 	{
 		AEDPlayerState* PS = Cast<AEDPlayerState>(BasePS);
 		if (!PS) continue;
 
-		if (PS->TeamId == 0) CountA++;
-		else if (PS->TeamId == 1) CountB++;
+		for (int32 i = 0; i < EDTeam::PlayerTeamCount; ++i)
+		{
+			if (PS->TeamId == EDTeam::PlayerTeams[i])
+			{
+				TeamCounts[i]++;
+				break;
+			}
+		}
 	}
-
-	TeamACount = CountA;
-	TeamBCount = CountB;
 }

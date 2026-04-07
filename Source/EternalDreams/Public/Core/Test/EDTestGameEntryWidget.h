@@ -41,12 +41,45 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> ReadyStatusText;
 
+	/** Team A 플레이어 목록 */
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> TeamAListText;
+
+	/** Team B 플레이어 목록 */
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> TeamBListText;
+
+	/** Team C 플레이어 목록 */
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UTextBlock> TeamCListText;
+
+	/** 팀 변경 버튼 */
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> TeamAButton;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> TeamBButton;
+
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UButton> TeamCButton;
+
 	UFUNCTION()
 	void OnJoinClicked();
 
 	UFUNCTION()
 	void OnReadyClicked();
 
+	UFUNCTION()
+	void OnTeamAClicked();
+
+	UFUNCTION()
+	void OnTeamBClicked();
+
+	UFUNCTION()
+	void OnTeamCClicked();
+
 private:
 	bool TrySaveNickname();
+	void UpdateTeamListUI();
+	void RequestChangeTeam(int32 NewTeamId);
 };
