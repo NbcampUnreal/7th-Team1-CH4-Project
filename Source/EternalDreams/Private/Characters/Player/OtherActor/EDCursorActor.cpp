@@ -1,14 +1,14 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "Characters/Player/CursorActor.h"
+#include "Characters/Player/OtherActor/EDCursorActor.h"
 
 #include "Components/WidgetComponent.h"
 #include "Kismet/GameplayStatics.h"
 
 
 // Sets default values
-ACursorActor::ACursorActor()
+AEDCursorActor::AEDCursorActor()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -20,14 +20,14 @@ ACursorActor::ACursorActor()
 }
 
 // Called when the game starts or when spawned
-void ACursorActor::BeginPlay()
+void AEDCursorActor::BeginPlay()
 {
 	Super::BeginPlay();
 	
 }
 
 // Called every frame
-void ACursorActor::Tick(float DeltaTime)
+void AEDCursorActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	

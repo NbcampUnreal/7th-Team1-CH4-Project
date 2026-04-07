@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "IMCComponent.h"
+#include "Characters/Player/Component/IMCComponent.h"
 #include "EnhancedInputComponent.h"
 #include "SNegativeActionButton.h"
 #include "Characters/Player/EDPlayerCharacter.h"

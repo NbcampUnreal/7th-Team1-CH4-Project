@@ -6,7 +6,8 @@
 #include "GameFramework/PlayerController.h"
 #include "EDPlayerController.generated.h"
 
-class ACursorActor;
+class AEDCameraActor;
+class AEDCursorActor;
 class UWidgetComponent;
 class UInputMappingContext;
 class UInputAction;
@@ -44,12 +45,21 @@ public:
 
 	// ESC 입력 처리용 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> LookAction=nullptr;
+	
+	//Actors
 	TObjectPtr<UInputAction> UIBackAction = nullptr;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="UIActor")
-	TSubclassOf<ACursorActor> CursorActorClass;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Actor")
+	TSubclassOf<AEDCursorActor> CursorActorClass;
 	UPROPERTY()
+	TObjectPtr<AEDCursorActor> CursorActor;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Actor")
+	TSubclassOf<AEDCameraActor> CameraActorClass;
+	UPROPERTY()
+	TObjectPtr<AEDCameraActor> CameraActor;
 	TObjectPtr<ACursorActor> CursorActor;
 
 private:

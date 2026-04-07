@@ -48,18 +48,6 @@ public:
 	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	
-
-	
-	
-protected:
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-	UCameraComponent* Camera;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-	USpringArmComponent* SpringArm;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-	float SpringArmLength=1000.f;
-	
 	
 	//Components
 protected:
@@ -69,7 +57,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
 	TObjectPtr<UIMCComponent> IMCComponent;
 	
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	UCameraComponent* Camera;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	USpringArmComponent* SpringArm;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	float SpringArmLength=1000.f;
 	
 	
 protected:

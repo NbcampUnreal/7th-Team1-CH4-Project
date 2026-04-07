@@ -4,7 +4,7 @@
 #include "Characters/Player/EDPlayerCharacter.h"
 
 #include "AbilitySystemComponent.h"
-#include "IMCComponent.h"
+#include "Characters/Player/Component/IMCComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Characters/Base/GAS/EDBaseAttributeSet.h"
 #include "Characters/Player/EDPlayerController.h"
@@ -19,14 +19,6 @@
 // Sets default values
 AEDPlayerCharacter::AEDPlayerCharacter()
 {
-	
-	//Camera 관련 생성
-	SpringArm=CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-	SpringArm->TargetArmLength = SpringArmLength;
-	SpringArm->SetupAttachment(RootComponent);
-	Camera=CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	Camera->SetupAttachment(SpringArm);
-	
 	// ASC 생성
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
@@ -35,8 +27,6 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 	//IMC 컴포넌트 생성
 	IMCComponent=CreateDefaultSubobject<UIMCComponent>(TEXT("IMCComponent"));
 	
-
-
 }
 
 // Called when the game starts or when spawned
