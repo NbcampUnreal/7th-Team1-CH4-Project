@@ -1,13 +1,13 @@
-#include "Inventory/System/InventoryCraftService.h"
+#include "Inventory/System/EDInventoryCraftService.h"
 
 #include "Engine/AssetManager.h"
-#include "Inventory/Component/InventoryComponent.h"
-#include "Item/Data/InventoryItemDataAsset.h"
-#include "Item/Data/ItemDataRows.h"
+#include "Inventory/Component/EDInventoryComponent.h"
+#include "Item/Data/EDInventoryItemDataAsset.h"
+#include "Item/Data/EDItemDataRows.h"
 
 namespace
 {
-const UInventoryItemDataAsset* ResolveItemData_Craft(const FPrimaryAssetId& ItemId)
+const UEDInventoryItemDataAsset* ResolveItemData_Craft(const FPrimaryAssetId& ItemId)
 {
     if (!ItemId.IsValid())
     {
@@ -24,16 +24,16 @@ const UInventoryItemDataAsset* ResolveItemData_Craft(const FPrimaryAssetId& Item
         }
     }
 
-    return Cast<UInventoryItemDataAsset>(ItemObject);
+    return Cast<UEDInventoryItemDataAsset>(ItemObject);
 }
 
 int32 GetItemMaxStack_Craft(const FPrimaryAssetId& ItemId)
 {
-    const UInventoryItemDataAsset* ItemData = ResolveItemData_Craft(ItemId);
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Craft(ItemId);
     return ItemData ? FMath::Max(1, ItemData->MaxStack) : 1;
 }
 
-void SetFailure_Craft(EInventoryActionFailure* OutFailure, EInventoryActionFailure Failure)
+void SetFailure_Craft(EEDInventoryActionFailure* OutFailure, EEDInventoryActionFailure Failure)
 {
     if (OutFailure)
     {
@@ -41,10 +41,10 @@ void SetFailure_Craft(EInventoryActionFailure* OutFailure, EInventoryActionFailu
     }
 }
 
-int32 CountItemInInventory(const UInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId)
+int32 CountItemInInventory(const UEDInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId)
 {
     int32 Count = 0;
-    for (const FInventorySlotData& Slot : InventoryComponent->InventorySlots)
+    for (const FEDInventorySlotData& Slot : InventoryComponent->InventorySlots)
     {
         if (!Slot.IsEmpty() && Slot.Item.ItemId == ItemId)
         {
@@ -55,12 +55,12 @@ int32 CountItemInInventory(const UInventoryComponent* InventoryComponent, const 
     return Count;
 }
 
-bool CanStoreResultItem(const UInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId, int32 Quantity)
+bool CanStoreResultItem(const UEDInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId, int32 Quantity)
 {
     const int32 MaxStack = GetItemMaxStack_Craft(ItemId);
     int32 Capacity = 0;
 
-    for (const FInventorySlotData& Slot : InventoryComponent->InventorySlots)
+    for (const FEDInventorySlotData& Slot : InventoryComponent->InventorySlots)
     {
         if (Slot.IsEmpty())
         {
@@ -80,12 +80,12 @@ bool CanStoreResultItem(const UInventoryComponent* InventoryComponent, const FPr
     return false;
 }
 
-bool IsEquipmentResult(const UInventoryItemDataAsset* ItemData)
+bool IsEquipmentResult(const UEDInventoryItemDataAsset* ItemData)
 {
-    return ItemData && ItemData->ItemType == EInventoryItemType::Equippable && ItemData->EquippableType != EEquippableType::None;
+    return ItemData && ItemData->ItemType == EEDInventoryItemType::Equippable && ItemData->EquippableType != EEDEquippableType::None;
 }
 
-FEquipmentSlotData* GetEquipmentSlot_Craft(UInventoryComponent* InventoryComponent, EEquippableType SlotType)
+FEDEquipmentSlotData* GetEquipmentSlot_Craft(UEDInventoryComponent* InventoryComponent, EEDEquippableType SlotType)
 {
     if (!InventoryComponent)
     {
@@ -94,29 +94,29 @@ FEquipmentSlotData* GetEquipmentSlot_Craft(UInventoryComponent* InventoryCompone
 
     switch (SlotType)
     {
-    case EEquippableType::Weapon:
+    case EEDEquippableType::Weapon:
         return &InventoryComponent->WeaponSlot;
-    case EEquippableType::TopArmor:
+    case EEDEquippableType::TopArmor:
         return &InventoryComponent->TopArmorSlot;
-    case EEquippableType::BottomArmor:
+    case EEDEquippableType::BottomArmor:
         return &InventoryComponent->BottomArmorSlot;
     default:
         return nullptr;
     }
 }
 
-int32 CountItemInEquipment(const UInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId)
+int32 CountItemInEquipment(const UEDInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId)
 {
     int32 Count = 0;
 
-    const TArray<const FEquipmentSlotData*> EquipmentSlots =
+    const TArray<const FEDEquipmentSlotData*> EquipmentSlots =
     {
         &InventoryComponent->WeaponSlot,
         &InventoryComponent->TopArmorSlot,
         &InventoryComponent->BottomArmorSlot
     };
 
-    for (const FEquipmentSlotData* Slot : EquipmentSlots)
+    for (const FEDEquipmentSlotData* Slot : EquipmentSlots)
     {
         if (Slot && Slot->EquippedItem.IsValid() && Slot->EquippedItem.ItemId == ItemId)
         {
@@ -127,12 +127,12 @@ int32 CountItemInEquipment(const UInventoryComponent* InventoryComponent, const 
     return Count;
 }
 
-int32 CountItemTotal(const UInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId)
+int32 CountItemTotal(const UEDInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId)
 {
     return CountItemInInventory(InventoryComponent, ItemId) + CountItemInEquipment(InventoryComponent, ItemId);
 }
 
-int32 StoreItemToInventory(UInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId, int32 Quantity)
+int32 StoreItemToInventory(UEDInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId, int32 Quantity)
 {
     if (!InventoryComponent || !ItemId.IsValid() || Quantity <= 0)
     {
@@ -142,7 +142,7 @@ int32 StoreItemToInventory(UInventoryComponent* InventoryComponent, const FPrima
     const int32 MaxStack = GetItemMaxStack_Craft(ItemId);
     int32 Remaining = Quantity;
 
-    for (FInventorySlotData& Slot : InventoryComponent->InventorySlots)
+    for (FEDInventorySlotData& Slot : InventoryComponent->InventorySlots)
     {
         if (Remaining <= 0)
         {
@@ -161,7 +161,7 @@ int32 StoreItemToInventory(UInventoryComponent* InventoryComponent, const FPrima
         }
     }
 
-    for (FInventorySlotData& Slot : InventoryComponent->InventorySlots)
+    for (FEDInventorySlotData& Slot : InventoryComponent->InventorySlots)
     {
         if (Remaining <= 0)
         {
@@ -180,43 +180,43 @@ int32 StoreItemToInventory(UInventoryComponent* InventoryComponent, const FPrima
     return Remaining;
 }
 
-void DropCraftedItem(UInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId, int32 Quantity)
+void DropCraftedItem(UEDInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId, int32 Quantity)
 {
     if (!InventoryComponent || !ItemId.IsValid() || Quantity <= 0)
     {
         return;
     }
 
-    FInventoryDropRequest DropRequest;
+    FEDInventoryDropRequest DropRequest;
     DropRequest.Item.ItemId = ItemId;
     DropRequest.Item.Quantity = Quantity;
     DropRequest.SourceOwner = InventoryComponent->GetOwner();
-    DropRequest.Reason = EInventoryDropReason::CraftSwap;
+    DropRequest.Reason = EEDInventoryDropReason::CraftSwap;
     InventoryComponent->OnInventoryDropRequested.Broadcast(DropRequest);
 }
 
-bool ConsumeIngredientFromEquipment(UInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId, int32& InOutRemaining, bool& bOutUsedEquippedIngredient, EEquippableType& OutLastConsumedSlotType)
+bool ConsumeIngredientFromEquipment(UEDInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId, int32& InOutRemaining, bool& bOutUsedEquippedIngredient, EEDEquippableType& OutLastConsumedSlotType)
 {
     if (!InventoryComponent || InOutRemaining <= 0)
     {
         return true;
     }
 
-    const TArray<EEquippableType> ConsumeOrder =
+    const TArray<EEDEquippableType> ConsumeOrder =
     {
-        EEquippableType::Weapon,
-        EEquippableType::TopArmor,
-        EEquippableType::BottomArmor
+        EEDEquippableType::Weapon,
+        EEDEquippableType::TopArmor,
+        EEDEquippableType::BottomArmor
     };
 
-    for (EEquippableType SlotType : ConsumeOrder)
+    for (EEDEquippableType SlotType : ConsumeOrder)
     {
         if (InOutRemaining <= 0)
         {
             break;
         }
 
-        FEquipmentSlotData* Slot = GetEquipmentSlot_Craft(InventoryComponent, SlotType);
+        FEDEquipmentSlotData* Slot = GetEquipmentSlot_Craft(InventoryComponent, SlotType);
         if (Slot && Slot->EquippedItem.IsValid() && Slot->EquippedItem.ItemId == ItemId)
         {
             const int32 ConsumeCount = FMath::Min(InOutRemaining, Slot->EquippedItem.Quantity);
@@ -227,7 +227,7 @@ bool ConsumeIngredientFromEquipment(UInventoryComponent* InventoryComponent, con
 
             if (Slot->EquippedItem.Quantity <= 0)
             {
-                Slot->EquippedItem = FInventoryItemHandle();
+                Slot->EquippedItem = FEDInventoryItemHandle();
             }
         }
     }
@@ -235,19 +235,19 @@ bool ConsumeIngredientFromEquipment(UInventoryComponent* InventoryComponent, con
     return InOutRemaining <= 0;
 }
 
-bool ShouldAutoEquipCraftResult(UInventoryComponent* InventoryComponent, EEquippableType ResultSlotType, bool bUsedEquippedIngredient, EEquippableType LastConsumedSlotType)
+bool ShouldAutoEquipCraftResult(UEDInventoryComponent* InventoryComponent, EEDEquippableType ResultSlotType, bool bUsedEquippedIngredient, EEDEquippableType LastConsumedSlotType)
 {
     if (!InventoryComponent || !InventoryComponent->bUseEquipmentSlots)
     {
         return false;
     }
 
-    if (ResultSlotType == EEquippableType::Weapon)
+    if (ResultSlotType == EEDEquippableType::Weapon)
     {
         return true;
     }
 
-    FEquipmentSlotData* ResultSlot = GetEquipmentSlot_Craft(InventoryComponent, ResultSlotType);
+    FEDEquipmentSlotData* ResultSlot = GetEquipmentSlot_Craft(InventoryComponent, ResultSlotType);
     if (!ResultSlot)
     {
         return false;
@@ -261,9 +261,9 @@ bool ShouldAutoEquipCraftResult(UInventoryComponent* InventoryComponent, EEquipp
     return !ResultSlot->EquippedItem.IsValid();
 }
 
-void EquipCraftResultOrFallback(UInventoryComponent* InventoryComponent, EEquippableType SlotType, const FPrimaryAssetId& ResultItemId)
+void EquipCraftResultOrFallback(UEDInventoryComponent* InventoryComponent, EEDEquippableType SlotType, const FPrimaryAssetId& ResultItemId)
 {
-    FEquipmentSlotData* TargetSlot = GetEquipmentSlot_Craft(InventoryComponent, SlotType);
+    FEDEquipmentSlotData* TargetSlot = GetEquipmentSlot_Craft(InventoryComponent, SlotType);
     if (!InventoryComponent || !TargetSlot || !ResultItemId.IsValid())
     {
         return;
@@ -271,7 +271,7 @@ void EquipCraftResultOrFallback(UInventoryComponent* InventoryComponent, EEquipp
 
     if (TargetSlot->EquippedItem.IsValid())
     {
-        const FInventoryItemHandle PreviousEquippedItem = TargetSlot->EquippedItem;
+        const FEDInventoryItemHandle PreviousEquippedItem = TargetSlot->EquippedItem;
         int32 RemainingPrevious = StoreItemToInventory(InventoryComponent, PreviousEquippedItem.ItemId, PreviousEquippedItem.Quantity);
         if (RemainingPrevious > 0)
         {
@@ -284,54 +284,54 @@ void EquipCraftResultOrFallback(UInventoryComponent* InventoryComponent, EEquipp
 }
 }
 
-bool FInventoryCraftService::TryCraftByRecipeId(UInventoryComponent* InventoryComponent, FName RecipeId, EInventoryActionFailure* OutFailure)
+bool FEDInventoryCraftService::TryCraftByRecipeId(UEDInventoryComponent* InventoryComponent, FName RecipeId, EEDInventoryActionFailure* OutFailure)
 {
-    SetFailure_Craft(OutFailure, EInventoryActionFailure::None);
+    SetFailure_Craft(OutFailure, EEDInventoryActionFailure::None);
 
     if (!InventoryComponent || !InventoryComponent->CraftingRecipeTable || RecipeId.IsNone())
     {
-        SetFailure_Craft(OutFailure, EInventoryActionFailure::InvalidRecipe);
+        SetFailure_Craft(OutFailure, EEDInventoryActionFailure::InvalidRecipe);
         return false;
     }
 
-    const FCraftingRecipeRow* RecipeRow = InventoryComponent->CraftingRecipeTable->FindRow<FCraftingRecipeRow>(RecipeId, TEXT("TryCraftByRecipeId"));
+    const FEDCraftingRecipeRow* RecipeRow = InventoryComponent->CraftingRecipeTable->FindRow<FEDCraftingRecipeRow>(RecipeId, TEXT("TryCraftByRecipeId"));
     if (!RecipeRow || !RecipeRow->ResultItemId.IsValid() || RecipeRow->ResultQuantity <= 0)
     {
-        SetFailure_Craft(OutFailure, EInventoryActionFailure::InvalidRecipe);
+        SetFailure_Craft(OutFailure, EEDInventoryActionFailure::InvalidRecipe);
         return false;
     }
 
-    const UInventoryItemDataAsset* ResultItemData = ResolveItemData_Craft(RecipeRow->ResultItemId);
+    const UEDInventoryItemDataAsset* ResultItemData = ResolveItemData_Craft(RecipeRow->ResultItemId);
     const bool bIsEquipmentResult = IsEquipmentResult(ResultItemData);
-    const EEquippableType ResultSlotType = bIsEquipmentResult ? ResultItemData->EquippableType : EEquippableType::None;
+    const EEDEquippableType ResultSlotType = bIsEquipmentResult ? ResultItemData->EquippableType : EEDEquippableType::None;
 
-    for (const FCraftingIngredientRow& Ingredient : RecipeRow->Ingredients)
+    for (const FEDCraftingIngredientRow& Ingredient : RecipeRow->Ingredients)
     {
         if (!Ingredient.ItemId.IsValid() || Ingredient.Quantity <= 0)
         {
-            SetFailure_Craft(OutFailure, EInventoryActionFailure::InvalidRecipe);
+            SetFailure_Craft(OutFailure, EEDInventoryActionFailure::InvalidRecipe);
             return false;
         }
 
         if (CountItemTotal(InventoryComponent, Ingredient.ItemId) < Ingredient.Quantity)
         {
-            SetFailure_Craft(OutFailure, EInventoryActionFailure::MissingIngredient);
+            SetFailure_Craft(OutFailure, EEDInventoryActionFailure::MissingIngredient);
             return false;
         }
     }
 
     if (!bIsEquipmentResult && !CanStoreResultItem(InventoryComponent, RecipeRow->ResultItemId, RecipeRow->ResultQuantity))
     {
-        SetFailure_Craft(OutFailure, EInventoryActionFailure::NoSpace);
+        SetFailure_Craft(OutFailure, EEDInventoryActionFailure::NoSpace);
         return false;
     }
 
     bool bUsedEquippedIngredient = false;
-    EEquippableType LastConsumedEquippedSlotType = EEquippableType::None;
-    for (const FCraftingIngredientRow& Ingredient : RecipeRow->Ingredients)
+    EEDEquippableType LastConsumedEquippedSlotType = EEDEquippableType::None;
+    for (const FEDCraftingIngredientRow& Ingredient : RecipeRow->Ingredients)
     {
         int32 Remaining = Ingredient.Quantity;
-        for (FInventorySlotData& Slot : InventoryComponent->InventorySlots)
+        for (FEDInventorySlotData& Slot : InventoryComponent->InventorySlots)
         {
             if (Remaining <= 0)
             {
@@ -346,7 +346,7 @@ bool FInventoryCraftService::TryCraftByRecipeId(UInventoryComponent* InventoryCo
 
                 if (Slot.Item.Quantity <= 0)
                 {
-                    Slot.Item = FInventoryItemHandle();
+                    Slot.Item = FEDInventoryItemHandle();
                 }
             }
         }
@@ -374,7 +374,7 @@ bool FInventoryCraftService::TryCraftByRecipeId(UInventoryComponent* InventoryCo
             return true;
         }
 
-        SetFailure_Craft(OutFailure, EInventoryActionFailure::NoSpace);
+        SetFailure_Craft(OutFailure, EEDInventoryActionFailure::NoSpace);
         return false;
     }
 

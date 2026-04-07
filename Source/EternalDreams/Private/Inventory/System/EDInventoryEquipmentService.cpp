@@ -1,13 +1,13 @@
-#include "Inventory/System/InventoryEquipmentService.h"
+#include "Inventory/System/EDInventoryEquipmentService.h"
 
 #include "Engine/AssetManager.h"
-#include "Inventory/Component/InventoryComponent.h"
-#include "Inventory/System/InventoryValidationService.h"
-#include "Item/Data/InventoryItemDataAsset.h"
+#include "Inventory/Component/EDInventoryComponent.h"
+#include "Inventory/System/EDInventoryValidationService.h"
+#include "Item/Data/EDInventoryItemDataAsset.h"
 
 namespace
 {
-const UInventoryItemDataAsset* ResolveItemData_Equipment(const FPrimaryAssetId& ItemId)
+const UEDInventoryItemDataAsset* ResolveItemData_Equipment(const FPrimaryAssetId& ItemId)
 {
     if (!ItemId.IsValid())
     {
@@ -24,10 +24,10 @@ const UInventoryItemDataAsset* ResolveItemData_Equipment(const FPrimaryAssetId& 
         }
     }
 
-    return Cast<UInventoryItemDataAsset>(ItemObject);
+    return Cast<UEDInventoryItemDataAsset>(ItemObject);
 }
 
-FEquipmentSlotData* GetEquipmentSlot_Equipment(UInventoryComponent* InventoryComponent, EEquippableType SlotType)
+FEDEquipmentSlotData* GetEquipmentSlot_Equipment(UEDInventoryComponent* InventoryComponent, EEDEquippableType SlotType)
 {
     if (!InventoryComponent)
     {
@@ -36,46 +36,46 @@ FEquipmentSlotData* GetEquipmentSlot_Equipment(UInventoryComponent* InventoryCom
 
     switch (SlotType)
     {
-    case EEquippableType::Weapon:
+    case EEDEquippableType::Weapon:
         return &InventoryComponent->WeaponSlot;
-    case EEquippableType::TopArmor:
+    case EEDEquippableType::TopArmor:
         return &InventoryComponent->TopArmorSlot;
-    case EEquippableType::BottomArmor:
+    case EEDEquippableType::BottomArmor:
         return &InventoryComponent->BottomArmorSlot;
     default:
         return nullptr;
     }
 }
 
-bool TryUnequipToInventoryOrDrop(UInventoryComponent* InventoryComponent, FEquipmentSlotData& EquipmentSlot)
+bool TryUnequipToInventoryOrDrop(UEDInventoryComponent* InventoryComponent, FEDEquipmentSlotData& EquipmentSlot)
 {
     if (!InventoryComponent || !EquipmentSlot.EquippedItem.IsValid())
     {
         return false;
     }
 
-    for (FInventorySlotData& Slot : InventoryComponent->InventorySlots)
+    for (FEDInventorySlotData& Slot : InventoryComponent->InventorySlots)
     {
         if (Slot.IsEmpty())
         {
             Slot.Item = EquipmentSlot.EquippedItem;
-            EquipmentSlot.EquippedItem = FInventoryItemHandle();
+            EquipmentSlot.EquippedItem = FEDInventoryItemHandle();
             return true;
         }
     }
 
-    FInventoryDropRequest DropRequest;
+    FEDInventoryDropRequest DropRequest;
     DropRequest.Item = EquipmentSlot.EquippedItem;
     DropRequest.SourceOwner = InventoryComponent->GetOwner();
-    DropRequest.Reason = EInventoryDropReason::UnequipNoSpace;
+    DropRequest.Reason = EEDInventoryDropReason::UnequipNoSpace;
     InventoryComponent->OnInventoryDropRequested.Broadcast(DropRequest);
 
-    EquipmentSlot.EquippedItem = FInventoryItemHandle();
+    EquipmentSlot.EquippedItem = FEDInventoryItemHandle();
     return true;
 }
 }
 
-bool FInventoryEquipmentService::EquipFromSlot(UInventoryComponent* InventoryComponent, int32 FromSlotIndex, EEquippableType TargetSlotType)
+bool FEDInventoryEquipmentService::EquipFromSlot(UEDInventoryComponent* InventoryComponent, int32 FromSlotIndex, EEDEquippableType TargetSlotType)
 {
     if (!InventoryComponent || !InventoryComponent->bUseEquipmentSlots)
     {
@@ -87,19 +87,19 @@ bool FInventoryEquipmentService::EquipFromSlot(UInventoryComponent* InventoryCom
         return false;
     }
 
-    FInventorySlotData& SourceSlot = InventoryComponent->InventorySlots[FromSlotIndex];
+    FEDInventorySlotData& SourceSlot = InventoryComponent->InventorySlots[FromSlotIndex];
     if (SourceSlot.IsEmpty())
     {
         return false;
     }
 
-    const UInventoryItemDataAsset* ItemData = ResolveItemData_Equipment(SourceSlot.Item.ItemId);
-    if (!FInventoryValidationService::CanEquipToSlot(ItemData, TargetSlotType))
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Equipment(SourceSlot.Item.ItemId);
+    if (!FEDInventoryValidationService::CanEquipToSlot(ItemData, TargetSlotType))
     {
         return false;
     }
 
-    FEquipmentSlotData* EquipmentSlot = GetEquipmentSlot_Equipment(InventoryComponent, TargetSlotType);
+    FEDEquipmentSlotData* EquipmentSlot = GetEquipmentSlot_Equipment(InventoryComponent, TargetSlotType);
     if (!EquipmentSlot)
     {
         return false;
@@ -107,18 +107,18 @@ bool FInventoryEquipmentService::EquipFromSlot(UInventoryComponent* InventoryCom
 
     if (EquipmentSlot->EquippedItem.IsValid())
     {
-        const FInventoryItemHandle PreviousEquippedItem = EquipmentSlot->EquippedItem;
+        const FEDInventoryItemHandle PreviousEquippedItem = EquipmentSlot->EquippedItem;
         EquipmentSlot->EquippedItem = SourceSlot.Item;
         SourceSlot.Item = PreviousEquippedItem;
         return true;
     }
 
     EquipmentSlot->EquippedItem = SourceSlot.Item;
-    SourceSlot.Item = FInventoryItemHandle();
+    SourceSlot.Item = FEDInventoryItemHandle();
     return true;
 }
 
-bool FInventoryEquipmentService::UnequipTopArmor(UInventoryComponent* InventoryComponent)
+bool FEDInventoryEquipmentService::UnequipTopArmor(UEDInventoryComponent* InventoryComponent)
 {
     if (!InventoryComponent || !InventoryComponent->bUseEquipmentSlots)
     {
@@ -128,7 +128,7 @@ bool FInventoryEquipmentService::UnequipTopArmor(UInventoryComponent* InventoryC
     return TryUnequipToInventoryOrDrop(InventoryComponent, InventoryComponent->TopArmorSlot);
 }
 
-bool FInventoryEquipmentService::UnequipBottomArmor(UInventoryComponent* InventoryComponent)
+bool FEDInventoryEquipmentService::UnequipBottomArmor(UEDInventoryComponent* InventoryComponent)
 {
     if (!InventoryComponent || !InventoryComponent->bUseEquipmentSlots)
     {
@@ -138,7 +138,7 @@ bool FInventoryEquipmentService::UnequipBottomArmor(UInventoryComponent* Invento
     return TryUnequipToInventoryOrDrop(InventoryComponent, InventoryComponent->BottomArmorSlot);
 }
 
-bool FInventoryEquipmentService::EnsureDefaultWeapon(UInventoryComponent* InventoryComponent)
+bool FEDInventoryEquipmentService::EnsureDefaultWeapon(UEDInventoryComponent* InventoryComponent)
 {
     if (!InventoryComponent || !InventoryComponent->bUseEquipmentSlots)
     {

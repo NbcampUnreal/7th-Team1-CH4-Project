@@ -2,13 +2,13 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
-#include "Item/Core/ItemTypes.h"
-#include "InventoryTypes.generated.h"
+#include "Item/Core/EDItemTypes.h"
+#include "EDInventoryTypes.generated.h"
 
 class AActor;
 
 UENUM(BlueprintType)
-enum class EInventoryDropReason : uint8
+enum class EEDInventoryDropReason : uint8
 {
     UserRequested,
     UnequipNoSpace,
@@ -17,7 +17,7 @@ enum class EInventoryDropReason : uint8
 };
 
 UENUM(BlueprintType)
-enum class EInventoryActionFailure : uint8
+enum class EEDInventoryActionFailure : uint8
 {
     None,
     InvalidInventory,
@@ -36,12 +36,12 @@ enum class EInventoryActionFailure : uint8
 };
 
 USTRUCT(BlueprintType)
-struct ETERNALDREAMS_API FInventorySlotData
+struct ETERNALDREAMS_API FEDInventorySlotData
 {
     GENERATED_BODY()
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-    FInventoryItemHandle Item;
+    FEDInventoryItemHandle Item;
 
     bool IsEmpty() const
     {
@@ -50,30 +50,30 @@ struct ETERNALDREAMS_API FInventorySlotData
 };
 
 USTRUCT(BlueprintType)
-struct ETERNALDREAMS_API FEquipmentSlotData
+struct ETERNALDREAMS_API FEDEquipmentSlotData
 {
     GENERATED_BODY()
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-    EEquippableType SlotType = EEquippableType::None;
+    EEDEquippableType SlotType = EEDEquippableType::None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-    FInventoryItemHandle EquippedItem;
+    FEDInventoryItemHandle EquippedItem;
 };
 
 USTRUCT(BlueprintType)
-struct ETERNALDREAMS_API FInventoryDropRequest
+struct ETERNALDREAMS_API FEDInventoryDropRequest
 {
     GENERATED_BODY()
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-    FInventoryItemHandle Item;
+    FEDInventoryItemHandle Item;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
     TObjectPtr<AActor> SourceOwner = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
-    EInventoryDropReason Reason = EInventoryDropReason::UserRequested;
+    EEDInventoryDropReason Reason = EEDInventoryDropReason::UserRequested;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
     FGameplayTagContainer ContextTags;

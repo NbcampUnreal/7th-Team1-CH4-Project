@@ -1,8 +1,8 @@
-#include "Inventory/System/InventoryTransferService.h"
+#include "Inventory/System/EDInventoryTransferService.h"
 
 #include "Engine/AssetManager.h"
-#include "Inventory/Component/InventoryComponent.h"
-#include "Item/Data/InventoryItemDataAsset.h"
+#include "Inventory/Component/EDInventoryComponent.h"
+#include "Item/Data/EDInventoryItemDataAsset.h"
 
 namespace
 {
@@ -11,7 +11,7 @@ int32 ClampMoveQuantity_Transfer(int32 RequestedQuantity, int32 AvailableQuantit
     return FMath::Max(0, FMath::Min(RequestedQuantity, AvailableQuantity));
 }
 
-const UInventoryItemDataAsset* ResolveItemData_Transfer(const FPrimaryAssetId& ItemId)
+const UEDInventoryItemDataAsset* ResolveItemData_Transfer(const FPrimaryAssetId& ItemId)
 {
     if (!ItemId.IsValid())
     {
@@ -28,16 +28,16 @@ const UInventoryItemDataAsset* ResolveItemData_Transfer(const FPrimaryAssetId& I
         }
     }
 
-    return Cast<UInventoryItemDataAsset>(ItemObject);
+    return Cast<UEDInventoryItemDataAsset>(ItemObject);
 }
 
 int32 GetItemMaxStack_Transfer(const FPrimaryAssetId& ItemId)
 {
-    const UInventoryItemDataAsset* ItemData = ResolveItemData_Transfer(ItemId);
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Transfer(ItemId);
     return ItemData ? FMath::Max(1, ItemData->MaxStack) : 1;
 }
 
-void SetFailure_Transfer(EInventoryActionFailure* OutFailure, EInventoryActionFailure Failure)
+void SetFailure_Transfer(EEDInventoryActionFailure* OutFailure, EEDInventoryActionFailure Failure)
 {
     if (OutFailure)
     {
@@ -46,7 +46,7 @@ void SetFailure_Transfer(EInventoryActionFailure* OutFailure, EInventoryActionFa
 }
 }
 
-bool FInventoryTransferService::MoveOrSwap(UInventoryComponent* InventoryComponent, int32 FromSlotIndex, int32 ToSlotIndex)
+bool FEDInventoryTransferService::MoveOrSwap(UEDInventoryComponent* InventoryComponent, int32 FromSlotIndex, int32 ToSlotIndex)
 {
     if (!InventoryComponent || FromSlotIndex == ToSlotIndex)
     {
@@ -58,8 +58,8 @@ bool FInventoryTransferService::MoveOrSwap(UInventoryComponent* InventoryCompone
         return false;
     }
 
-    FInventorySlotData& FromSlot = InventoryComponent->InventorySlots[FromSlotIndex];
-    FInventorySlotData& ToSlot = InventoryComponent->InventorySlots[ToSlotIndex];
+    FEDInventorySlotData& FromSlot = InventoryComponent->InventorySlots[FromSlotIndex];
+    FEDInventorySlotData& ToSlot = InventoryComponent->InventorySlots[ToSlotIndex];
     if (FromSlot.IsEmpty())
     {
         return false;
@@ -69,33 +69,33 @@ bool FInventoryTransferService::MoveOrSwap(UInventoryComponent* InventoryCompone
     return true;
 }
 
-bool FInventoryTransferService::TransferAuto(UInventoryComponent* FromInventory, UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EInventoryActionFailure* OutFailure)
+bool FEDInventoryTransferService::TransferAuto(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure* OutFailure)
 {
-    SetFailure_Transfer(OutFailure, EInventoryActionFailure::None);
+    SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::None);
 
     if (!FromInventory || !ToInventory)
     {
-        SetFailure_Transfer(OutFailure, EInventoryActionFailure::InvalidInventory);
+        SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::InvalidInventory);
         return false;
     }
 
     if (!FromInventory->InventorySlots.IsValidIndex(FromSlotIndex))
     {
-        SetFailure_Transfer(OutFailure, EInventoryActionFailure::InvalidSlot);
+        SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::InvalidSlot);
         return false;
     }
 
-    FInventorySlotData& SourceSlot = FromInventory->InventorySlots[FromSlotIndex];
+    FEDInventorySlotData& SourceSlot = FromInventory->InventorySlots[FromSlotIndex];
     if (SourceSlot.IsEmpty())
     {
-        SetFailure_Transfer(OutFailure, EInventoryActionFailure::EmptySlot);
+        SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::EmptySlot);
         return false;
     }
 
     const int32 MoveQuantity = ClampMoveQuantity_Transfer(Quantity, SourceSlot.Item.Quantity);
     if (MoveQuantity <= 0)
     {
-        SetFailure_Transfer(OutFailure, EInventoryActionFailure::InvalidQuantity);
+        SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::InvalidQuantity);
         return false;
     }
 
@@ -110,7 +110,7 @@ bool FInventoryTransferService::TransferAuto(UInventoryComponent* FromInventory,
             continue;
         }
 
-        FInventorySlotData& DestinationSlot = ToInventory->InventorySlots[Index];
+        FEDInventorySlotData& DestinationSlot = ToInventory->InventorySlots[Index];
         if (!DestinationSlot.IsEmpty() && DestinationSlot.Item.ItemId == SourceItemId)
         {
             const int32 SpaceLeft = FMath::Max(0, MaxStack - DestinationSlot.Item.Quantity);
@@ -130,7 +130,7 @@ bool FInventoryTransferService::TransferAuto(UInventoryComponent* FromInventory,
             continue;
         }
 
-        FInventorySlotData& DestinationSlot = ToInventory->InventorySlots[Index];
+        FEDInventorySlotData& DestinationSlot = ToInventory->InventorySlots[Index];
         if (DestinationSlot.IsEmpty())
         {
             const int32 AddAmount = FMath::Min(Remaining, MaxStack);
@@ -143,53 +143,53 @@ bool FInventoryTransferService::TransferAuto(UInventoryComponent* FromInventory,
     const int32 MovedQuantity = MoveQuantity - Remaining;
     if (MovedQuantity <= 0)
     {
-        SetFailure_Transfer(OutFailure, EInventoryActionFailure::NoSpace);
+        SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::NoSpace);
         return false;
     }
 
     SourceSlot.Item.Quantity -= MovedQuantity;
     if (SourceSlot.Item.Quantity <= 0)
     {
-        SourceSlot.Item = FInventoryItemHandle();
+        SourceSlot.Item = FEDInventoryItemHandle();
     }
 
     return true;
 }
 
-bool FInventoryTransferService::TransferToSlot(UInventoryComponent* FromInventory, UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EInventoryActionFailure* OutFailure)
+bool FEDInventoryTransferService::TransferToSlot(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure* OutFailure)
 {
-    SetFailure_Transfer(OutFailure, EInventoryActionFailure::None);
+    SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::None);
 
     if (!FromInventory || !ToInventory)
     {
-        SetFailure_Transfer(OutFailure, EInventoryActionFailure::InvalidInventory);
+        SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::InvalidInventory);
         return false;
     }
 
     if (FromSlotIndex == ToSlotIndex && FromInventory == ToInventory)
     {
-        SetFailure_Transfer(OutFailure, EInventoryActionFailure::SlotConflict);
+        SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::SlotConflict);
         return false;
     }
 
     if (!FromInventory->InventorySlots.IsValidIndex(FromSlotIndex) || !ToInventory->InventorySlots.IsValidIndex(ToSlotIndex))
     {
-        SetFailure_Transfer(OutFailure, EInventoryActionFailure::InvalidSlot);
+        SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::InvalidSlot);
         return false;
     }
 
-    FInventorySlotData& SourceSlot = FromInventory->InventorySlots[FromSlotIndex];
-    FInventorySlotData& DestinationSlot = ToInventory->InventorySlots[ToSlotIndex];
+    FEDInventorySlotData& SourceSlot = FromInventory->InventorySlots[FromSlotIndex];
+    FEDInventorySlotData& DestinationSlot = ToInventory->InventorySlots[ToSlotIndex];
     if (SourceSlot.IsEmpty())
     {
-        SetFailure_Transfer(OutFailure, EInventoryActionFailure::EmptySlot);
+        SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::EmptySlot);
         return false;
     }
 
     const int32 MoveQuantity = ClampMoveQuantity_Transfer(Quantity, SourceSlot.Item.Quantity);
     if (MoveQuantity <= 0)
     {
-        SetFailure_Transfer(OutFailure, EInventoryActionFailure::InvalidQuantity);
+        SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::InvalidQuantity);
         return false;
     }
 
@@ -200,7 +200,7 @@ bool FInventoryTransferService::TransferToSlot(UInventoryComponent* FromInventor
         const int32 AddAmount = FMath::Min(MoveQuantity, MaxStack);
         if (AddAmount <= 0)
         {
-            SetFailure_Transfer(OutFailure, EInventoryActionFailure::StackLimit);
+            SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::StackLimit);
             return false;
         }
 
@@ -210,7 +210,7 @@ bool FInventoryTransferService::TransferToSlot(UInventoryComponent* FromInventor
         SourceSlot.Item.Quantity -= AddAmount;
         if (SourceSlot.Item.Quantity <= 0)
         {
-            SourceSlot.Item = FInventoryItemHandle();
+            SourceSlot.Item = FEDInventoryItemHandle();
         }
 
         return true;
@@ -222,7 +222,7 @@ bool FInventoryTransferService::TransferToSlot(UInventoryComponent* FromInventor
         const int32 AddAmount = FMath::Min(MoveQuantity, SpaceLeft);
         if (AddAmount <= 0)
         {
-            SetFailure_Transfer(OutFailure, EInventoryActionFailure::StackLimit);
+            SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::StackLimit);
             return false;
         }
 
@@ -230,7 +230,7 @@ bool FInventoryTransferService::TransferToSlot(UInventoryComponent* FromInventor
         SourceSlot.Item.Quantity -= AddAmount;
         if (SourceSlot.Item.Quantity <= 0)
         {
-            SourceSlot.Item = FInventoryItemHandle();
+            SourceSlot.Item = FEDInventoryItemHandle();
         }
 
         return true;
@@ -238,7 +238,7 @@ bool FInventoryTransferService::TransferToSlot(UInventoryComponent* FromInventor
 
     if (MoveQuantity != SourceSlot.Item.Quantity)
     {
-        SetFailure_Transfer(OutFailure, EInventoryActionFailure::SlotConflict);
+        SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::SlotConflict);
         return false;
     }
 

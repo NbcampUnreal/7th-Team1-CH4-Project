@@ -1,22 +1,19 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
-#include "Item/Core/ItemTypes.h"
-#include "InventoryItemDataAsset.generated.h"
+#include "Item/Core/EDItemTypes.h"
+#include "EDInventoryItemDataAsset.generated.h"
 
 class UGameplayEffect;
 
 UCLASS(BlueprintType)
-class ETERNALDREAMS_API UInventoryItemDataAsset : public UPrimaryDataAsset
+class ETERNALDREAMS_API UEDInventoryItemDataAsset : public UPrimaryDataAsset
 {
     GENERATED_BODY()
 
 public:
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
-    FPrimaryAssetId ItemId;
-
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
     FText DisplayName;
 
@@ -24,13 +21,13 @@ public:
     FText Description;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
-    EInventoryItemType ItemType = EInventoryItemType::Ingredient;
+    EEDInventoryItemType ItemType = EEDInventoryItemType::Ingredient;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
-    EEquippableType EquippableType = EEquippableType::None;
+    EEDEquippableType EquippableType = EEDEquippableType::None;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
-    EItemRarity Rarity = EItemRarity::Normal;
+    EEDItemRarity Rarity = EEDItemRarity::Normal;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "1"))
     int32 MaxStack = 1;
@@ -52,6 +49,7 @@ public:
 
     virtual FPrimaryAssetId GetPrimaryAssetId() const override
     {
-        return ItemId;
+        static const FPrimaryAssetType ItemAssetType(TEXT("InventoryItem"));
+        return FPrimaryAssetId(ItemAssetType, GetFName());
     }
 };
