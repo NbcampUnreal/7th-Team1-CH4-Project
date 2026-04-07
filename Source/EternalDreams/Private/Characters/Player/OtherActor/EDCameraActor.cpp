@@ -109,6 +109,6 @@ void AEDCameraActor::CameraMove(FInputActionValue value)
 	FVector2D Viewport= UWidgetLayoutLibrary::GetViewportSize(GetWorld());
 	
 	
-	UE_LOG(LogTemp,Warning,TEXT("%s"),*(MousePos/Viewport).ToString());
+	//UE_LOG(LogTemp,Warning,TEXT("%s"),*(MousePos/Viewport).ToString());
 }
 

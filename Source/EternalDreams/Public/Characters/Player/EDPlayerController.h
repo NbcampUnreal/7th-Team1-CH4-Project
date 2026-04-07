@@ -27,21 +27,16 @@ class ETERNALDREAMS_API AEDPlayerController : public APlayerController
 
 protected:
 	virtual void BeginPlay() override;
+		// 작성자 : 김동주
+    	// Enhanced Input 액션을 실제 처리 함수에 바인딩
 	virtual void SetupInputComponent() override;
 
-	// 작성자 : 김동주
-	// Enhanced Input 액션을 실제 처리 함수에 바인딩
-	void SetupInputComponent();
+
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputMappingContext> InputMappingContext = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	TObjectPtr<UInputAction> MoveAction = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	TObjectPtr<UInputAction> LookAction = nullptr;
-
+	
 	// 작성자 : 김동주
 	// 인벤토리 패널 열기/닫기 입력 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
@@ -49,6 +44,7 @@ public:
 
 	// ESC 입력 처리용 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	TObjectPtr<UInputAction> UIBackAction = nullptr;
 	
 public:	
 #pragma region Input Player
@@ -76,9 +72,6 @@ public:
 	UFUNCTION()
 	void CameraZoom(const FInputActionValue& value);
 	
-	//Actors
-	TObjectPtr<UInputAction> UIBackAction = nullptr;
-
 	UFUNCTION()
 	void CameraFocus(const FInputActionValue& value);
 	
@@ -97,8 +90,7 @@ protected:
 	TSubclassOf<AEDCameraActor> CameraActorClass;
 	UPROPERTY()
 	TObjectPtr<AEDCameraActor> CameraActor;
-	TObjectPtr<ACursorActor> CursorActor;
-
+#pragma endregion
 private:
 	// 작성자 : 김동주
 	// 인벤토리 패널 열기/닫기 입력 처리
@@ -109,7 +101,7 @@ private:
 
 	// 애플리케이션 복귀 시 현재 열린 UI 상태에 맞게 입력 모드와 포커스 복구를 요청
 	void HandleApplicationReactivated();
-#pragma endregion
+
 #pragma region Delegate
 	FOnOtherInput OnCameraScroll;
 	FOnOtherInput OnCameraFocus;

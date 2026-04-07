@@ -36,14 +36,12 @@ void AEDPlayerController::BeginPlay()
 			OnCameraFocus.BindUObject(CameraActor,&AEDCameraActor::ToggleCameraFocus);
 			OnCameraMove.BindUObject(CameraActor,&AEDCameraActor::CameraMove);
 		}
-	
 		
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(CameraInputMappingContext, 0);  // Gameplay
 		}
-
-		CursorActor = GetWorld()->SpawnActor<ACursorActor>(CursorActorClass);
+		
 	}
 
 	FCoreDelegates::ApplicationHasReactivatedDelegate.AddUObject(
@@ -87,6 +85,29 @@ void AEDPlayerController::SetupInputComponent()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIBackAction이 설정되지 않았습니다."));
 	}
+	
+	
+	
+		EnhancedInputComponent->BindAction(
+			WheelAction,
+			ETriggerEvent::Triggered,
+			this,
+			&AEDPlayerController::CameraZoom
+			);
+		EnhancedInputComponent->BindAction(
+			KeyboardCAction,
+			ETriggerEvent::Started,
+			this,
+			&AEDPlayerController::CameraFocus
+			);
+		EnhancedInputComponent->BindAction(
+			LookAction,
+				ETriggerEvent::Triggered,
+				this,
+				&AEDPlayerController::CameraMove
+				);
+	
+	
 }
 
 void AEDPlayerController::HandleToggleInventory()
@@ -144,7 +165,10 @@ void AEDPlayerController::HandleApplicationReactivated()
 		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: 애플리케이션 복귀 시 UIManageSubsystem을 찾지 못했습니다."));
 		return;
 	}
-
+	
+	
+	
+	
 	// 창 복귀 직후 즉시 포커스를 한 번 복구
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 애플리케이션 복귀로 UI 포커스 복구를 요청합니다."));
 	UIManageSubsystem->RestoreUIFocus();
@@ -174,32 +198,6 @@ void AEDPlayerController::HandleApplicationReactivated()
 			0.0f,
 			false
 		);
-	}
-}
-void AEDPlayerController::SetupInputComponent()
-{
-	Super::SetupInputComponent();
-	
-	if (UEnhancedInputComponent* InputComponents = Cast<UEnhancedInputComponent>(InputComponent))
-	{
-		InputComponents->BindAction(
-			WheelAction,
-			ETriggerEvent::Triggered,
-			this,
-			&AEDPlayerController::CameraZoom
-			);
-		InputComponents->BindAction(
-			KeyboardCAction,
-			ETriggerEvent::Started,
-			this,
-			&AEDPlayerController::CameraFocus
-			);
-		InputComponents->BindAction(
-			LookAction,
-				ETriggerEvent::Triggered,
-				this,
-				&AEDPlayerController::CameraMove
-	);
 	}
 }
 
