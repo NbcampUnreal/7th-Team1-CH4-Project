@@ -12,14 +12,26 @@ AEDGameMode::AEDGameMode()
 	PlayerControllerClass = AEDPlayerController_Temp::StaticClass();
 
 	PrimaryActorTick.bCanEverTick = true;
+	bUseSeamlessTravel = true;
+}
+
+void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
+{
+	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
+
+	if (!ErrorMessage.IsEmpty())
+	{
+		return;
+	}
+
+	ErrorMessage = TEXT("MatchAlreadyStarted");
+	UE_LOG(LogTemp, Warning, TEXT("[GameMode] PreLogin rejected | Address=%s | Reason=%s"), *Address, *ErrorMessage);
 }
 
 void AEDGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 데디케이티드 서버: GameMode는 서버에서만 존재
-	// PhaseSequence가 설정되어 있으면 자동으로 페이즈 시퀀스 시작
 	if (PhaseSequence.Num() > 0)
 	{
 		StartPhaseSequence();
@@ -34,7 +46,6 @@ void AEDGameMode::Tick(float DeltaSeconds)
 
 	PhaseTimer -= DeltaSeconds;
 
-	// GameState에 남은 시간 동기화
 	if (AEDGameState* GS = GetGameState<AEDGameState>())
 	{
 		GS->SetPhaseRemainingTime(PhaseTimer);
@@ -44,11 +55,6 @@ void AEDGameMode::Tick(float DeltaSeconds)
 	{
 		SkipToNextPhase();
 	}
-}
-
-void AEDGameMode::StartGame()
-{
-	GetWorld()->ServerTravel(GameMapPath);
 }
 
 void AEDGameMode::SetPhase(FGameplayTag NewPhase)
@@ -77,7 +83,6 @@ void AEDGameMode::StartPhaseSequence()
 
 	bPhaseSequenceActive = true;
 	AdvanceToPhase(0);
-
 }
 
 void AEDGameMode::SkipToNextPhase()
@@ -86,7 +91,6 @@ void AEDGameMode::SkipToNextPhase()
 
 	if (NextIndex >= PhaseSequence.Num())
 	{
-		// 마지막 페이즈 종료
 		bPhaseSequenceActive = false;
 		PhaseTimer = 0.f;
 
@@ -112,7 +116,6 @@ void AEDGameMode::AdvanceToPhase(int32 PhaseIndex)
 	{
 		GS->SetPhaseRemainingTime(PhaseTimer);
 	}
-
 }
 
 float AEDGameMode::GetPhaseDuration(int32 PhaseIndex) const

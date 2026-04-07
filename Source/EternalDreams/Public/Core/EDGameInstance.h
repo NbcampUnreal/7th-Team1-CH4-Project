@@ -3,8 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/EngineBaseTypes.h"
 #include "Engine/GameInstance.h"
 #include "EDGameInstance.generated.h"
+
+class UNetDriver;
 
 /**
  * UEDGameInstance
@@ -32,9 +35,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "ED|GameInstance")
 	FString LocalPlayerNickname;
 
-	/** 희망 팀 ID (-1 = 미배정) */
+	/** 희망 팀 ID (EDTeam::None = 미배정) */
 	UPROPERTY(BlueprintReadWrite, Category = "ED|GameInstance")
-	int32 DesiredTeamID = -1;
+	int32 DesiredTeamID = -1;  // EDTeam::None
 
 	/** 마지막으로 접속을 시도한 서버 IP */
 	UPROPERTY(BlueprintReadWrite, Category = "ED|GameInstance")
@@ -48,5 +51,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ED|GameInstance")
 	void JoinGame(const FString& ServerIP);
 
-
+private:
+	void HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& ErrorString);
+	void HandleTravelFailure(UWorld* World, ETravelFailure::Type FailureType, const FString& ErrorString);
 };
