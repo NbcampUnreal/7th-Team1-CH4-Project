@@ -6,11 +6,14 @@
 #include "GameFramework/PlayerController.h"
 #include "EDPlayerController.generated.h"
 
+struct FInputActionValue;
 class AEDCameraActor;
 class AEDCursorActor;
 class UWidgetComponent;
 class UInputMappingContext;
 class UInputAction;
+
+DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
 
 /**
  * 
@@ -24,19 +27,43 @@ class ETERNALDREAMS_API AEDPlayerController : public APlayerController
 	
 	protected:
 	virtual void BeginPlay() override;
+	virtual void SetupInputComponent() override;
 
 	
 public:	
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	TObjectPtr<UInputMappingContext> InputMappingContext=nullptr;
-  // IMC_UI (ESC, Inventory - 항상 활성)
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+#pragma region Input Player
+	//IMC_Player
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
+	TObjectPtr<UInputMappingContext> PlayerInputMappingContext=nullptr;
+  // IA_Player
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
 	TObjectPtr<UInputAction> MoveAction=nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
 	TObjectPtr<UInputAction> LookAction=nullptr;
+#pragma endregion
+#pragma region Input Camera
+	//IMC_Camera
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Camera")
+	TObjectPtr<UInputMappingContext> CameraInputMappingContext=nullptr;
+	// IA_Camera
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Camera")
+	TObjectPtr<UInputAction> WheelAction=nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Camera")
+	TObjectPtr<UInputAction> KeyboardCAction=nullptr;
+#pragma endregion
+#pragma region Input Bindings
+public:
+	UFUNCTION()
+	void CameraZoom(const FInputActionValue& value);
 	
-	//Actors
+	UFUNCTION()
+	void CameraFocus(const FInputActionValue& value);
+	
+	UFUNCTION()
+	void CameraMove(const FInputActionValue& value);
+	
+#pragma endregion
+#pragma region Spawn Actor
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Actor")
 	TSubclassOf<AEDCursorActor> CursorActorClass;
@@ -47,4 +74,12 @@ protected:
 	TSubclassOf<AEDCameraActor> CameraActorClass;
 	UPROPERTY()
 	TObjectPtr<AEDCameraActor> CameraActor;
+#pragma endregion
+#pragma region Delegate
+	FOnOtherInput OnCameraScroll;
+	FOnOtherInput OnCameraFocus;
+	FOnOtherInput OnCameraMove;
+#pragma endregion
+	
+
 };
