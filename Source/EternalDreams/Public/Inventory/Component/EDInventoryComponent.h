@@ -2,22 +2,22 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Inventory/Core/InventoryTypes.h"
+#include "Inventory/Core/EDInventoryTypes.h"
 #include "GameplayEffectTypes.h"
-#include "InventoryComponent.generated.h"
+#include "EDInventoryComponent.generated.h"
 
 class UDataTable;
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventoryDropRequested, const FInventoryDropRequest&, DropRequest);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEDInventoryChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEDInventoryDropRequested, const FEDInventoryDropRequest&, DropRequest);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class ETERNALDREAMS_API UInventoryComponent : public UActorComponent
+class ETERNALDREAMS_API UEDInventoryComponent : public UActorComponent
 {
     GENERATED_BODY()
 
 public:
-    UInventoryComponent();
+    UEDInventoryComponent();
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Replicated, Category = "Inventory")
     int32 MaxInventorySlots = 20;
@@ -35,22 +35,22 @@ public:
     TObjectPtr<UDataTable> CraftingRecipeTable = nullptr;
 
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Inventory")
-    TArray<FInventorySlotData> InventorySlots;
+    TArray<FEDInventorySlotData> InventorySlots;
 
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Inventory|Equipment")
-    FEquipmentSlotData WeaponSlot;
+    FEDEquipmentSlotData WeaponSlot;
 
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Inventory|Equipment")
-    FEquipmentSlotData TopArmorSlot;
+    FEDEquipmentSlotData TopArmorSlot;
 
     UPROPERTY(Replicated, BlueprintReadOnly, Category = "Inventory|Equipment")
-    FEquipmentSlotData BottomArmorSlot;
+    FEDEquipmentSlotData BottomArmorSlot;
 
     UPROPERTY(BlueprintAssignable, Category = "Inventory")
-    FOnInventoryChanged OnInventoryChanged;
+    FOnEDInventoryChanged OnInventoryChanged;
 
     UPROPERTY(BlueprintAssignable, Category = "Inventory")
-    FOnInventoryDropRequested OnInventoryDropRequested;
+    FOnEDInventoryDropRequested OnInventoryDropRequested;
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     void InitializeInventorySlots();
@@ -59,16 +59,16 @@ public:
     bool TryMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryTransferItemAuto(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity);
+    bool TryTransferItemAuto(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryTransferItemAutoDetailed(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EInventoryActionFailure& OutFailure);
+    bool TryTransferItemAutoDetailed(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryTransferItemToSlot(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity);
+    bool TryTransferItemToSlot(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryTransferItemToSlotDetailed(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EInventoryActionFailure& OutFailure);
+    bool TryTransferItemToSlotDetailed(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool TryDropAllFromSlot(int32 FromSlotIndex);
@@ -77,7 +77,7 @@ public:
     bool TryDropSingleFromSlot(int32 FromSlotIndex);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
-    bool TryEquipItemFromSlot(int32 FromSlotIndex, EEquippableType TargetSlotType);
+    bool TryEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
     bool TryUnequipTopArmor();
@@ -89,13 +89,13 @@ public:
     bool TryCraftItem(FName RecipeId);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Craft")
-    bool TryCraftItemDetailed(FName RecipeId, EInventoryActionFailure& OutFailure);
+    bool TryCraftItemDetailed(FName RecipeId, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Consumable")
     bool TryConsumeItemAtSlot(int32 SlotIndex);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Consumable")
-    bool TryConsumeItemAtSlotDetailed(int32 SlotIndex, EInventoryActionFailure& OutFailure);
+    bool TryConsumeItemAtSlotDetailed(int32 SlotIndex, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Init")
     bool EnsureDefaultEquipment();
@@ -109,10 +109,10 @@ protected:
     void ServerTryMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex);
 
     UFUNCTION(Server, Reliable)
-    void ServerTryTransferItemAuto(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity);
+    void ServerTryTransferItemAuto(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity);
 
     UFUNCTION(Server, Reliable)
-    void ServerTryTransferItemToSlot(UInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity);
+    void ServerTryTransferItemToSlot(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity);
 
     UFUNCTION(Server, Reliable)
     void ServerTryDropAllFromSlot(int32 FromSlotIndex);
@@ -121,7 +121,7 @@ protected:
     void ServerTryDropSingleFromSlot(int32 FromSlotIndex);
 
     UFUNCTION(Server, Reliable)
-    void ServerTryEquipItemFromSlot(int32 FromSlotIndex, EEquippableType TargetSlotType);
+    void ServerTryEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType);
 
     UFUNCTION(Server, Reliable)
     void ServerTryUnequipTopArmor();
@@ -135,9 +135,9 @@ protected:
     UFUNCTION(Server, Reliable)
     void ServerTryConsumeItemAtSlot(int32 SlotIndex);
 
-    FEquipmentSlotData* GetEquipmentSlotData(EEquippableType SlotType);
-    FActiveGameplayEffectHandle* GetEquipmentEffectHandle(EEquippableType SlotType);
-    bool SyncEquipEffectForSlot(EEquippableType SlotType);
+    FEDEquipmentSlotData* GetEquipmentSlotData(EEDEquippableType SlotType);
+    FActiveGameplayEffectHandle* GetEquipmentEffectHandle(EEDEquippableType SlotType);
+    bool SyncEquipEffectForSlot(EEDEquippableType SlotType);
 
     FActiveGameplayEffectHandle WeaponEquipEffectHandle;
     FActiveGameplayEffectHandle TopArmorEquipEffectHandle;

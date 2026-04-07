@@ -1,16 +1,16 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Engine/DataTable.h"
-#include "Item/Core/ItemTypes.h"
-#include "ItemDataRows.generated.h"
+#include "Item/Core/EDItemTypes.h"
+#include "EDItemDataRows.generated.h"
 
 USTRUCT(BlueprintType)
-struct ETERNALDREAMS_API FCraftingIngredientRow
+struct ETERNALDREAMS_API FEDCraftingIngredientRow
 {
     GENERATED_BODY()
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowedTypes = "InventoryItem"))
     FPrimaryAssetId ItemId;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "1"))
@@ -18,7 +18,7 @@ struct ETERNALDREAMS_API FCraftingIngredientRow
 };
 
 USTRUCT(BlueprintType)
-struct ETERNALDREAMS_API FCraftingRecipeRow : public FTableRowBase
+struct ETERNALDREAMS_API FEDCraftingRecipeRow : public FTableRowBase
 {
     GENERATED_BODY()
 
@@ -26,9 +26,9 @@ struct ETERNALDREAMS_API FCraftingRecipeRow : public FTableRowBase
     FName RecipeId = NAME_None;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    TArray<FCraftingIngredientRow> Ingredients;
+    TArray<FEDCraftingIngredientRow> Ingredients;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowedTypes = "InventoryItem"))
     FPrimaryAssetId ResultItemId;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "1"))
@@ -36,11 +36,11 @@ struct ETERNALDREAMS_API FCraftingRecipeRow : public FTableRowBase
 };
 
 USTRUCT(BlueprintType)
-struct ETERNALDREAMS_API FItemSpawnRow : public FTableRowBase
+struct ETERNALDREAMS_API FEDItemSpawnRow : public FTableRowBase
 {
     GENERATED_BODY()
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowedTypes = "InventoryItem"))
     FPrimaryAssetId ItemId;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0.0"))
@@ -54,12 +54,12 @@ struct ETERNALDREAMS_API FItemSpawnRow : public FTableRowBase
 };
 
 USTRUCT(BlueprintType)
-struct ETERNALDREAMS_API FItemRarityVisualRow : public FTableRowBase
+struct ETERNALDREAMS_API FEDItemRarityVisualRow : public FTableRowBase
 {
     GENERATED_BODY()
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-    EItemRarity Rarity = EItemRarity::Normal;
+    EEDItemRarity Rarity = EEDItemRarity::Normal;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     FText DisplayText;
@@ -70,4 +70,3 @@ struct ETERNALDREAMS_API FItemRarityVisualRow : public FTableRowBase
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
     int32 SortOrder = 0;
 };
-
