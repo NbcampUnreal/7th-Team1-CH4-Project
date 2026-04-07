@@ -65,8 +65,6 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	BaseAttributeSet->InitMaxDefensive(Stat.Def);
 	BaseAttributeSet->InitMaxWalkSpeed(Stat.MoveSpeed);
 	BaseAttributeSet->InitWalkSpeed(Stat.MoveSpeed);
-	
-	// TODO : AttributeSet 연결 후 Stat적용 
 	// TODO : Mesh, AnimInstance, BT - DataAsset에 getter 추가 후 비동기 로드
 }
 

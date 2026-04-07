@@ -10,7 +10,9 @@ UEDMonsterAttackAbility::UEDMonsterAttackAbility()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 	// BTTask_MonsterAttack에서 이 태그로 활성화
-	AbilityTags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.Monster.Attack")));
+	FGameplayTagContainer Tags;
+	Tags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.Monster.Attack")));
+	SetAssetTags(Tags);
 }
 
 void UEDMonsterAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
