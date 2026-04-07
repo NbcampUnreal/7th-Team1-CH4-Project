@@ -4,7 +4,31 @@
 #include "Core/EDPlayerState.h"
 #include "Core/Lobby/EDLobbyGameMode.h"
 #include "Core/Lobby/EDLobbyGameState.h"
+#include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
+
+void AEDLobbyPlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+
+	if (!IsLocalController()) return;
+
+	// UI 전용 입력 모드 + 마우스 커서 표시
+	bShowMouseCursor = true;
+	FInputModeUIOnly InputMode;
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(InputMode);
+
+	// 로비 위젯 생성
+	if (LobbyWidgetClass)
+	{
+		LobbyWidget = CreateWidget<UUserWidget>(this, LobbyWidgetClass);
+		if (LobbyWidget)
+		{
+			LobbyWidget->AddToViewport();
+		}
+	}
+}
 
 void AEDLobbyPlayerController::Server_SetReady_Implementation()
 {

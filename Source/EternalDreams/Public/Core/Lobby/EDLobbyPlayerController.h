@@ -8,7 +8,7 @@
 
 /**
  * Lobby-only PlayerController.
- * Clients only report Ready state to the dedicated server.
+ * UI 전용 입력 모드, 로비 위젯 자동 생성.
  */
 UCLASS()
 class ETERNALDREAMS_API AEDLobbyPlayerController : public APlayerController
@@ -22,4 +22,15 @@ public:
 	/** 팀 변경 요청 (클라이언트 → 서버) */
 	UFUNCTION(Server, Reliable)
 	void Server_ChangeTeam(int32 NewTeamId);
+
+protected:
+	virtual void BeginPlay() override;
+
+	/** 로비 위젯 클래스 (BP에서 지정) */
+	UPROPERTY(EditDefaultsOnly, Category = "ED|Lobby|UI")
+	TSubclassOf<UUserWidget> LobbyWidgetClass;
+
+private:
+	UPROPERTY()
+	TObjectPtr<UUserWidget> LobbyWidget;
 };

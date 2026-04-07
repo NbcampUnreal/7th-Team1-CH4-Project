@@ -3,13 +3,13 @@
 #include "Core/EDGameMode.h"
 #include "Core/EDGameState.h"
 #include "Core/EDPlayerState.h"
-#include "Core/EDPlayerController_Temp.h"
+#include "Characters/Player/EDPlayerController.h"
 
 AEDGameMode::AEDGameMode()
 {
 	GameStateClass        = AEDGameState::StaticClass();
 	PlayerStateClass      = AEDPlayerState::StaticClass();
-	PlayerControllerClass = AEDPlayerController_Temp::StaticClass();
+	PlayerControllerClass = AEDPlayerController::StaticClass();
 
 	PrimaryActorTick.bCanEverTick = true;
 	bUseSeamlessTravel = true;
@@ -25,7 +25,6 @@ void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const
 	}
 
 	ErrorMessage = TEXT("MatchAlreadyStarted");
-	UE_LOG(LogTemp, Warning, TEXT("[GameMode] PreLogin rejected | Address=%s | Reason=%s"), *Address, *ErrorMessage);
 }
 
 void AEDGameMode::BeginPlay()
