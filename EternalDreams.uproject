@@ -9,7 +9,9 @@
 			"Type": "Runtime",
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
-				"Engine"
+				"Engine",
+				"GameplayAbilities",
+				"CommonUI"
 			]
 		},
 		{
@@ -44,10 +46,6 @@
 		},
 		{
 			"Name": "PCGBiomeCore",
-			"Enabled": true
-		},
-		{
-			"Name": "PCGBiomeSample",
 			"Enabled": true
 		}
 	]
