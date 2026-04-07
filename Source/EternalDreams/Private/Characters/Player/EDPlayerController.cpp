@@ -9,11 +9,12 @@
 #include "Characters/Player/OtherActor/EDCursorActor.h"
 #include "Components/WidgetComponent.h"
 
-#include "EnhancedInputComponent.h"
 #include "Engine/LocalPlayer.h"
 #include "InputAction.h"
 #include "UI/Subsystem/EDUIManageSubsystem.h"
 #include "Misc/CoreDelegates.h"
+#include "Core/EDGameMode.h"
+#include "Kismet/GameplayStatics.h"
 
 AEDPlayerController::AEDPlayerController()
 {
@@ -25,23 +26,29 @@ void AEDPlayerController::BeginPlay()
 
 	if (IsLocalController())
 	{
+		// Game + UI 입력 모드 설정 (로비 UIOnly → 인게임 전환)
+		bShowMouseCursor = true;
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
+
 		//Create Component
 		CursorActor=GetWorld()->SpawnActor<AEDCursorActor>(CursorActorClass);
 		CameraActor=GetWorld()->SpawnActor<AEDCameraActor>(CameraActorClass);
 		SetViewTargetWithBlend(CameraActor);
-		
+
 		if (IsValid(CameraActor))
 		{
 			OnCameraScroll.BindUObject(CameraActor,&AEDCameraActor::CameraZoom);
 			OnCameraFocus.BindUObject(CameraActor,&AEDCameraActor::ToggleCameraFocus);
 			OnCameraMove.BindUObject(CameraActor,&AEDCameraActor::CameraMove);
 		}
-		
+
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(CameraInputMappingContext, 0);  // Gameplay
 		}
-		
+
 	}
 
 	FCoreDelegates::ApplicationHasReactivatedDelegate.AddUObject(
@@ -214,6 +221,22 @@ void AEDPlayerController::CameraFocus(const FInputActionValue& value)
 void AEDPlayerController::CameraMove(const FInputActionValue& value)
 {
 	OnCameraMove.ExecuteIfBound(value);
+}
+
+void AEDPlayerController::Server_RequestStartPhaseSequence_Implementation()
+{
+	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (!GM) return;
+
+	GM->StartPhaseSequence();
+}
+
+void AEDPlayerController::Server_RequestSkipPhase_Implementation()
+{
+	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (!GM) return;
+
+	GM->SkipToNextPhase();
 }
 
 

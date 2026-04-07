@@ -20,7 +20,7 @@ public:
 
 	/** Destination map for the actual match. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "ED|Lobby")
-	FString GameMapPath = TEXT("/Game/ED/Asset/IgnoredAsset/Test/GameMap");
+	FString GameMapPath;
 
 	/** Checks all connected players and starts the match on the server when ready. */
 	UFUNCTION(BlueprintCallable, Category = "ED|Lobby")
