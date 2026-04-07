@@ -4,10 +4,6 @@
 #include "GameFramework/HUD.h"
 #include "EDGameHUD.generated.h"
 
-class UEDInventoryPanelWidget;
-class UEDHUDLayout;
-class UCommonActivatableWidget;
-class UEDPauseMenuWidget;
 class UEDUIRegistryDataAsset;
 class UEDUIManageSubsystem;
 
@@ -20,18 +16,6 @@ public:
 	virtual void BeginPlay() override;
 
 protected:
-	// 에디터에서 HUD 루트 BP 지정용
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
-	TSubclassOf<UEDHUDLayout> HUDLayoutClass;
-	
-	// 인벤토리 패널 BP 지정용
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
-	TSubclassOf<UEDInventoryPanelWidget> InventoryPanelClass;
-	
-	// 일시정지 메뉴 지정용
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
-	TSubclassOf<UEDPauseMenuWidget> PauseMenuPanelClass;
-	
 	// 에디터에서 어떤 UI를 등록할지 지정
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
 	TObjectPtr<UEDUIRegistryDataAsset> UIRegistry;
