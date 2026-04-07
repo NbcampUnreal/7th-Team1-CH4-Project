@@ -215,6 +215,7 @@ void AEDMonsterAIController::OnPerceptionForgotten(AActor* Actor)
 	UBlackboardComponent* BB = GetBlackboardComponent();
 	if (IsValid(BB) == false)
 		return;
+	BB->SetValueAsObject(TEXT("TargetActor"), nullptr);
 	BB->SetValueAsVector(TEXT("LastHearingLocation"), FVector::ZeroVector);
 	BB->SetValueAsBool(TEXT("bIsTracking"), false);
 }
