@@ -9,8 +9,6 @@
 
 class AEDPlayerController;
 class UWidgetComponent;
-class UCameraComponent;
-class USpringArmComponent;
 class UEDBaseAttributeSet;
 class UEDPlayerAttributeSet;
 class UIMCComponent;
@@ -57,12 +55,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
 	TObjectPtr<UIMCComponent> IMCComponent;
 	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-	UCameraComponent* Camera;
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
-	USpringArmComponent* SpringArm;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-	float SpringArmLength=1000.f;
+
 	
 	
 protected:
@@ -79,10 +72,6 @@ protected:
 	virtual void InitializeAbilitySystem();
 	
 
-
-	//캐싱
-protected:
-	TObjectPtr<AEDPlayerController> EDPC=nullptr;
-
+	
 
 };

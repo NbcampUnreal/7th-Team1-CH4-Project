@@ -2,6 +2,8 @@
 
 #include "Characters/Player/EDPlayerController.h"
 
+#include "EnhancedInputComponent.h"
+#include "EnhancedInputSubsystems.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "Characters/Player/OtherActor/EDCameraActor.h"
 #include "Characters/Player/OtherActor/EDCursorActor.h"
@@ -23,11 +25,23 @@ void AEDPlayerController::BeginPlay()
 
 	if (IsLocalController())
 	{
+		//Create Component
 		CursorActor=GetWorld()->SpawnActor<AEDCursorActor>(CursorActorClass);
 		CameraActor=GetWorld()->SpawnActor<AEDCameraActor>(CameraActorClass);
 		SetViewTargetWithBlend(CameraActor);
-
-		CursorActor = GetWorld()->SpawnActor<ACursorActor>(CursorActorClass);
+		
+		if (IsValid(CameraActor))
+		{
+			OnCameraScroll.BindUObject(CameraActor,&AEDCameraActor::CameraZoom);
+			OnCameraFocus.BindUObject(CameraActor,&AEDCameraActor::ToggleCameraFocus);
+			OnCameraMove.BindUObject(CameraActor,&AEDCameraActor::CameraMove);
+		}
+		
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
+		{
+			Subsystem->AddMappingContext(CameraInputMappingContext, 0);  // Gameplay
+		}
+		
 	}
 
 	FCoreDelegates::ApplicationHasReactivatedDelegate.AddUObject(
@@ -71,6 +85,29 @@ void AEDPlayerController::SetupInputComponent()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIBackAction이 설정되지 않았습니다."));
 	}
+	
+	
+	
+		EnhancedInputComponent->BindAction(
+			WheelAction,
+			ETriggerEvent::Triggered,
+			this,
+			&AEDPlayerController::CameraZoom
+			);
+		EnhancedInputComponent->BindAction(
+			KeyboardCAction,
+			ETriggerEvent::Started,
+			this,
+			&AEDPlayerController::CameraFocus
+			);
+		EnhancedInputComponent->BindAction(
+			LookAction,
+				ETriggerEvent::Triggered,
+				this,
+				&AEDPlayerController::CameraMove
+				);
+	
+	
 }
 
 void AEDPlayerController::HandleToggleInventory()
@@ -128,7 +165,10 @@ void AEDPlayerController::HandleApplicationReactivated()
 		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: 애플리케이션 복귀 시 UIManageSubsystem을 찾지 못했습니다."));
 		return;
 	}
-
+	
+	
+	
+	
 	// 창 복귀 직후 즉시 포커스를 한 번 복구
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 애플리케이션 복귀로 UI 포커스 복구를 요청합니다."));
 	UIManageSubsystem->RestoreUIFocus();
@@ -160,3 +200,20 @@ void AEDPlayerController::HandleApplicationReactivated()
 		);
 	}
 }
+
+void AEDPlayerController::CameraZoom(const FInputActionValue& value)
+{
+	OnCameraScroll.ExecuteIfBound(value);
+}
+
+void AEDPlayerController::CameraFocus(const FInputActionValue& value)
+{
+	OnCameraFocus.ExecuteIfBound(value);
+}
+
+void AEDPlayerController::CameraMove(const FInputActionValue& value)
+{
+	OnCameraMove.ExecuteIfBound(value);
+}
+
+
