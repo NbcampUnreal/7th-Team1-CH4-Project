@@ -7,6 +7,7 @@
 #include "CommonActivatableWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Components/OverlaySlot.h"
+#include "UI/Types/EDUIWidgetIds.h"
 
 void UEDUIManageSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -168,7 +169,7 @@ bool UEDUIManageSubsystem::HandleEscapeAction()
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 열려 있는 패널이 없어 PauseMenu를 엽니다."));
-	OpenPanel(TEXT("PauseMenu"));
+	OpenPanel(EDUIWidgetIds::Panel_PauseMenu);
 	return true;
 }
 

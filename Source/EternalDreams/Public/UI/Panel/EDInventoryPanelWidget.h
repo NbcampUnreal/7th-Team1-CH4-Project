@@ -24,8 +24,4 @@ protected:
 	// 설명 텍스트
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Inventory")
 	TObjectPtr<UTextBlock> DescriptionText;
-
-private:
-	// 문구 확인 테스트용
-	void ApplyPreviewText() const;
 };

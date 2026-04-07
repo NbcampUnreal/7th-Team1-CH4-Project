@@ -15,6 +15,7 @@
 #include "Misc/CoreDelegates.h"
 #include "Core/EDGameMode.h"
 #include "Kismet/GameplayStatics.h"
+#include "UI/Types/EDUIWidgetIds.h"
 
 AEDPlayerController::AEDPlayerController()
 {
@@ -134,7 +135,7 @@ void AEDPlayerController::HandleToggleInventory()
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 인벤토리 토글 입력을 처리합니다."));
-	UIManageSubsystem->TogglePanel(TEXT("Inventory"));
+	UIManageSubsystem->TogglePanel(EDUIWidgetIds::Panel_Inventory);
 }
 
 void AEDPlayerController::HandleUIBack()

@@ -26,7 +26,4 @@ protected:
 	// 설명 텍스트
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Pause")
 	TObjectPtr<UTextBlock> DescriptionText;
-
-private:
-	void ApplyPreviewText() const;
 };
