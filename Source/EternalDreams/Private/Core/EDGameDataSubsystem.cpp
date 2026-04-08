@@ -11,12 +11,10 @@ void UEDGameDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
 	Super::Initialize(Collection);
 	LoadPhase_Lobby();
-	UE_LOG(LogTemp, Log, TEXT("[EDSyncManager - Initialize] 서브시스템 초기화 완료"));
 }
 
 void UEDGameDataSubsystem::Deinitialize()
 {
-	UE_LOG(LogTemp, Log, TEXT("[EDSyncManager - Deinitialize] 서브 시스템 정리 완료"))
 	Super::Deinitialize();
 }
 
@@ -35,7 +33,7 @@ void UEDGameDataSubsystem::InitializeGameData()
 {
 	if (CurrentPhase != EDataLoadPhase::LobbyReady)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[EDSyncManager] 로비 데이터가 아직 준비되지 않았습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - InitializeGameData] 로비 데이터가 아직 준비되지 않았습니다."));
 		return;
 	}
 	LoadPhase_Item();
@@ -53,7 +51,7 @@ void UEDGameDataSubsystem::LoadPhase_Lobby()
 	AM.GetPrimaryAssetIdList(LobbyAssetType, Ids);
 	if (Ids.IsEmpty())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[EDSyncManager - LoadPhase_Lobby] Data가 없습니다. 다음 단계로 건너뜁니다."));
+		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - LoadPhase_Lobby] Data가 없습니다. 다음 단계로 건너뜁니다."));
 		OnLobbyDataLoaded();
 		return;
 	}
@@ -75,7 +73,7 @@ void UEDGameDataSubsystem::LoadPhase_Item()
 	AM.GetPrimaryAssetIdList(ItemAssetType, Ids);
 	if (Ids.IsEmpty())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[EDSyncManager - LoadPhase_Item] Data가 없습니다. 다음 단계로 건너뜁니다."));
+		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - LoadPhase_Item] Data가 없습니다. 다음 단계로 건너뜁니다."));
 		OnItemDataLoaded();
 		return;
 	}
@@ -96,7 +94,7 @@ void UEDGameDataSubsystem::LoadPhase_Monster()
 	AM.GetPrimaryAssetIdList(MonsterAssetType, Ids);
 	if (Ids.IsEmpty())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[EDSyncManager - LoadPhase_Monster] Data가 없습니다. 다음 단계로 건너뜁니다."));
+		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - LoadPhase_Monster] Data가 없습니다. 다음 단계로 건너뜁니다."));
 		OnMonsterDataLoaded();
 		return;
 	}
@@ -123,20 +121,20 @@ void UEDGameDataSubsystem::OnLobbyDataLoaded()
 	CacheLoadedAssets(LobbyAssetType);
 	SetPhase(EDataLoadPhase::LobbyReady);
 	OnLobbyDataReady.Broadcast();
-	UE_LOG(LogTemp, Log, TEXT("[EDSyncManager] Lobby 데이터 로드 완료"));
+	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem - OnLobbyDataLoaded] Lobby 데이터 로드 완료"));
 }
 
 void UEDGameDataSubsystem::OnItemDataLoaded()
 {
 	CacheLoadedAssets(ItemAssetType);
-	UE_LOG(LogTemp, Log, TEXT("[EDSyncManager] Item 데이터 로드 완료"));
+	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem - OnItemDataLoaded] Item 데이터 로드 완료"));
 	LoadPhase_Monster();
 }
 
 void UEDGameDataSubsystem::OnMonsterDataLoaded()
 {
 	CacheLoadedAssets(MonsterAssetType);
-	UE_LOG(LogTemp, Log, TEXT("[EDSyncManager]  Monster 데이터 로드 완료"));
+	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem - OnMonsterDataLoaded]  Monster 데이터 로드 완료"));
 	SetPhase(EDataLoadPhase::Completed);
 	
 	// 완료 신호
@@ -157,7 +155,7 @@ void UEDGameDataSubsystem::CacheLoadedAssets(const FPrimaryAssetType& AssetType)
 		UObject* Obj = AM.GetPrimaryAssetObject(Id);
 		if (!Obj)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[EDSyncManager - CacheLoadedAssets] 로드 실패 : %s"), *Id.ToString());
+			UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - CacheLoadedAssets] 로드 실패 : %s"), *Id.ToString());
 			continue;
 		}
 		DataCache.Add(Id, Obj);
