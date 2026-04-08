@@ -4,10 +4,8 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
-#include "Blueprint/WidgetLayoutLibrary.h"
 #include "Characters/Player/OtherActor/EDCameraActor.h"
 #include "Characters/Player/OtherActor/EDCursorActor.h"
-#include "Components/WidgetComponent.h"
 
 #include "Engine/LocalPlayer.h"
 #include "InputAction.h"
@@ -16,6 +14,7 @@
 #include "Core/EDGameMode.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/Types/EDUIWidgetIds.h"
+#include "InputMappingContext.h"
 
 AEDPlayerController::AEDPlayerController()
 {
@@ -56,6 +55,18 @@ void AEDPlayerController::BeginPlay()
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
 		{
 			Subsystem->AddMappingContext(CameraInputMappingContext, 0);  // Gameplay
+			
+			// UI 입력 매핑 컨텍스트 등록
+			if (UIInputMappingContext)
+			{
+				Subsystem->AddMappingContext(UIInputMappingContext, 1);
+				UE_LOG(LogTemp, Log, TEXT("EDPlayerController: UIInputMappingContext 등록을 완료했습니다. 이름 = %s"),
+					*UIInputMappingContext->GetName());
+			}
+			else
+			{
+				UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIInputMappingContext가 설정되지 않았습니다."));
+			}
 		}
 
 	}
@@ -173,9 +184,6 @@ void AEDPlayerController::HandleApplicationReactivated()
 		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: 애플리케이션 복귀 시 UIManageSubsystem을 찾지 못했습니다."));
 		return;
 	}
-	
-	
-	
 	
 	// 창 복귀 직후 즉시 포커스를 한 번 복구
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 애플리케이션 복귀로 UI 포커스 복구를 요청합니다."));
