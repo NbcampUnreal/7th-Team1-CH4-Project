@@ -27,19 +27,10 @@ void AEDPlayerController::BeginPlay()
 	if (IsLocalController())
 	{
 		// Game + UI 입력 모드 설정 (로비 UIOnly → 인게임 전환)
-		
-
-		FInputModeGameOnly InputMode;
-/*
-		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
-		InputMode.SetHideCursorDuringCapture(false);
-		InputMode.SetWidgetToFocus(nullptr);
- *
- */
-		SetInputMode(InputMode);
 		bShowMouseCursor = true;
-		
-		
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		SetInputMode(InputMode);
 
 		//Create Component
 		CursorActor=GetWorld()->SpawnActor<AEDCursorActor>(CursorActorClass);
@@ -218,6 +209,12 @@ void AEDPlayerController::CameraFocus(const FInputActionValue& value)
 	OnCameraFocus.ExecuteIfBound(value);
 }
 
+<<<<<<< HEAD
+void AEDPlayerController::CameraMove(const FInputActionValue& value)
+{
+	OnCameraMove.ExecuteIfBound(value);
+}
+
 void AEDPlayerController::Server_RequestStartPhaseSequence_Implementation()
 {
 	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
@@ -235,3 +232,5 @@ void AEDPlayerController::Server_RequestSkipPhase_Implementation()
 }
 
 
+=======
+>>>>>>> 219ce3f (임시 커밋)

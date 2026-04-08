@@ -62,7 +62,6 @@ void AEDCameraActor::Tick(float DeltaTime)
 	{
 		PlayerController->SetViewTargetWithBlend(this);
 	}
-
 	
 	if(bIsFocusedPlayer)
 	{
@@ -70,14 +69,19 @@ void AEDCameraActor::Tick(float DeltaTime)
 		{
 			return;
 		}
+		LookTargetLocation=PlayerCharacter->GetActorLocation();
 		
-		PlayerController->SetViewTargetWithBlend(this);
-		SetActorLocation(PlayerCharacter->GetActorLocation()+CameraOffset);
 	}
+	else
+	{
+		CameraMove(DeltaTime);
+	}
+	SetActorLocation(LookTargetLocation+CameraOffset);
 }
 
 void AEDCameraActor::CameraZoom(FInputActionValue value)
 {
+	FVector BufferVector;
 	BufferVector=CameraOffset+(CameraFrontVector*CameraScrollSpeed*(value.Get<float>()));
 	
 
@@ -85,7 +89,7 @@ void AEDCameraActor::CameraZoom(FInputActionValue value)
 	CameraOffset=FVector(
 		//카메라 오프셋의 X좌표는 음수이므로, MinZoom(최대 줌아웃)이 절대값이 커서 Min에 위치한다.
 		FMath::Clamp(BufferVector.X,MinZoomCameraOffset.X,MaxZoomCameraOffset.X),
-		0.f,
+		CameraOffset.Y,
 		//카메라 오프셋의 Z좌표는 양수이므로, MinZoom(최대 줌아웃)이 값이 커서 Max에 위치한다.
 		FMath::Clamp(BufferVector.Z,MaxZoomCameraOffset.Z,MinZoomCameraOffset.Z)
 		);
@@ -100,15 +104,53 @@ void AEDCameraActor::ToggleCameraFocus(FInputActionValue value)
 		bIsFocusedPlayer=false;
 		return;
 	}
-	bIsFocusedPlayer=true;
+	else
+	{
+		CameraOffset=MinZoomCameraOffset;
+		bIsFocusedPlayer=true;
+	}
+
 }
 
-void AEDCameraActor::CameraMove(FInputActionValue value)
+void AEDCameraActor::CameraMove(float DeltaTime)
 {
-	FVector2D MousePos = UWidgetLayoutLibrary::GetMousePositionOnViewport(GetWorld());
-	FVector2D Viewport= UWidgetLayoutLibrary::GetViewportSize(GetWorld());
+	if (!GEngine||!GEngine->GameViewport)
+	{
+		return;
+	}
+	float BufferX, BufferY;
+	FVector2D ViewportSize;
+	//현재 마우스의 픽셀 단위 위치를 구한다.
+	PlayerController->GetMousePosition(BufferX,BufferY);
+	FVector2D MousePos=FVector2D(BufferX,BufferY);
+	//뷰포트의 크기를 픽셀 단위로 구한다.
+	GEngine->GameViewport->GetViewportSize(ViewportSize);
+	//정규화된 마우스의 위치값
+	FVector2D NormalPosition=MousePos/ViewportSize;
+	//마우스의 위치에 따른 방향벡터
+	FVector DirVector=FVector::ZeroVector;
 	
+	NormalCameraMoveEdge=FMath::Clamp(NormalCameraMoveEdge,0.0f,0.5f);
+	if (NormalPosition.X<NormalCameraMoveEdge)
+	{
+		DirVector+=FVector(0.0f,-1.f,0.f);
+	}
+	if (NormalPosition.X>(1.0f-NormalCameraMoveEdge))
+	{
+		DirVector+=FVector(0.0f,1.f,0.f);
+	}
+	if (NormalPosition.Y<NormalCameraMoveEdge)
+	{
+		DirVector+=FVector(1.0f,0.f,0.f);
+	}
+	if (NormalPosition.Y>(1.0f-NormalCameraMoveEdge))
+	{
+		DirVector+=FVector(-1.0f,0.f,0.f);
+	}
 	
-	//UE_LOG(LogTemp,Warning,TEXT("%s"),*(MousePos/Viewport).ToString());
+	FVector BufferVector=CameraOffset+(DirVector*CameraMoveSpeed*DeltaTime);
+	//TODO: 카메라가 맵을 벗어나지 못하게 처리
+	
+	CameraOffset=BufferVector;
 }
 
