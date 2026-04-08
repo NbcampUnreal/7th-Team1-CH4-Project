@@ -86,10 +86,6 @@ public:
 	
 	UFUNCTION()
 	void CameraFocus(const FInputActionValue& value);
-	
-	UFUNCTION()
-	void CameraMove(const FInputActionValue& value);
-	
 #pragma endregion
 #pragma region Spawn Actor
 protected:
@@ -117,7 +113,6 @@ private:
 #pragma region Delegate
 	FOnOtherInput OnCameraScroll;
 	FOnOtherInput OnCameraFocus;
-	FOnOtherInput OnCameraMove;
 #pragma endregion
 	
 
