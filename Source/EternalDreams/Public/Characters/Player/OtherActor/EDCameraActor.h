@@ -57,8 +57,10 @@ public:
 	bool bIsFocusedPlayer=true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute")
 	float CameraScrollSpeed=10.0f;
-	
-	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute")
+	float CameraMoveSpeed=500.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attribute")
+	float NormalCameraMoveEdge=0.1f;
 	//Caching
 protected:
 	UPROPERTY()
@@ -68,7 +70,7 @@ protected:
 	UPROPERTY()
 	FVector CameraFrontVector;
 	UPROPERTY()
-	FVector BufferVector;
+	FVector LookTargetLocation;
 	
 	//CallBack
 public:
@@ -77,5 +79,5 @@ public:
 	UFUNCTION()
 	void ToggleCameraFocus(FInputActionValue value);
 	UFUNCTION()
-	void CameraMove(FInputActionValue value);
+	void CameraMove(float DeltaTime);
 };
