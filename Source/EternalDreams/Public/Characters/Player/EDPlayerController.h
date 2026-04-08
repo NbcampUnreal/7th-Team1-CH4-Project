@@ -6,10 +6,14 @@
 #include "GameFramework/PlayerController.h"
 #include "EDPlayerController.generated.h"
 
-class ACursorActor;
+struct FInputActionValue;
+class AEDCameraActor;
+class AEDCursorActor;
 class UWidgetComponent;
 class UInputMappingContext;
 class UInputAction;
+
+DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
 
 /**
  * 
@@ -23,20 +27,16 @@ class ETERNALDREAMS_API AEDPlayerController : public APlayerController
 
 protected:
 	virtual void BeginPlay() override;
+		// 작성자 : 김동주
+    	// Enhanced Input 액션을 실제 처리 함수에 바인딩
+	virtual void SetupInputComponent() override;
 
-	// 작성자 : 김동주
-	// Enhanced Input 액션을 실제 처리 함수에 바인딩
-	void SetupInputComponent();
+
 
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputMappingContext> InputMappingContext = nullptr;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	TObjectPtr<UInputAction> MoveAction = nullptr;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
-	TObjectPtr<UInputAction> LookAction = nullptr;
-
+	
 	// 작성자 : 김동주
 	// 인벤토리 패널 열기/닫기 입력 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
@@ -45,13 +45,60 @@ public:
 	// ESC 입력 처리용 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input")
 	TObjectPtr<UInputAction> UIBackAction = nullptr;
+	
+	// -------------------------------------------------------
+	// 테스트용 RPC (페이즈)
+	// -------------------------------------------------------
 
+	/** 클라이언트에서 호출 → 서버에서 실행. 페이즈 시퀀스 시작 요청. (테스트용) */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestStartPhaseSequence();
+
+	/** 클라이언트에서 호출 → 서버에서 실행. 다음 페이즈 스킵 요청. (테스트용) */
+	UFUNCTION(Server, Reliable)
+	void Server_RequestSkipPhase();
+
+public:
+#pragma region Input Player
+	//IMC_Player
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
+	TObjectPtr<UInputMappingContext> PlayerInputMappingContext=nullptr;
+  // IA_Player
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
+	TObjectPtr<UInputAction> MoveAction=nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
+	TObjectPtr<UInputAction> LookAction=nullptr;
+#pragma endregion
+#pragma region Input Camera
+	//IMC_Camera
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Camera")
+	TObjectPtr<UInputMappingContext> CameraInputMappingContext=nullptr;
+	// IA_Camera
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Camera")
+	TObjectPtr<UInputAction> WheelAction=nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Camera")
+	TObjectPtr<UInputAction> KeyboardCAction=nullptr;
+#pragma endregion
+#pragma region Input Bindings
+public:
+	UFUNCTION()
+	void CameraZoom(const FInputActionValue& value);
+	
+	UFUNCTION()
+	void CameraFocus(const FInputActionValue& value);
+#pragma endregion
+#pragma region Spawn Actor
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="UIActor")
-	TSubclassOf<ACursorActor> CursorActorClass;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Actor")
+	TSubclassOf<AEDCursorActor> CursorActorClass;
 	UPROPERTY()
-	TObjectPtr<ACursorActor> CursorActor;
-
+	TObjectPtr<AEDCursorActor> CursorActor;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Actor")
+	TSubclassOf<AEDCameraActor> CameraActorClass;
+	UPROPERTY()
+	TObjectPtr<AEDCameraActor> CameraActor;
+#pragma endregion
 private:
 	// 작성자 : 김동주
 	// 인벤토리 패널 열기/닫기 입력 처리
@@ -62,4 +109,11 @@ private:
 
 	// 애플리케이션 복귀 시 현재 열린 UI 상태에 맞게 입력 모드와 포커스 복구를 요청
 	void HandleApplicationReactivated();
+
+#pragma region Delegate
+	FOnOtherInput OnCameraScroll;
+	FOnOtherInput OnCameraFocus;
+#pragma endregion
+	
+
 };

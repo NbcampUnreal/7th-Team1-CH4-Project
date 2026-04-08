@@ -4,12 +4,10 @@
 #include "Characters/Player/EDPlayerCharacter.h"
 
 #include "AbilitySystemComponent.h"
-#include "IMCComponent.h"
-#include "Camera/CameraComponent.h"
+#include "Characters/Player/Component/IMCComponent.h"
 #include "Characters/Base/GAS/EDBaseAttributeSet.h"
 #include "Characters/Player/EDPlayerController.h"
 #include "Characters/Player/GAS/EDPlayerAttributeSet.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/WidgetComponent.h"
@@ -19,14 +17,6 @@
 // Sets default values
 AEDPlayerCharacter::AEDPlayerCharacter()
 {
-	
-	//Camera 관련 생성
-	SpringArm=CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-	SpringArm->TargetArmLength = SpringArmLength;
-	SpringArm->SetupAttachment(RootComponent);
-	Camera=CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
-	Camera->SetupAttachment(SpringArm);
-	
 	// ASC 생성
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
@@ -35,8 +25,6 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 	//IMC 컴포넌트 생성
 	IMCComponent=CreateDefaultSubobject<UIMCComponent>(TEXT("IMCComponent"));
 	
-
-
 }
 
 // Called when the game starts or when spawned
@@ -54,12 +42,14 @@ void AEDPlayerCharacter::BeginPlay()
 	
 	//AbilitySystem 초기화
 	InitializeAbilitySystem();
+	
+	//IMC 추가
 	AEDPlayerController* PC = Cast<AEDPlayerController>(GetController());
 	if (IsValid(PC))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PC->GetLocalPlayer()))
 		{
-			Subsystem->AddMappingContext(PC->InputMappingContext, 0);  // Gameplay
+			Subsystem->AddMappingContext(PC->PlayerInputMappingContext, 0);  // Gameplay
 		}
 	}
 	

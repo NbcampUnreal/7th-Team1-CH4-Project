@@ -2,7 +2,7 @@
 
 #include "Core/Test/EDTestPhaseWidget.h"
 #include "Core/EDGameState.h"
-#include "Core/EDPlayerController_Temp.h"
+#include "Characters/Player/EDPlayerController.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 
@@ -24,7 +24,7 @@ void UEDTestPhaseWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 
 void UEDTestPhaseWidget::OnSkipPhaseClicked()
 {
-	AEDPlayerController_Temp* PC = Cast<AEDPlayerController_Temp>(GetOwningPlayer());
+	AEDPlayerController* PC = Cast<AEDPlayerController>(GetOwningPlayer());
 	if (!PC)
 	{
 		return;
