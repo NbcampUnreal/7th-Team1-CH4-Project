@@ -48,10 +48,10 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
-private:
-	UPROPERTY()
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
 	TObjectPtr<UEDMonsterDataAsset> DataAsset;
-
+private:
 	UPROPERTY(ReplicatedUsing = OnRep_MonsterState)
 	EMonsterState MonsterState;
 	
