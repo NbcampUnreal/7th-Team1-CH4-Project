@@ -44,6 +44,14 @@ public:
 	FGameplayAttributeData MaxMana;
 	ATTRIBUTE_ACCESSORS(UEDPlayerAttributeSet, MaxMana)
 	
+	//kSH --- 금지구역 시간 ---
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_SurvivalTime)
+	FGameplayAttributeData SurvivalTime;
+	ATTRIBUTE_ACCESSORS(UEDPlayerAttributeSet, SurvivalTime)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_MaxSurvivalTime)
+	FGameplayAttributeData MaxSurvivalTime;
+	ATTRIBUTE_ACCESSORS(UEDPlayerAttributeSet, MaxSurvivalTime)
 	
 	//콜백 함수
 public:
@@ -52,6 +60,11 @@ public:
 	UFUNCTION()
 	virtual void OnRep_MaxMana(const FGameplayAttributeData& OldMaxMana);
 	
+	//kSH --- 금지구역 콜백 ---
+	UFUNCTION()
+	virtual void OnRep_SurvivalTime(const FGameplayAttributeData& OldSurvivalTime);
+	UFUNCTION()
+	virtual void OnRep_MaxSurvivalTime(const FGameplayAttributeData& OldMaxSurvivalTime);
 	
 public:
 	// Attribute 변경 전 호출 (Clamping)
