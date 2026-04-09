@@ -51,6 +51,9 @@ struct ETERNALDREAMS_API FEDItemSpawnRow : public FTableRowBase
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "1"))
     int32 MaxCount = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "0"))
+    int32 LootIndex = 0;
 };
 
 USTRUCT(BlueprintType)
