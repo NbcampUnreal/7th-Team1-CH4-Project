@@ -43,6 +43,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "ED|GameInstance")
 	FString LastServerIP;
 
+	UPROPERTY(BlueprintReadOnly, Category = "ED|GameInstance")
+	FString LastConnectionError;
+
 	// -------------------------------------------------------
 	// 레벨 트래블
 	// -------------------------------------------------------
