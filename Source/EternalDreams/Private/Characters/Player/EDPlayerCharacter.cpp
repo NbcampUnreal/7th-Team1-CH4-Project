@@ -5,6 +5,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "Characters/Player/Component/IMCComponent.h"
+#include "Characters/Player/Component/ZoneDetectorComponent.h"
 #include "Characters/Base/GAS/EDBaseAttributeSet.h"
 #include "Characters/Player/EDPlayerController.h"
 #include "Characters/Player/GAS/EDPlayerAttributeSet.h"
@@ -25,6 +26,9 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 	//IMC 컴포넌트 생성
 	IMCComponent=CreateDefaultSubobject<UIMCComponent>(TEXT("IMCComponent"));
 	
+	//--ksh 금지구역 감지 컴포넌트 부착
+	ZoneDetector = CreateDefaultSubobject<UZoneDetectorComponent>(TEXT("ZoneDetector"));
+
 }
 
 // Called when the game starts or when spawned

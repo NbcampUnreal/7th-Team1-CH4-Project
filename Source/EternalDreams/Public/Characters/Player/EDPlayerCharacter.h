@@ -12,6 +12,7 @@ class UWidgetComponent;
 class UEDBaseAttributeSet;
 class UEDPlayerAttributeSet;
 class UIMCComponent;
+class UZoneDetectorComponent;
 
 /*
  * [EDPlayerCharacter]
@@ -55,7 +56,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
 	TObjectPtr<UIMCComponent> IMCComponent;
 	
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UZoneDetectorComponent> ZoneDetector;
 	
 	
 protected:
