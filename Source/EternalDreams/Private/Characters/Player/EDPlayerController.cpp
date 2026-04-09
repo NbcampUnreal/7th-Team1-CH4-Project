@@ -12,6 +12,7 @@
 #include "UI/Subsystem/EDUIManageSubsystem.h"
 #include "Misc/CoreDelegates.h"
 #include "Core/EDGameMode.h"
+#include "Core/EDPlayerState.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/Types/EDUIWidgetIds.h"
 #include "InputMappingContext.h"
@@ -20,9 +21,42 @@ AEDPlayerController::AEDPlayerController()
 {
 }
 
+
+// IGenericTeamAgentInterface
+void AEDPlayerController::SetGenericTeamId(const FGenericTeamId& NewTeamId)
+{
+	CachedTeamId = NewTeamId;
+}
+
+FGenericTeamId AEDPlayerController::GetGenericTeamId() const
+{
+	return CachedTeamId;
+}
+
+ETeamAttitude::Type AEDPlayerController::GetTeamAttitudeTowards(const AActor& Other) const
+{
+	const APawn* OtherPawn = Cast<APawn>(&Other);
+	if (!IsValid(OtherPawn))
+		return ETeamAttitude::Neutral;
+
+	const IGenericTeamAgentInterface* OtherTeamAgent = Cast<IGenericTeamAgentInterface>(OtherPawn->GetController());
+	if (!OtherTeamAgent)
+		return ETeamAttitude::Neutral;
+
+	return CachedTeamId == OtherTeamAgent->GetGenericTeamId()
+		? ETeamAttitude::Friendly
+		: ETeamAttitude::Hostile;
+}
+
 void AEDPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+
+	// 로비에서 배정된 TeamId → GenericTeamId 동기화
+	if (AEDPlayerState* PS = GetPlayerState<AEDPlayerState>())
+	{
+		SetGenericTeamId(FGenericTeamId(PS->TeamId));
+	}
 
 	if (IsLocalController())
 	{
