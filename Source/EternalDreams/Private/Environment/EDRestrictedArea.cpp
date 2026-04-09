@@ -31,12 +31,9 @@ void AEDRestrictedArea::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (HasAuthority())
-	{
-		// Box가 아닌 Mesh의 오버랩 이벤트에 바인딩
-		AreaMesh->OnComponentBeginOverlap.AddDynamic(this, &AEDRestrictedArea::OnMeshBeginOverlap);
-		AreaMesh->OnComponentEndOverlap.AddDynamic(this, &AEDRestrictedArea::OnMeshEndOverlap);
-	}
+	//서버와 클라이언트 모두 오버랩을 감지
+	AreaMesh->OnComponentBeginOverlap.AddDynamic(this, &AEDRestrictedArea::OnMeshBeginOverlap);
+	AreaMesh->OnComponentEndOverlap.AddDynamic(this, &AEDRestrictedArea::OnMeshEndOverlap);
 }
 
 void AEDRestrictedArea::OnMeshBeginOverlap(
@@ -44,12 +41,27 @@ void AEDRestrictedArea::OnMeshBeginOverlap(
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep,
 	const FHitResult& SweepResult)
 {
+	//--- 서버 클라 공통 로직 ---
+	
 	// 1. 기본 유효성 검사 ( OtherActor 널 체크)
-	if (!HasAuthority() || !RestrictedAreaEffectClass || !IsValid(OtherActor)) return;
+	if (!RestrictedAreaEffectClass || !IsValid(OtherActor)) return;
 
-	// 2. 중복 방지: 닿은 컴포넌트가 루트 컴포넌트가 아니면 무시
+	// 2-1. 중복 방지: 닿은 컴포넌트가 루트 컴포넌트가 아니면 무시
 	if (OtherComp != OtherActor->GetRootComponent()) return;
+	
+	// 2-2. 추가 유효성 검사 [클라이언트 & 서버 공통 영역: 디버그 및 비주얼]
+	// IsLocallyControlled()를 써서 "내가 조종하는 캐릭터"가 들어갔을 때만 내 화면에 띄웁니다.
+	APawn* OverlapPawn = Cast<APawn>(OtherActor);
+	if (OverlapPawn && OverlapPawn->IsLocallyControlled())
+	{
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Red, TEXT("🚨 [클라이언트] 금지구역 진입 감지!"));
+	}
 
+	// 2-3. 서버 권한 체크
+	if (!HasAuthority()) return;
+	
+	//--- 서버 전용 로직 ---
+	
 	// 3. ASC 가져오기 및 유효성 검사 (얼리 리턴)
 	UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor);
 	if (!TargetASC) return;
@@ -89,12 +101,26 @@ void AEDRestrictedArea::OnMeshEndOverlap(
 	UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
 	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
+	//--- 서버클라 공통로직 ---
+	
 	// 1. 기본 유효성 검사 (OtherActor 널 체크)
-	if (!HasAuthority() || !RestrictedAreaEffectClass || !IsValid(OtherActor)) return;
+	if (!RestrictedAreaEffectClass || !IsValid(OtherActor)) return;
 
-	// 2. 루트 컴포넌트인지 확인
+	// 2-1. 루트 컴포넌트인지 확인
 	if (OtherComp != OtherActor->GetRootComponent()) return;
+	
+	// 2-2. 추가 유효성 검사 [클라이언트 & 서버 공통 영역]
+	APawn* OverlapPawn = Cast<APawn>(OtherActor);
+	if (OverlapPawn && OverlapPawn->IsLocallyControlled())
+	{
+		if (GEngine) GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, TEXT("✅ [클라이언트] 금지구역 이탈 감지!"));
+	}
 
+	// 2-3. 서버 권한 체크
+	if (!HasAuthority()) return;
+	
+	//--- 서버 전용 로직 ---
+	
 	// 3. ASC 가져오기 및 유효성 검사 (얼리 리턴)
 	UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(OtherActor);
 	if (!TargetASC) return;
