@@ -6,6 +6,7 @@
 #include "Abilities/GameplayAbility.h"
 #include "Characters/Monster/EDMonsterAnimInstance.h"
 #include "Data/EDMonsterDataAsset.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 
 // Sets default values
@@ -41,6 +42,8 @@ void AEDMonsterBase::BeginPlay()
 	if (IsValid(DataAsset) == false)
 		return;
 	
+	InitializeFromDataAsset(DataAsset);
+	
 	for (const TSubclassOf<UGameplayAbility>& AbilityClass : DataAsset->GetDefaultAbilities())
 	{
 		if (IsValid(AbilityClass) == false)
@@ -65,7 +68,14 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	BaseAttributeSet->InitMaxDefensive(Stat.Def);
 	BaseAttributeSet->InitMaxWalkSpeed(Stat.MoveSpeed);
 	BaseAttributeSet->InitWalkSpeed(Stat.MoveSpeed);
-	// TODO : Mesh, AnimInstance, BT - DataAsset에 getter 추가 후 비동기 로드
+	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+	if (MoveComp == nullptr)
+		return;
+	MoveComp->MaxWalkSpeed = Stat.MoveSpeed;
+	MoveComp->bOrientRotationToMovement = true;
+	bUseControllerRotationYaw = false;
+		
+	// TODO : Mesh, AnimInstance - DataAsset에 getter 추가 후 비동기 로드
 }
 
 void AEDMonsterBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const

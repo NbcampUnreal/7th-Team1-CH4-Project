@@ -68,6 +68,34 @@ void AEDMonsterAIController::BeginPlay()
 {
 	Super::BeginPlay();
 	
+	UE_LOG(LogTemp, Warning, TEXT("[AICtrl][%s] BeginPlay 진입 - Authority:%s / Pawn:%s"),
+	*GetName(),
+	HasAuthority() ? TEXT("YES") : TEXT("NO"),
+	IsValid(GetPawn()) ? *GetPawn()->GetName() : TEXT("NULL"));
+	
+	if (HasAuthority() == false)
+		return;
+	
+	AEDMonsterBase* Monster = Cast<AEDMonsterBase>(GetPawn());
+	if (IsValid(Monster) == false)
+		return;
+	
+	UEDMonsterDataAsset* DA = Monster->GetDataAsset();
+	if (IsValid(DA) == false)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] BeginPlay: DataAsset 없음"), *GetName());
+		return;
+	}
+	
+	UBehaviorTree* BT = DA->GetBehaviorTree().LoadSynchronous();
+	if (IsValid(BT) == false)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] Failed to load BehaviorTree!"), *GetName());
+		return;
+	}
+	
+	bool bResult = RunBehaviorTree(BT);
+	UE_LOG(LogTemp, Warning, TEXT("[AICtrl][%s] RunBehaviorTree: %s"), *GetName(), bResult ? TEXT("성공") : TEXT("실패"));
 }
 
 ETeamAttitude::Type AEDMonsterAIController::GetTeamAttitudeTowards(const AActor& Other) const
@@ -93,23 +121,6 @@ void AEDMonsterAIController::OnPossess(APawn* InPawn)
 		return;
 	SetGenericTeamId(MonsterTeamId);
 	UAIPerceptionSystem::GetCurrent(GetWorld())->UpdateListener(*AIPerceptionComp);
-	
-	AEDMonsterBase* Monster = Cast<AEDMonsterBase>(InPawn);
-	if (IsValid(Monster) == false)
-		return;
-	
-	UEDMonsterDataAsset* DA = Monster->GetDataAsset();
-	if (IsValid(DA) == false)
-		return;
-	
-	UBehaviorTree* BT = DA->GetBehaviorTree().LoadSynchronous();
-	if (IsValid(BT) == false)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] Failed to load BehaviorTree!"), *GetName());
-		return;
-	}
-	
-	RunBehaviorTree(BT);
 }
 
 void AEDMonsterAIController::OnUnPossess()
