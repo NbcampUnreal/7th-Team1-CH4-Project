@@ -3,9 +3,8 @@
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
 #include "Components/PanelWidget.h"
+#include "UI/Types/EDUITypes.h"
 #include "EDHUDLayout.generated.h"
-
-class UEDPlayerStatusWidget;
 
 UCLASS()
 class ETERNALDREAMS_API UEDHUDLayout : public UCommonUserWidget
@@ -33,31 +32,15 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "HUD")
 	TObjectPtr<UPanelWidget> RootContainer;
 
-	// PlayerStatus 배치용 슬롯
-	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "HUD")
-	TObjectPtr<UPanelWidget> PlayerStatusSlot;
-
-	// PlayerStatus 위젯 클래스
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "HUD")
-	TSubclassOf<UEDPlayerStatusWidget> PlayerStatusWidgetClass;
-
-	// 생성된 테스트 위젯 참조 보관용
-	UPROPERTY(Transient, BlueprintReadOnly, Category = "HUD")
-	TObjectPtr<UEDPlayerStatusWidget> PlayerStatusWidgetInstance;
-
-	// 인게임 패널이 올라가는 레이어 슬롯
+	// 게임 중 열리는 패널이 올라갈 레이어
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "HUD|Layer")
 	TObjectPtr<UPanelWidget> GameLayerSlot;
 
-	// 메뉴 계열 패널이 올라가는 레이어 슬롯
+	// 메뉴 계열 패널이 올라갈 레이어
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "HUD|Layer")
 	TObjectPtr<UPanelWidget> MenuLayerSlot;
 
-	// 확인창, 경고창 같은 최상위 패널이 올라가는 레이어 슬롯
+	// 모달, 확인창, 경고창 등이 올라갈 최상위 레이어
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "HUD|Layer")
 	TObjectPtr<UPanelWidget> ModalLayerSlot;
-
-private:
-	// PlayerStatus 위젯 생성용
-	void CreatePlayerStatusWidget();
 };
