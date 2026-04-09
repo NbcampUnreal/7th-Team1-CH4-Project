@@ -282,6 +282,94 @@ void EquipCraftResultOrFallback(UEDInventoryComponent* InventoryComponent, EEDEq
     TargetSlot->EquippedItem.ItemId = ResultItemId;
     TargetSlot->EquippedItem.Quantity = 1;
 }
+
+FText ResolveItemDisplayName_Craft(const FPrimaryAssetId& ItemId)
+{
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Craft(ItemId);
+    if (ItemData && !ItemData->DisplayName.IsEmpty())
+    {
+        return ItemData->DisplayName;
+    }
+
+    return FText::FromName(ItemId.PrimaryAssetName);
+}
+
+EEDItemRarity ResolveItemRarity_Craft(const FPrimaryAssetId& ItemId)
+{
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Craft(ItemId);
+    return ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
+}
+
+bool IsRecipeRowValid_Craft(const FEDCraftingRecipeRow& RecipeRow)
+{
+    if (!RecipeRow.ResultItemId.IsValid() || RecipeRow.ResultQuantity <= 0)
+    {
+        return false;
+    }
+
+    for (const FEDCraftingIngredientRow& Ingredient : RecipeRow.Ingredients)
+    {
+        if (!Ingredient.ItemId.IsValid() || Ingredient.Quantity <= 0)
+        {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+int32 CompareCraftableEntry(const FEDCraftableRecipeEntry& A, const FEDCraftableRecipeEntry& B, EEDCraftableRecipeSortOption SortOption)
+{
+    auto CompareByName = [](const FText& Left, const FText& Right) -> int32
+    {
+        return FCString::Stricmp(*Left.ToString(), *Right.ToString());
+    };
+
+    auto CompareByFName = [](FName Left, FName Right) -> int32
+    {
+        return FCString::Stricmp(*Left.ToString(), *Right.ToString());
+    };
+
+    switch (SortOption)
+    {
+    case EEDCraftableRecipeSortOption::ByRarity:
+        if (A.ResultRarity != B.ResultRarity)
+        {
+            return static_cast<int32>(A.ResultRarity) - static_cast<int32>(B.ResultRarity);
+        }
+        break;
+
+    case EEDCraftableRecipeSortOption::ByResultItemId:
+        if (A.ResultItemId != B.ResultItemId)
+        {
+            return FCString::Stricmp(*A.ResultItemId.ToString(), *B.ResultItemId.ToString());
+        }
+        break;
+
+    case EEDCraftableRecipeSortOption::ByResultItemName:
+        {
+            const int32 NameCompare = CompareByName(A.ResultItemName, B.ResultItemName);
+            if (NameCompare != 0)
+            {
+                return NameCompare;
+            }
+        }
+        break;
+
+    case EEDCraftableRecipeSortOption::ByRowId:
+    default:
+        break;
+    }
+
+    const int32 RowCompare = CompareByFName(A.RowId, B.RowId);
+    if (RowCompare != 0)
+    {
+        return RowCompare;
+    }
+
+    return CompareByFName(A.RecipeId, B.RecipeId);
+}
+
 }
 
 bool FEDInventoryCraftService::TryCraftByRecipeId(UEDInventoryComponent* InventoryComponent, FName RecipeId, EEDInventoryActionFailure* OutFailure)
@@ -295,9 +383,14 @@ bool FEDInventoryCraftService::TryCraftByRecipeId(UEDInventoryComponent* Invento
     }
 
     const FEDCraftingRecipeRow* RecipeRow = InventoryComponent->CraftingRecipeTable->FindRow<FEDCraftingRecipeRow>(RecipeId, TEXT("TryCraftByRecipeId"));
-    if (!RecipeRow || !RecipeRow->ResultItemId.IsValid() || RecipeRow->ResultQuantity <= 0)
+    if (!RecipeRow)
     {
         SetFailure_Craft(OutFailure, EEDInventoryActionFailure::InvalidRecipe);
+        return false;
+    }
+
+    if (!CanCraftRecipe(InventoryComponent, *RecipeRow, OutFailure))
+    {
         return false;
     }
 
@@ -379,4 +472,69 @@ bool FEDInventoryCraftService::TryCraftByRecipeId(UEDInventoryComponent* Invento
     }
 
     return true;
+}
+
+bool FEDInventoryCraftService::CanCraftRecipe(const UEDInventoryComponent* InventoryComponent, const FEDCraftingRecipeRow& RecipeRow, EEDInventoryActionFailure* OutFailure)
+{
+    SetFailure_Craft(OutFailure, EEDInventoryActionFailure::None);
+
+    if (!InventoryComponent || !IsRecipeRowValid_Craft(RecipeRow))
+    {
+        SetFailure_Craft(OutFailure, EEDInventoryActionFailure::InvalidRecipe);
+        return false;
+    }
+
+    for (const FEDCraftingIngredientRow& Ingredient : RecipeRow.Ingredients)
+    {
+        if (CountItemTotal(InventoryComponent, Ingredient.ItemId) < Ingredient.Quantity)
+        {
+            SetFailure_Craft(OutFailure, EEDInventoryActionFailure::MissingIngredient);
+            return false;
+        }
+    }
+
+    const UEDInventoryItemDataAsset* ResultItemData = ResolveItemData_Craft(RecipeRow.ResultItemId);
+    const bool bIsEquipmentResult = IsEquipmentResult(ResultItemData);
+    if (!bIsEquipmentResult && !CanStoreResultItem(InventoryComponent, RecipeRow.ResultItemId, RecipeRow.ResultQuantity))
+    {
+        SetFailure_Craft(OutFailure, EEDInventoryActionFailure::NoSpace);
+        return false;
+    }
+
+    return true;
+}
+
+void FEDInventoryCraftService::GetCraftableRecipes(const UEDInventoryComponent* InventoryComponent, TArray<FEDCraftableRecipeEntry>& OutRecipes, EEDCraftableRecipeSortOption SortOption, bool bDescending)
+{
+    OutRecipes.Reset();
+
+    if (!InventoryComponent || !InventoryComponent->CraftingRecipeTable)
+    {
+        return;
+    }
+
+    const TArray<FName> RowNames = InventoryComponent->CraftingRecipeTable->GetRowNames();
+    for (const FName RowName : RowNames)
+    {
+        const FEDCraftingRecipeRow* RecipeRow = InventoryComponent->CraftingRecipeTable->FindRow<FEDCraftingRecipeRow>(RowName, TEXT("GetCraftableRecipes"));
+        if (!RecipeRow || !CanCraftRecipe(InventoryComponent, *RecipeRow, nullptr))
+        {
+            continue;
+        }
+
+        FEDCraftableRecipeEntry Entry;
+        Entry.RowId = RowName;
+        Entry.RecipeId = RecipeRow->RecipeId;
+        Entry.ResultItemId = RecipeRow->ResultItemId;
+        Entry.ResultItemName = ResolveItemDisplayName_Craft(RecipeRow->ResultItemId);
+        Entry.ResultRarity = ResolveItemRarity_Craft(RecipeRow->ResultItemId);
+
+        OutRecipes.Add(MoveTemp(Entry));
+    }
+
+    OutRecipes.Sort([SortOption, bDescending](const FEDCraftableRecipeEntry& A, const FEDCraftableRecipeEntry& B)
+    {
+        const int32 CompareResult = CompareCraftableEntry(A, B, SortOption);
+        return bDescending ? (CompareResult > 0) : (CompareResult < 0);
+    });
 }
