@@ -19,6 +19,10 @@ public:
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	// -------------------------------------------------------
+	// Phase 정보 (읽기)
+	// -------------------------------------------------------
+
 	/** 현재 게임 페이즈 태그 반환 */
 	UFUNCTION(BlueprintCallable, Category = "ED|Phase")
 	FGameplayTag GetCurrentPhase() const { return CurrentPhase; }
@@ -27,13 +31,26 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ED|Phase")
 	float GetPhaseRemainingTime() const { return PhaseRemainingTime; }
 
-	/** 페이즈 변경 (서버에서만 호출) */
-	void SetCurrentPhase(const FGameplayTag& NewPhase);
+	/** 현재 몇 일차인지 (1~4, 0=미시작). CurrentPhase 태그에서 파싱 */
+	UFUNCTION(BlueprintCallable, Category = "ED|Phase")
+	int32 GetCurrentDay() const;
 
-	/** 남은 시간 갱신 (서버에서만 호출) */
+	/** 현재 밤인지. CurrentPhase 태그에서 파싱 */
+	UFUNCTION(BlueprintCallable, Category = "ED|Phase")
+	bool GetIsNight() const;
+
+	// -------------------------------------------------------
+	// Phase 정보 (서버에서만 호출)
+	// -------------------------------------------------------
+
+	void SetCurrentPhase(const FGameplayTag& NewPhase);
 	void SetPhaseRemainingTime(float NewTime);
 
-	/** 페이즈 변경 시 브로드캐스트 델리게이트 */
+	// -------------------------------------------------------
+	// 델리게이트
+	// -------------------------------------------------------
+
+	/** 페이즈 변경 시 브로드캐스트 */
 	UPROPERTY(BlueprintAssignable, Category = "ED|Phase")
 	FOnGamePhaseChanged OnGamePhaseChanged;
 

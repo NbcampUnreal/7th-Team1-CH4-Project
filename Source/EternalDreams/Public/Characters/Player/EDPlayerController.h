@@ -10,6 +10,7 @@
 struct FInputActionValue;
 class AEDCameraActor;
 class AEDCursorActor;
+class UUserWidget;
 class UWidgetComponent;
 class UInputMappingContext;
 class UInputAction;
@@ -104,11 +105,21 @@ protected:
 	TSubclassOf<AEDCursorActor> CursorActorClass;
 	UPROPERTY()
 	TObjectPtr<AEDCursorActor> CursorActor;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Actor")
 	TSubclassOf<AEDCameraActor> CameraActorClass;
 	UPROPERTY()
 	TObjectPtr<AEDCameraActor> CameraActor;
+#pragma endregion
+
+#pragma region Test Widget
+protected:
+	/** 테스트용 위젯 클래스 (BP에서 지정. 비워두면 생성하지 않음) */
+	UPROPERTY(EditDefaultsOnly, Category = "ED|Test")
+	TSubclassOf<UUserWidget> TestWidgetClass;
+
+	UPROPERTY()
+	TObjectPtr<UUserWidget> TestWidget;
 #pragma endregion
 private:
 #pragma region UI 

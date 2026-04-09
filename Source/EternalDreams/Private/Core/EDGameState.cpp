@@ -15,6 +15,46 @@ void AEDGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 	DOREPLIFETIME(AEDGameState, PhaseRemainingTime);
 }
 
+// ============================================================
+//  Phase 태그에서 일차/밤낮 파싱
+//
+//  태그 형식: "Phase.DayN.Day" 또는 "Phase.DayN.Night"
+//  예: Phase.Day2.Night → Day=2, Night=true
+// ============================================================
+
+int32 AEDGameState::GetCurrentDay() const
+{
+	if (!CurrentPhase.IsValid()) return 0;
+
+	const FString TagStr = CurrentPhase.ToString();
+
+	// "Phase.Day2.Night" → "Day" 찾기 (오프셋 6 = "Phase." 이후부터)
+	const int32 DayCharIndex = TagStr.Find(TEXT("Day"), ESearchCase::IgnoreCase, ESearchDir::FromStart, 6);
+	if (DayCharIndex == INDEX_NONE) return 0;
+
+	// "Day" 바로 뒤 한 글자에서 숫자 추출: "Day2" → '2'
+	const int32 NumIndex = DayCharIndex + 3;
+	if (!TagStr.IsValidIndex(NumIndex)) return 0;
+
+	const TCHAR DayChar = TagStr[NumIndex];
+	if (DayChar >= TEXT('1') && DayChar <= TEXT('4'))
+	{
+		return DayChar - TEXT('0');
+	}
+
+	return 0;
+}
+
+bool AEDGameState::GetIsNight() const
+{
+	if (!CurrentPhase.IsValid()) return false;
+
+	// 태그가 ".Night"로 끝나는지 확인
+	return CurrentPhase.ToString().EndsWith(TEXT("Night"));
+}
+
+// ============================================================
+
 void AEDGameState::SetCurrentPhase(const FGameplayTag& NewPhase)
 {
 	if (!HasAuthority()) return;

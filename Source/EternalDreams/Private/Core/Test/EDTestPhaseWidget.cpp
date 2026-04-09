@@ -41,7 +41,7 @@ void UEDTestPhaseWidget::UpdateDisplay()
 	{
 		PhaseNameText->SetText(FText::FromString(TEXT("대기 중")));
 		RemainingTimeText->SetText(FText::FromString(TEXT("--:--")));
-		PhaseIndexText->SetText(FText::FromString(TEXT("")));
+		DayInfoText->SetText(FText::FromString(TEXT("")));
 		return;
 	}
 
@@ -62,7 +62,9 @@ void UEDTestPhaseWidget::UpdateDisplay()
 	const int32 Seconds = FMath::FloorToInt(FMath::Fmod(Remaining, 60.f));
 	RemainingTimeText->SetText(FText::FromString(FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds)));
 
-	// 페이즈 태그 표시
-	PhaseIndexText->SetText(FText::FromString(
-		FString::Printf(TEXT("Phase: %s"), *CurrentPhase.ToString())));
+	// 일차 / 밤낮 표시
+	const int32 Day = GS->GetCurrentDay();
+	const bool bNight = GS->GetIsNight();
+	DayInfoText->SetText(FText::FromString(
+		FString::Printf(TEXT("Day %d - %s"), Day, bNight ? TEXT("Night") : TEXT("Day"))));
 }

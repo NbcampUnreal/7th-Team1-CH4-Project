@@ -40,9 +40,9 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> RemainingTimeText;
 
-	/** 페이즈 인덱스 표시 (예: 1 / 8) */
+	/** 일차 / 밤낮 표시 (예: Day 2 - Night) */
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> PhaseIndexText;
+	TObjectPtr<UTextBlock> DayInfoText;
 
 	/** 다음 페이즈 스킵 버튼 (테스트용) */
 	UPROPERTY(meta = (BindWidget))

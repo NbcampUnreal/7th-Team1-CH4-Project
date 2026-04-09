@@ -16,6 +16,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "UI/Types/EDUIWidgetIds.h"
 #include "InputMappingContext.h"
+#include "Blueprint/UserWidget.h"
 
 AEDPlayerController::AEDPlayerController()
 {
@@ -103,6 +104,16 @@ void AEDPlayerController::BeginPlay()
 			}
 		}
 
+	}
+
+	// 테스트 위젯 생성 (BP에서 TestWidgetClass가 지정된 경우에만)
+	if (IsLocalController() && TestWidgetClass)
+	{
+		TestWidget = CreateWidget<UUserWidget>(this, TestWidgetClass);
+		if (TestWidget)
+		{
+			TestWidget->AddToViewport();
+		}
 	}
 
 	FCoreDelegates::ApplicationHasReactivatedDelegate.AddUObject(
