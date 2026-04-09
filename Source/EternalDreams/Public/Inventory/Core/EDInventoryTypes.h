@@ -35,6 +35,14 @@ enum class EEDInventoryActionFailure : uint8
     EffectApplyFailed
 };
 
+UENUM(BlueprintType)
+enum class EEDInventoryLootSpawnMode : uint8
+{
+    Static,
+    QuantityMax,
+    RollCountMax
+};
+
 USTRUCT(BlueprintType)
 struct ETERNALDREAMS_API FEDInventorySlotData
 {
@@ -77,4 +85,34 @@ struct ETERNALDREAMS_API FEDInventoryDropRequest
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
     FGameplayTagContainer ContextTags;
+};
+
+UENUM(BlueprintType)
+enum class EEDCraftableRecipeSortOption : uint8
+{
+    ByRowId,
+    ByRarity,
+    ByResultItemId,
+    ByResultItemName
+};
+
+USTRUCT(BlueprintType)
+struct ETERNALDREAMS_API FEDCraftableRecipeEntry
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft")
+    FName RowId = NAME_None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft")
+    FName RecipeId = NAME_None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft")
+    FPrimaryAssetId ResultItemId;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft")
+    FText ResultItemName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft")
+    EEDItemRarity ResultRarity = EEDItemRarity::Normal;
 };
