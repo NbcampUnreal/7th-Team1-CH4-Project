@@ -15,7 +15,7 @@ AEDMonsterBase::AEDMonsterBase()
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
-	
+	SetReplicateMovement(true);
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	// 몬스터 GE는 서버만 가지고있고 계산하기 때문에 Minimal로 설정
@@ -74,7 +74,6 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	MoveComp->MaxWalkSpeed = Stat.MoveSpeed;
 	MoveComp->bOrientRotationToMovement = true;
 	bUseControllerRotationYaw = false;
-		
 	// TODO : Mesh, AnimInstance - DataAsset에 getter 추가 후 비동기 로드
 }
 
