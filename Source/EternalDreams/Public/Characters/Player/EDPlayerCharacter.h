@@ -15,8 +15,7 @@ class UIMCComponent;
 class UZoneDetectorComponent;
 
 /*
- * [EDPlayerCharacter]
- * 체력, 방어력, 이동속도의 현재와 최대치(혹은 감소되기 전 값) Attribute를 관리하는 캐릭터, 몬스터의 공통된 AttributeSet
+ * 플레이어 캐릭터 클래스
  */
 UCLASS()
 class ETERNALDREAMS_API AEDPlayerCharacter : public ACharacter, public IAbilitySystemInterface

@@ -148,9 +148,9 @@ void AEDCameraActor::CameraMove(float DeltaTime)
 		DirVector+=FVector(-1.0f,0.f,0.f);
 	}
 	
-	FVector BufferVector=CameraOffset+(DirVector*CameraMoveSpeed*DeltaTime);
+	FVector BufferVector=LookTargetLocation+(DirVector*CameraMoveSpeed*DeltaTime);
 	//TODO: 카메라가 맵을 벗어나지 못하게 처리
 	
-	CameraOffset=BufferVector;
+	LookTargetLocation=BufferVector;
 }
 

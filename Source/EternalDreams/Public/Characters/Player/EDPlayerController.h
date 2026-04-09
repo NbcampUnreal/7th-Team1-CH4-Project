@@ -16,7 +16,7 @@ class UInputAction;
 DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
 
 /**
- * 
+ * 플레이어 컨트롤러 클래스
  */
 UCLASS()
 class ETERNALDREAMS_API AEDPlayerController : public APlayerController

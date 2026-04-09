@@ -11,7 +11,9 @@ class UWidgetComponent;
 class AEDPlayerController;
 class AEDPlayerCharacter;
 
-
+/**
+ * 캐릭터에 관한 인풋을 받아 적용하는 액터 컴포넌트
+ */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ETERNALDREAMS_API UIMCComponent : public UActorComponent
 {

@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Core/EDAssetManager.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
 
 UEDAssetManager::UEDAssetManager()
 {
@@ -30,6 +31,9 @@ void UEDAssetManager::StartInitialLoading()
 	
 	// TODO : 프로젝트 커스텀 초기화 작성
 	UE_LOG(LogTemp, Log, TEXT("[EDAssetManager] StartInitialLoading 실행완료"));
+	
+	//현석: NativeGameplayTags 초기화
+	FEDGameplayTags::InitializeNativeTags();
 }
 
 // 경로 배열을 받아서 각 경로의 에셋을 순서대로 동기 로드 -> OutAssets배열에 담음
