@@ -1,10 +1,13 @@
 // Copyright Eternal Dreams Team. All Rights Reserved.
 
 #include "Core/EDGameState.h"
+#include "Engine/Engine.h"
 #include "Net/UnrealNetwork.h"
 
 AEDGameState::AEDGameState()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
 }
 
 void AEDGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -13,6 +16,30 @@ void AEDGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 
 	DOREPLIFETIME(AEDGameState, CurrentPhase);
 	DOREPLIFETIME(AEDGameState, PhaseRemainingTime);
+}
+
+void AEDGameState::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	// 클라이언트 화면에 Phase 디버그 정보 표시
+	if (GetNetMode() != NM_DedicatedServer)
+	{
+		if (CurrentPhase.IsValid() && GEngine)
+		{
+			const int32 Day = GetCurrentDay();
+			const bool bNight = GetIsNight();
+			const int32 Minutes = FMath::FloorToInt(PhaseRemainingTime / 60.f);
+			const int32 Seconds = FMath::FloorToInt(FMath::Fmod(PhaseRemainingTime, 60.f));
+
+			const FString DebugMsg = FString::Printf(
+				TEXT("Day%d %s  %02d:%02d  [%s]"),
+				Day, bNight ? TEXT("Night") : TEXT("Day"),
+				Minutes, Seconds, *CurrentPhase.ToString());
+
+			GEngine->AddOnScreenDebugMessage(1000, 0.f, FColor::Yellow, DebugMsg);
+		}
+	}
 }
 
 // ============================================================

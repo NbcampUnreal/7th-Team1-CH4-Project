@@ -18,6 +18,7 @@ public:
 	AEDGameState();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	virtual void Tick(float DeltaSeconds) override;
 
 	// -------------------------------------------------------
 	// Phase 정보 (읽기)
