@@ -16,11 +16,31 @@ public:
 	virtual void NativeConstruct() override;
 
 protected:
-	// 테스트용 HP 표시 바인딩용
+	// 플레이어 이름 표시용 텍스트
+	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "PlayerStatus")
+	TObjectPtr<UTextBlock> PlayerNameText;
+	
+	// 레벨 표시용 텍스트
+	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "PlayerStatus")
+	TObjectPtr<UTextBlock> LevelText;
+	
+	// HP 표시 바
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "PlayerStatus")
 	TObjectPtr<UProgressBar> HPBar;
-
-	// 테스트용 텍스트 표시 바인딩용
+	
+	// HP 수치 텍스트
+	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "PlayerStatus")
+	TObjectPtr<UTextBlock> HPValueText;
+	
+	// 마나 표시 바
+	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "PlayerStatus")
+	TObjectPtr<UProgressBar> ManaBar;
+	
+	// 마나 수치 텍스트
+	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "PlayerStatus")
+	TObjectPtr<UTextBlock> ManaValueText;
+	
+	// 상태 표시용 텍스트
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "PlayerStatus")
 	TObjectPtr<UTextBlock> StatusText;
 
