@@ -255,12 +255,12 @@ void UEDInventoryComponent::BeginPlay()
 
     if (GetOwner() && GetOwner()->HasAuthority() && InventorySlots.Num() != MaxInventorySlots)
     {
-        InitializeInventorySlots();
+        RequestInitializeInventorySlots();
     }
 
     if (bGiveDefaultWeaponOnBeginPlay)
     {
-        EnsureDefaultEquipment();
+        RequestEnsureDefaultEquipment();
     }
 
     if (GetOwner() && GetOwner()->HasAuthority() && bUseEquipmentSlots)
@@ -270,17 +270,28 @@ void UEDInventoryComponent::BeginPlay()
         SyncEquipEffectForSlot(EEDEquippableType::BottomArmor);
     }
 
-    if (GetOwner() && GetOwner()->HasAuthority() && bAutoInitializeRandomLootOnBeginPlay && !bRandomLootInitialized)
+    if (GetOwner() && GetOwner()->HasAuthority() && bAutoInitializeLootOnBeginPlay && !bRandomLootInitialized)
     {
         EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-        TryInitializeRandomLootDetailed(RandomLootRollCount, RandomLootMinIndex, RandomLootMaxIndex, RandomLootSeed, Failure);
+        RequestInitializeRandomLootDetailed(RandomLootRollCount, RandomLootMinIndex, RandomLootMaxIndex, RandomLootSeed, Failure);
     }
 
     RefreshCraftableRecipesCache();
 }
 
-void UEDInventoryComponent::InitializeInventorySlots()
+void UEDInventoryComponent::RequestInitializeInventorySlots()
 {
+    if (!GetOwner())
+    {
+        return;
+    }
+
+    if (!GetOwner()->HasAuthority())
+    {
+        ServerRequestInitializeInventorySlots();
+        return;
+    }
+
     if (MaxInventorySlots < 0)
     {
         MaxInventorySlots = 0;
@@ -368,7 +379,7 @@ bool UEDInventoryComponent::SyncEquipEffectForSlot(EEDEquippableType SlotType)
     return true;
 }
 
-bool UEDInventoryComponent::TryMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex)
+bool UEDInventoryComponent::RequestMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex)
 {
     if (!GetOwner())
     {
@@ -377,7 +388,7 @@ bool UEDInventoryComponent::TryMoveItemBetweenSlots(int32 FromSlotIndex, int32 T
 
     if (!GetOwner()->HasAuthority())
     {
-        ServerTryMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex);
+        ServerRequestMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex);
         return true;
     }
 
@@ -390,15 +401,21 @@ bool UEDInventoryComponent::TryMoveItemBetweenSlots(int32 FromSlotIndex, int32 T
     return bSucceeded;
 }
 
-bool UEDInventoryComponent::TryTransferItemAuto(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity)
+bool UEDInventoryComponent::RequestTransferItemAuto(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity)
 {
     EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-    return TryTransferItemAutoDetailed(ToInventory, FromSlotIndex, Quantity, Failure);
+    return RequestTransferItemAutoDetailed(FromInventory, ToInventory, FromSlotIndex, Quantity, Failure);
 }
 
-bool UEDInventoryComponent::TryTransferItemAutoDetailed(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure)
+bool UEDInventoryComponent::RequestTransferItemAutoDetailed(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure)
 {
     OutFailure = EEDInventoryActionFailure::None;
+
+    if (!FromInventory || !ToInventory)
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
 
     if (!GetOwner())
     {
@@ -408,15 +425,15 @@ bool UEDInventoryComponent::TryTransferItemAutoDetailed(UEDInventoryComponent* T
 
     if (!GetOwner()->HasAuthority())
     {
-        ServerTryTransferItemAuto(ToInventory, FromSlotIndex, Quantity);
+        ServerRequestTransferItemAuto(FromInventory, ToInventory, FromSlotIndex, Quantity);
         return true;
     }
 
-    const bool bSucceeded = FEDInventoryTransferService::TransferAuto(this, ToInventory, FromSlotIndex, Quantity, &OutFailure);
+    const bool bSucceeded = FEDInventoryTransferService::TransferAuto(FromInventory, ToInventory, FromSlotIndex, Quantity, &OutFailure);
     if (bSucceeded)
     {
-        OnInventoryChanged.Broadcast();
-        if (ToInventory && ToInventory != this)
+        FromInventory->OnInventoryChanged.Broadcast();
+        if (ToInventory != FromInventory)
         {
             ToInventory->OnInventoryChanged.Broadcast();
         }
@@ -425,15 +442,21 @@ bool UEDInventoryComponent::TryTransferItemAutoDetailed(UEDInventoryComponent* T
     return bSucceeded;
 }
 
-bool UEDInventoryComponent::TryTransferItemToSlot(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity)
+bool UEDInventoryComponent::RequestTransferItemToSlot(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity)
 {
     EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-    return TryTransferItemToSlotDetailed(ToInventory, FromSlotIndex, ToSlotIndex, Quantity, Failure);
+    return RequestTransferItemToSlotDetailed(FromInventory, ToInventory, FromSlotIndex, ToSlotIndex, Quantity, Failure);
 }
 
-bool UEDInventoryComponent::TryTransferItemToSlotDetailed(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure)
+bool UEDInventoryComponent::RequestTransferItemToSlotDetailed(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure)
 {
     OutFailure = EEDInventoryActionFailure::None;
+
+    if (!FromInventory || !ToInventory)
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
 
     if (!GetOwner())
     {
@@ -443,15 +466,15 @@ bool UEDInventoryComponent::TryTransferItemToSlotDetailed(UEDInventoryComponent*
 
     if (!GetOwner()->HasAuthority())
     {
-        ServerTryTransferItemToSlot(ToInventory, FromSlotIndex, ToSlotIndex, Quantity);
+        ServerRequestTransferItemToSlot(FromInventory, ToInventory, FromSlotIndex, ToSlotIndex, Quantity);
         return true;
     }
 
-    const bool bSucceeded = FEDInventoryTransferService::TransferToSlot(this, ToInventory, FromSlotIndex, ToSlotIndex, Quantity, &OutFailure);
+    const bool bSucceeded = FEDInventoryTransferService::TransferToSlot(FromInventory, ToInventory, FromSlotIndex, ToSlotIndex, Quantity, &OutFailure);
     if (bSucceeded)
     {
-        OnInventoryChanged.Broadcast();
-        if (ToInventory && ToInventory != this)
+        FromInventory->OnInventoryChanged.Broadcast();
+        if (ToInventory != FromInventory)
         {
             ToInventory->OnInventoryChanged.Broadcast();
         }
@@ -460,7 +483,7 @@ bool UEDInventoryComponent::TryTransferItemToSlotDetailed(UEDInventoryComponent*
     return bSucceeded;
 }
 
-bool UEDInventoryComponent::TryDropAllFromSlot(int32 FromSlotIndex)
+bool UEDInventoryComponent::RequestDropAllFromSlot(int32 FromSlotIndex)
 {
     if (!GetOwner())
     {
@@ -469,7 +492,7 @@ bool UEDInventoryComponent::TryDropAllFromSlot(int32 FromSlotIndex)
 
     if (!GetOwner()->HasAuthority())
     {
-        ServerTryDropAllFromSlot(FromSlotIndex);
+        ServerRequestDropAllFromSlot(FromSlotIndex);
         return true;
     }
 
@@ -489,7 +512,7 @@ bool UEDInventoryComponent::TryDropAllFromSlot(int32 FromSlotIndex)
     return true;
 }
 
-bool UEDInventoryComponent::TryDropSingleFromSlot(int32 FromSlotIndex)
+bool UEDInventoryComponent::RequestDropSingleFromSlot(int32 FromSlotIndex)
 {
     if (!GetOwner())
     {
@@ -498,7 +521,7 @@ bool UEDInventoryComponent::TryDropSingleFromSlot(int32 FromSlotIndex)
 
     if (!GetOwner()->HasAuthority())
     {
-        ServerTryDropSingleFromSlot(FromSlotIndex);
+        ServerRequestDropSingleFromSlot(FromSlotIndex);
         return true;
     }
 
@@ -524,7 +547,7 @@ bool UEDInventoryComponent::TryDropSingleFromSlot(int32 FromSlotIndex)
     return true;
 }
 
-bool UEDInventoryComponent::TryEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType)
+bool UEDInventoryComponent::RequestEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType)
 {
     if (!GetOwner())
     {
@@ -533,7 +556,7 @@ bool UEDInventoryComponent::TryEquipItemFromSlot(int32 FromSlotIndex, EEDEquippa
 
     if (!GetOwner()->HasAuthority())
     {
-        ServerTryEquipItemFromSlot(FromSlotIndex, TargetSlotType);
+        ServerRequestEquipItemFromSlot(FromSlotIndex, TargetSlotType);
         return true;
     }
 
@@ -547,7 +570,7 @@ bool UEDInventoryComponent::TryEquipItemFromSlot(int32 FromSlotIndex, EEDEquippa
     return bSucceeded;
 }
 
-bool UEDInventoryComponent::TryUnequipTopArmor()
+bool UEDInventoryComponent::RequestUnequipTopArmor()
 {
     if (!GetOwner())
     {
@@ -556,7 +579,7 @@ bool UEDInventoryComponent::TryUnequipTopArmor()
 
     if (!GetOwner()->HasAuthority())
     {
-        ServerTryUnequipTopArmor();
+        ServerRequestUnequipTopArmor();
         return true;
     }
 
@@ -570,7 +593,7 @@ bool UEDInventoryComponent::TryUnequipTopArmor()
     return bSucceeded;
 }
 
-bool UEDInventoryComponent::TryUnequipBottomArmor()
+bool UEDInventoryComponent::RequestUnequipBottomArmor()
 {
     if (!GetOwner())
     {
@@ -579,7 +602,7 @@ bool UEDInventoryComponent::TryUnequipBottomArmor()
 
     if (!GetOwner()->HasAuthority())
     {
-        ServerTryUnequipBottomArmor();
+        ServerRequestUnequipBottomArmor();
         return true;
     }
 
@@ -593,13 +616,13 @@ bool UEDInventoryComponent::TryUnequipBottomArmor()
     return bSucceeded;
 }
 
-bool UEDInventoryComponent::TryCraftItem(FName RecipeId)
+bool UEDInventoryComponent::RequestCraftItem(FName RecipeId)
 {
     EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-    return TryCraftItemDetailed(RecipeId, Failure);
+    return RequestCraftItemDetailed(RecipeId, Failure);
 }
 
-bool UEDInventoryComponent::TryCraftItemDetailed(FName RecipeId, EEDInventoryActionFailure& OutFailure)
+bool UEDInventoryComponent::RequestCraftItemDetailed(FName RecipeId, EEDInventoryActionFailure& OutFailure)
 {
     OutFailure = EEDInventoryActionFailure::None;
 
@@ -611,7 +634,7 @@ bool UEDInventoryComponent::TryCraftItemDetailed(FName RecipeId, EEDInventoryAct
 
     if (!GetOwner()->HasAuthority())
     {
-        ServerTryCraftItem(RecipeId);
+        ServerRequestCraftItem(RecipeId);
         return true;
     }
 
@@ -668,7 +691,7 @@ void UEDInventoryComponent::SetCraftableRecipeCacheSort(EEDCraftableRecipeSortOp
     RefreshCraftableRecipesCache();
 }
 
-bool UEDInventoryComponent::TryCraftFirstCachedRecipe()
+bool UEDInventoryComponent::RequestCraftFirstCachedRecipe()
 {
     if (CachedCraftableRecipes.Num() <= 0)
     {
@@ -681,16 +704,16 @@ bool UEDInventoryComponent::TryCraftFirstCachedRecipe()
         return false;
     }
 
-    return TryCraftItem(RecipeRowId);
+    return RequestCraftItem(RecipeRowId);
 }
 
-bool UEDInventoryComponent::TryConsumeItemAtSlot(int32 SlotIndex)
+bool UEDInventoryComponent::RequestConsumeItemAtSlot(int32 SlotIndex)
 {
     EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-    return TryConsumeItemAtSlotDetailed(SlotIndex, Failure);
+    return RequestConsumeItemAtSlotDetailed(SlotIndex, Failure);
 }
 
-bool UEDInventoryComponent::TryConsumeItemAtSlotDetailed(int32 SlotIndex, EEDInventoryActionFailure& OutFailure)
+bool UEDInventoryComponent::RequestConsumeItemAtSlotDetailed(int32 SlotIndex, EEDInventoryActionFailure& OutFailure)
 {
     OutFailure = EEDInventoryActionFailure::None;
 
@@ -702,7 +725,7 @@ bool UEDInventoryComponent::TryConsumeItemAtSlotDetailed(int32 SlotIndex, EEDInv
 
     if (!GetOwner()->HasAuthority())
     {
-        ServerTryConsumeItemAtSlot(SlotIndex);
+        ServerRequestConsumeItemAtSlot(SlotIndex);
         return true;
     }
 
@@ -744,11 +767,17 @@ bool UEDInventoryComponent::TryConsumeItemAtSlotDetailed(int32 SlotIndex, EEDInv
     return true;
 }
 
-bool UEDInventoryComponent::EnsureDefaultEquipment()
+bool UEDInventoryComponent::RequestEnsureDefaultEquipment()
 {
-    if (!GetOwner() || !GetOwner()->HasAuthority())
+    if (!GetOwner())
     {
         return false;
+    }
+
+    if (!GetOwner()->HasAuthority())
+    {
+        ServerRequestEnsureDefaultEquipment();
+        return true;
     }
 
     const bool bSucceeded = FEDInventoryEquipmentService::EnsureDefaultWeapon(this);
@@ -761,13 +790,13 @@ bool UEDInventoryComponent::EnsureDefaultEquipment()
     return bSucceeded;
 }
 
-bool UEDInventoryComponent::TryAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity)
+bool UEDInventoryComponent::RequestAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity)
 {
     EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-    return TryAddItemAutoDetailed(ItemId, Quantity, Failure);
+    return RequestAddItemAutoDetailed(ItemId, Quantity, Failure);
 }
 
-bool UEDInventoryComponent::TryAddItemAutoDetailed(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure)
+bool UEDInventoryComponent::RequestAddItemAutoDetailed(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure)
 {
     OutFailure = EEDInventoryActionFailure::None;
 
@@ -791,7 +820,7 @@ bool UEDInventoryComponent::TryAddItemAutoDetailed(FPrimaryAssetId ItemId, int32
 
     if (!GetOwner()->HasAuthority())
     {
-        ServerTryAddItemAuto(ItemId, Quantity);
+        ServerRequestAddItemAuto(ItemId, Quantity);
         return true;
     }
 
@@ -805,13 +834,13 @@ bool UEDInventoryComponent::TryAddItemAutoDetailed(FPrimaryAssetId ItemId, int32
     return true;
 }
 
-bool UEDInventoryComponent::TryAddItemToSlot(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex)
+bool UEDInventoryComponent::RequestAddItemToSlot(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex)
 {
     EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-    return TryAddItemToSlotDetailed(ItemId, Quantity, SlotIndex, Failure);
+    return RequestAddItemToSlotDetailed(ItemId, Quantity, SlotIndex, Failure);
 }
 
-bool UEDInventoryComponent::TryAddItemToSlotDetailed(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex, EEDInventoryActionFailure& OutFailure)
+bool UEDInventoryComponent::RequestAddItemToSlotDetailed(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex, EEDInventoryActionFailure& OutFailure)
 {
     OutFailure = EEDInventoryActionFailure::None;
 
@@ -835,7 +864,7 @@ bool UEDInventoryComponent::TryAddItemToSlotDetailed(FPrimaryAssetId ItemId, int
 
     if (!GetOwner()->HasAuthority())
     {
-        ServerTryAddItemToSlot(ItemId, Quantity, SlotIndex);
+        ServerRequestAddItemToSlot(ItemId, Quantity, SlotIndex);
         return true;
     }
 
@@ -848,13 +877,13 @@ bool UEDInventoryComponent::TryAddItemToSlotDetailed(FPrimaryAssetId ItemId, int
     return true;
 }
 
-bool UEDInventoryComponent::TryInitializeRandomLoot()
+bool UEDInventoryComponent::RequestInitializeRandomLoot()
 {
     EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-    return TryInitializeRandomLootDetailed(RandomLootRollCount, RandomLootMinIndex, RandomLootMaxIndex, RandomLootSeed, Failure);
+    return RequestInitializeRandomLootDetailed(RandomLootRollCount, RandomLootMinIndex, RandomLootMaxIndex, RandomLootSeed, Failure);
 }
 
-bool UEDInventoryComponent::TryInitializeRandomLootDetailed(int32 RollCount, int32 MinLootIndex, int32 MaxLootIndex, int32 Seed, EEDInventoryActionFailure& OutFailure)
+bool UEDInventoryComponent::RequestInitializeRandomLootDetailed(int32 RollCount, int32 MinLootIndex, int32 MaxLootIndex, int32 Seed, EEDInventoryActionFailure& OutFailure)
 {
     OutFailure = EEDInventoryActionFailure::None;
 
@@ -872,7 +901,7 @@ bool UEDInventoryComponent::TryInitializeRandomLootDetailed(int32 RollCount, int
 
     if (!GetOwner()->HasAuthority())
     {
-        ServerTryInitializeRandomLoot(RollCount, MinLootIndex, MaxLootIndex, Seed);
+        ServerRequestInitializeRandomLoot(RollCount, MinLootIndex, MaxLootIndex, Seed);
         return true;
     }
 
@@ -1039,70 +1068,80 @@ bool UEDInventoryComponent::TryInitializeRandomLootDetailed(int32 RollCount, int
     return true;
 }
 
-void UEDInventoryComponent::ServerTryMoveItemBetweenSlots_Implementation(int32 FromSlotIndex, int32 ToSlotIndex)
+void UEDInventoryComponent::ServerRequestMoveItemBetweenSlots_Implementation(int32 FromSlotIndex, int32 ToSlotIndex)
 {
-    TryMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex);
+    RequestMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex);
 }
 
-void UEDInventoryComponent::ServerTryTransferItemAuto_Implementation(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity)
+void UEDInventoryComponent::ServerRequestInitializeInventorySlots_Implementation()
 {
-    TryTransferItemAuto(ToInventory, FromSlotIndex, Quantity);
+    RequestInitializeInventorySlots();
 }
 
-void UEDInventoryComponent::ServerTryTransferItemToSlot_Implementation(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity)
+void UEDInventoryComponent::ServerRequestTransferItemAuto_Implementation(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity)
 {
-    TryTransferItemToSlot(ToInventory, FromSlotIndex, ToSlotIndex, Quantity);
+    RequestTransferItemAuto(FromInventory, ToInventory, FromSlotIndex, Quantity);
 }
 
-void UEDInventoryComponent::ServerTryDropAllFromSlot_Implementation(int32 FromSlotIndex)
+void UEDInventoryComponent::ServerRequestTransferItemToSlot_Implementation(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity)
 {
-    TryDropAllFromSlot(FromSlotIndex);
+    RequestTransferItemToSlot(FromInventory, ToInventory, FromSlotIndex, ToSlotIndex, Quantity);
 }
 
-void UEDInventoryComponent::ServerTryDropSingleFromSlot_Implementation(int32 FromSlotIndex)
+void UEDInventoryComponent::ServerRequestDropAllFromSlot_Implementation(int32 FromSlotIndex)
 {
-    TryDropSingleFromSlot(FromSlotIndex);
+    RequestDropAllFromSlot(FromSlotIndex);
 }
 
-void UEDInventoryComponent::ServerTryEquipItemFromSlot_Implementation(int32 FromSlotIndex, EEDEquippableType TargetSlotType)
+void UEDInventoryComponent::ServerRequestDropSingleFromSlot_Implementation(int32 FromSlotIndex)
 {
-    TryEquipItemFromSlot(FromSlotIndex, TargetSlotType);
+    RequestDropSingleFromSlot(FromSlotIndex);
 }
 
-void UEDInventoryComponent::ServerTryUnequipTopArmor_Implementation()
+void UEDInventoryComponent::ServerRequestEquipItemFromSlot_Implementation(int32 FromSlotIndex, EEDEquippableType TargetSlotType)
 {
-    TryUnequipTopArmor();
+    RequestEquipItemFromSlot(FromSlotIndex, TargetSlotType);
 }
 
-void UEDInventoryComponent::ServerTryUnequipBottomArmor_Implementation()
+void UEDInventoryComponent::ServerRequestUnequipTopArmor_Implementation()
 {
-    TryUnequipBottomArmor();
+    RequestUnequipTopArmor();
 }
 
-void UEDInventoryComponent::ServerTryCraftItem_Implementation(FName RecipeId)
+void UEDInventoryComponent::ServerRequestUnequipBottomArmor_Implementation()
 {
-    TryCraftItem(RecipeId);
+    RequestUnequipBottomArmor();
 }
 
-void UEDInventoryComponent::ServerTryConsumeItemAtSlot_Implementation(int32 SlotIndex)
+void UEDInventoryComponent::ServerRequestCraftItem_Implementation(FName RecipeId)
 {
-    TryConsumeItemAtSlot(SlotIndex);
+    RequestCraftItem(RecipeId);
 }
 
-void UEDInventoryComponent::ServerTryAddItemAuto_Implementation(FPrimaryAssetId ItemId, int32 Quantity)
+void UEDInventoryComponent::ServerRequestConsumeItemAtSlot_Implementation(int32 SlotIndex)
 {
-    TryAddItemAuto(ItemId, Quantity);
+    RequestConsumeItemAtSlot(SlotIndex);
 }
 
-void UEDInventoryComponent::ServerTryAddItemToSlot_Implementation(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex)
+void UEDInventoryComponent::ServerRequestEnsureDefaultEquipment_Implementation()
 {
-    TryAddItemToSlot(ItemId, Quantity, SlotIndex);
+    RequestEnsureDefaultEquipment();
 }
 
-void UEDInventoryComponent::ServerTryInitializeRandomLoot_Implementation(int32 RollCount, int32 MinLootIndex, int32 MaxLootIndex, int32 Seed)
+void UEDInventoryComponent::ServerRequestAddItemAuto_Implementation(FPrimaryAssetId ItemId, int32 Quantity)
+{
+    RequestAddItemAuto(ItemId, Quantity);
+}
+
+void UEDInventoryComponent::ServerRequestAddItemToSlot_Implementation(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex)
+{
+    RequestAddItemToSlot(ItemId, Quantity, SlotIndex);
+}
+
+void UEDInventoryComponent::ServerRequestInitializeRandomLoot_Implementation(int32 RollCount, int32 MinLootIndex, int32 MaxLootIndex, int32 Seed)
 {
     EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-    TryInitializeRandomLootDetailed(RollCount, MinLootIndex, MaxLootIndex, Seed, Failure);
+    RequestInitializeRandomLootDetailed(RollCount, MinLootIndex, MaxLootIndex, Seed, Failure);
 }
 
 void UEDInventoryComponent::OnRep_InventorySlots()

@@ -56,7 +56,7 @@ public:
     int32 RandomLootSeed = 0;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Loot")
-    bool bAutoInitializeRandomLootOnBeginPlay = false;
+    bool bAutoInitializeLootOnBeginPlay = false;
 
     UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Inventory|Loot")
     bool bRandomLootInitialized = false;
@@ -92,61 +92,61 @@ public:
     FOnEDInventoryDropRequested OnInventoryDropRequested;
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    void InitializeInventorySlots();
+    void RequestInitializeInventorySlots();
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex);
+    bool RequestMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Network")
+    bool RequestTransferItemAuto(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Network")
+    bool RequestTransferItemAutoDetailed(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Network")
+    bool RequestTransferItemToSlot(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Network")
+    bool RequestTransferItemToSlotDetailed(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryTransferItemAuto(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity);
+    bool RequestDropAllFromSlot(int32 FromSlotIndex);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryTransferItemAutoDetailed(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure);
-
-    UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryTransferItemToSlot(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity);
-
-    UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryTransferItemToSlotDetailed(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure);
-
-    UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryDropAllFromSlot(int32 FromSlotIndex);
-
-    UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryDropSingleFromSlot(int32 FromSlotIndex);
+    bool RequestDropSingleFromSlot(int32 FromSlotIndex);
     
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
-    bool TryEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType);
+    bool RequestEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
-    bool TryUnequipTopArmor();
+    bool RequestUnequipTopArmor();
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
-    bool TryUnequipBottomArmor();
+    bool RequestUnequipBottomArmor();
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity);
+    bool RequestAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryAddItemAutoDetailed(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure);
+    bool RequestAddItemAutoDetailed(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryAddItemToSlot(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex);
+    bool RequestAddItemToSlot(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool TryAddItemToSlotDetailed(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex, EEDInventoryActionFailure& OutFailure);
+    bool RequestAddItemToSlotDetailed(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Loot")
-    bool TryInitializeRandomLoot();
+    bool RequestInitializeRandomLoot();
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Loot")
-    bool TryInitializeRandomLootDetailed(int32 RollCount, int32 MinLootIndex, int32 MaxLootIndex, int32 Seed, EEDInventoryActionFailure& OutFailure);
+    bool RequestInitializeRandomLootDetailed(int32 RollCount, int32 MinLootIndex, int32 MaxLootIndex, int32 Seed, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Craft")
-    bool TryCraftItem(FName RecipeId);
+    bool RequestCraftItem(FName RecipeId);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Craft")
-    bool TryCraftItemDetailed(FName RecipeId, EEDInventoryActionFailure& OutFailure);
+    bool RequestCraftItemDetailed(FName RecipeId, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Craft")
     void GetCraftableRecipes(TArray<FEDCraftableRecipeEntry>& OutRecipes, EEDCraftableRecipeSortOption SortOption = EEDCraftableRecipeSortOption::ByRowId, bool bDescending = false) const;
@@ -164,16 +164,16 @@ public:
     void SetCraftableRecipeCacheSort(EEDCraftableRecipeSortOption SortOption, bool bDescending);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Craft")
-    bool TryCraftFirstCachedRecipe();
+    bool RequestCraftFirstCachedRecipe();
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Consumable")
-    bool TryConsumeItemAtSlot(int32 SlotIndex);
+    bool RequestConsumeItemAtSlot(int32 SlotIndex);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Consumable")
-    bool TryConsumeItemAtSlotDetailed(int32 SlotIndex, EEDInventoryActionFailure& OutFailure);
+    bool RequestConsumeItemAtSlotDetailed(int32 SlotIndex, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Init")
-    bool EnsureDefaultEquipment();
+    bool RequestEnsureDefaultEquipment();
 
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -181,43 +181,49 @@ protected:
     virtual void BeginPlay() override;
 
     UFUNCTION(Server, Reliable)
-    void ServerTryMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex);
+    void ServerRequestInitializeInventorySlots();
 
     UFUNCTION(Server, Reliable)
-    void ServerTryTransferItemAuto(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity);
+    void ServerRequestMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex);
 
     UFUNCTION(Server, Reliable)
-    void ServerTryTransferItemToSlot(UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity);
+    void ServerRequestTransferItemAuto(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity);
 
     UFUNCTION(Server, Reliable)
-    void ServerTryDropAllFromSlot(int32 FromSlotIndex);
+    void ServerRequestTransferItemToSlot(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity);
 
     UFUNCTION(Server, Reliable)
-    void ServerTryDropSingleFromSlot(int32 FromSlotIndex);
+    void ServerRequestDropAllFromSlot(int32 FromSlotIndex);
 
     UFUNCTION(Server, Reliable)
-    void ServerTryAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity);
+    void ServerRequestDropSingleFromSlot(int32 FromSlotIndex);
 
     UFUNCTION(Server, Reliable)
-    void ServerTryAddItemToSlot(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex);
+    void ServerRequestAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity);
 
     UFUNCTION(Server, Reliable)
-    void ServerTryInitializeRandomLoot(int32 RollCount, int32 MinLootIndex, int32 MaxLootIndex, int32 Seed);
+    void ServerRequestAddItemToSlot(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex);
 
     UFUNCTION(Server, Reliable)
-    void ServerTryEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType);
+    void ServerRequestInitializeRandomLoot(int32 RollCount, int32 MinLootIndex, int32 MaxLootIndex, int32 Seed);
 
     UFUNCTION(Server, Reliable)
-    void ServerTryUnequipTopArmor();
+    void ServerRequestEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType);
 
     UFUNCTION(Server, Reliable)
-    void ServerTryUnequipBottomArmor();
+    void ServerRequestUnequipTopArmor();
 
     UFUNCTION(Server, Reliable)
-    void ServerTryCraftItem(FName RecipeId);
+    void ServerRequestUnequipBottomArmor();
 
     UFUNCTION(Server, Reliable)
-    void ServerTryConsumeItemAtSlot(int32 SlotIndex);
+    void ServerRequestCraftItem(FName RecipeId);
+
+    UFUNCTION(Server, Reliable)
+    void ServerRequestConsumeItemAtSlot(int32 SlotIndex);
+
+    UFUNCTION(Server, Reliable)
+    void ServerRequestEnsureDefaultEquipment();
 
     UFUNCTION()
     void OnRep_InventorySlots();
