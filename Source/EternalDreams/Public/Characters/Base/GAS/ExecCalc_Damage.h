@@ -7,7 +7,7 @@
 #include "ExecCalc_Damage.generated.h"
 
 /**
- * 
+ * GameplayEffect의 데미지를 방어력을 고려하여 계산하는 Execution Calculation Class
  */
 UCLASS()
 class ETERNALDREAMS_API UExecCalc_Damage : public UGameplayEffectExecutionCalculation

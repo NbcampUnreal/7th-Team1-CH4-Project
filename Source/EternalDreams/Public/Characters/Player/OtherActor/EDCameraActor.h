@@ -12,6 +12,9 @@ class USpringArmComponent;
 class UCameraComponent;
 struct FInputActionValue;
 
+/**
+ * 카메라 컴포넌트를 관리하는 액터 클래스
+ */
 UCLASS()
 class ETERNALDREAMS_API AEDCameraActor : public AActor
 {

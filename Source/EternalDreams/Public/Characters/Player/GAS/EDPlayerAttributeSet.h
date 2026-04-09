@@ -17,8 +17,7 @@ GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
 
 /*
- * [PlayerAttributeSet]
- * Health, MaxHealth, Mana Attribute를 관리하는 AttributeSet
+ * 공용 Attribute를 제외한 플레이어 Attribute를 관리하는 AttributeSet
  */
 UCLASS()
 class ETERNALDREAMS_API UEDPlayerAttributeSet : public UAttributeSet

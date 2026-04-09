@@ -15,7 +15,6 @@ GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName)\
 GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
 /*
- * [BaseAttributeSet]
  * 체력, 방어력, 이동속도의 현재와 최대치(혹은 감소되기 전 값) Attribute를 관리하는 캐릭터, 몬스터의 공통된 AttributeSet
  */
 UCLASS()

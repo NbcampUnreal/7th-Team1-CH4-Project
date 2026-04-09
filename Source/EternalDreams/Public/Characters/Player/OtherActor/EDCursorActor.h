@@ -8,6 +8,9 @@
 
 class UWidgetComponent;
 
+/**
+ * 마우스 커서 위젯 컴포넌트를 관리하는 액터 클래스
+ */
 UCLASS()
 class ETERNALDREAMS_API AEDCursorActor : public AActor
 {
