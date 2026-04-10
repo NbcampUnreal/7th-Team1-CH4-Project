@@ -79,6 +79,8 @@ public:
 	TObjectPtr<UInputAction> MoveAction=nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
 	TObjectPtr<UInputAction> LookAction=nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
+	TObjectPtr<UInputAction> BasicAttackAction=nullptr;
 #pragma endregion
 #pragma region Input Camera
 	//IMC_Camera

@@ -2,11 +2,15 @@
 
 
 #include "Characters/Player/Component/IMCComponent.h"
+
+#include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
 #include "SNegativeActionButton.h"
+#include "ToolBuilderUtil.h"
 #include "Characters/Player/EDPlayerCharacter.h"
 #include "Characters/Player/EDPlayerController.h"
 #include "Components/WidgetComponent.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
 
 
 // Sets default values for this component's properties
@@ -64,6 +68,14 @@ void UIMCComponent::SetupPlayerInput(UInputComponent* PlayerInputComponent)
 				this,
 				&UIMCComponent::PlayerLook
 			);
+			
+			// BasicAttack 바인딩
+			InputComponents->BindAction(
+				PlayerController->BasicAttackAction,
+				ETriggerEvent::Triggered,
+				this,
+				&UIMCComponent::PlayerBasicAttack
+			);
 		}
 	}
 }
@@ -101,6 +113,19 @@ void UIMCComponent::PlayerLook(const FInputActionValue& value)
 		
 		PlayerController->SetControlRotation(LookAtRotation);
 		
+	}
+	
+}
+
+void UIMCComponent::PlayerBasicAttack(const FInputActionValue& value)
+{
+	UAbilitySystemComponent* AbilitySystemComponent=GetOwner()->FindComponentByClass<UAbilitySystemComponent>();
+	if (IsValid(AbilitySystemComponent))
+	{
+		FGameplayTagContainer AbilityTagContainer;
+		const FEDGameplayTags& Tags = FEDGameplayTags::Get();
+		AbilityTagContainer.AddTag(Tags.Ability_Player_BasicAttack);
+		AbilitySystemComponent->TryActivateAbilitiesByTag(AbilityTagContainer);
 	}
 	
 }
