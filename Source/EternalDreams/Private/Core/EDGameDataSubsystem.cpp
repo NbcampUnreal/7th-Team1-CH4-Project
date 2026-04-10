@@ -41,6 +41,14 @@ void UEDGameDataSubsystem::InitializeGameData()
 	LoadPhase_Item();
 }
 
+void UEDGameDataSubsystem::ReturnToLobby()
+{
+	// 게임씬 데이터 언로드
+	UnloadPhaseData(ItemAssetType, TEXT("Item"));
+	UnloadPhaseData(MonsterAssetType, TEXT("Monster"));
+	LoadPhase_Lobby();
+}
+
 // ================================================================
 // 언로드
 // ================================================================

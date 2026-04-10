@@ -84,6 +84,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ED|EDGameDataSubsystem")
     void InitializeGameData();
 	
+	// 게임 종료되고 로비로 복귀
+	UFUNCTION(BlueprintCallable, Category = "ED|EDGameDataSubsystem")
+	void ReturnToLobby();
+	
     // 로딩 상태 조회
     UFUNCTION(BlueprintPure, Category = "ED|EDGameDataSubsystem")
     EDataLoadPhase GetCurrentPhase() const { return CurrentPhase; }
