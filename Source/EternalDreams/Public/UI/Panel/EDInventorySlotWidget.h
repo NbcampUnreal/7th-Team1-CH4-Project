@@ -7,6 +7,7 @@
 
 class UBorder;
 class UTextBlock;
+class UEDEquipmentSlotWidget;
 
 UCLASS()
 class ETERNALDREAMS_API UEDInventorySlotWidget : public UCommonUserWidget

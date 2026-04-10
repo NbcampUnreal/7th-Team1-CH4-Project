@@ -1,56 +1,62 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.s
-#include "UI/Panel/EDInventorySlotWidget.h"
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
+#include "UI/Panel/EDEquipmentSlotWidget.h"
 
 #include "Components/Border.h"
 #include "Components/TextBlock.h"
-#include "Inventory/Component/EDInventoryComponent.h"
 
-void UEDInventorySlotWidget::SetEmptyState()
+void UEDEquipmentSlotWidget::SetEmptyState(const FText& InSlotTypeName)
 {
-	// 빈 슬롯은 EmptyText만 보이고, 나머지 정보는 숨김 처리
+	// 장비 슬롯 종류는 항상 보이도록 유지
+	if (SlotTypeText)
+	{
+		SlotTypeText->SetText(InSlotTypeName);
+		SlotTypeText->SetVisibility(ESlateVisibility::Visible);
+	}
+
+	// 빈 슬롯일 때, Empty 텍스트 표시
 	if (EmptyText)
 	{
 		EmptyText->SetVisibility(ESlateVisibility::Visible);
+		EmptyText->SetText(FText::FromString(TEXT("Empty")));
 	}
 
+	// 장착된 아이템 이름 숨김
 	if (ItemNameText)
 	{
 		ItemNameText->SetVisibility(ESlateVisibility::Collapsed);
 		ItemNameText->SetText(FText::GetEmpty());
 	}
 
-	if (QuantityText)
-	{
-		QuantityText->SetVisibility(ESlateVisibility::Collapsed);
-		QuantityText->SetText(FText::GetEmpty());
-	}
-
+	// 희귀도 강조 라인 숨김
 	if (RarityAccent)
 	{
 		RarityAccent->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
 
-void UEDInventorySlotWidget::SetItemState(const FText& InItemName, int32 InQuantity, EEDItemRarity InRarity)
+void UEDEquipmentSlotWidget::SetItemState(const FText& InSlotTypeName, const FText& InItemName, EEDItemRarity InRarity)
 {
-	// 아이템이 있는 슬롯은 이름, 수량, 희귀도 라인을 표시
+	// 슬롯 종류는 항상 보이도록 유지
+	if (SlotTypeText)
+	{
+		SlotTypeText->SetText(InSlotTypeName);
+		SlotTypeText->SetVisibility(ESlateVisibility::Visible);
+	}
+
+	// 장착된 아이템이 있으면 Empty 텍스트 숨김
 	if (EmptyText)
 	{
 		EmptyText->SetVisibility(ESlateVisibility::Collapsed);
 	}
 
+	// 장착 아이템 이름 표시
 	if (ItemNameText)
 	{
 		ItemNameText->SetVisibility(ESlateVisibility::Visible);
 		ItemNameText->SetText(InItemName);
 	}
 
-	if (QuantityText)
-	{
-		QuantityText->SetVisibility(ESlateVisibility::Visible);
-		QuantityText->SetText(FText::FromString(FString::Printf(TEXT("x%d"), InQuantity)));
-	}
-
+	// 희귀도 강조 라인 표시
 	if (RarityAccent)
 	{
 		RarityAccent->SetVisibility(ESlateVisibility::Visible);
@@ -58,7 +64,7 @@ void UEDInventorySlotWidget::SetItemState(const FText& InItemName, int32 InQuant
 	}
 }
 
-FLinearColor UEDInventorySlotWidget::GetRarityColor(EEDItemRarity InRarity) const
+FLinearColor UEDEquipmentSlotWidget::GetRarityColor(EEDItemRarity InRarity) const
 {
 	switch (InRarity)
 	{

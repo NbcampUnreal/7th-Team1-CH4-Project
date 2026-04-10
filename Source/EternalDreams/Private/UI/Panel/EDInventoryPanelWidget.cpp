@@ -11,6 +11,7 @@
 #include "Inventory/Core/EDInventoryTypes.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "UI/Panel/EDInventorySlotWidget.h"
+#include "UI/Panel/EDEquipmentSlotWidget.h"
 
 void UEDInventoryPanelWidget::NativeConstruct()
 {
@@ -20,6 +21,7 @@ void UEDInventoryPanelWidget::NativeConstruct()
 	InitializeInventoryComponent();
 	CreateInventorySlotWidgets();
 	RefreshInventorySlots();
+	RefreshEquipmentSlots();
 	BindInventoryChanged();
 
 	if (TitleText)
@@ -182,6 +184,7 @@ void UEDInventoryPanelWidget::HandleInventoryChanged()
 {
 	// 인벤토리 내용이 바뀌면 슬롯 전체를 다시 그림
 	RefreshInventorySlots();
+	RefreshEquipmentSlots();
 }
 
 FText UEDInventoryPanelWidget::ResolveItemDisplayName(const FPrimaryAssetId& ItemId) const
@@ -229,4 +232,54 @@ EEDItemRarity UEDInventoryPanelWidget::ResolveItemRarity(const FPrimaryAssetId& 
 
 	const UEDInventoryItemDataAsset* ItemData = Cast<UEDInventoryItemDataAsset>(ItemObject);
 	return ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
+}
+
+void UEDInventoryPanelWidget::RefreshEquipmentSlots()
+{
+	if (!InventoryComponent)
+	{
+		return;
+	}
+
+	if (WeaponSlotWidget)
+	{
+		if (InventoryComponent->WeaponSlot.EquippedItem.IsValid())
+		{
+			const FText ItemName = ResolveItemDisplayName(InventoryComponent->WeaponSlot.EquippedItem.ItemId);
+			const EEDItemRarity ItemRarity = ResolveItemRarity(InventoryComponent->WeaponSlot.EquippedItem.ItemId);
+			WeaponSlotWidget->SetItemState(FText::FromString(TEXT("Weapon")), ItemName, ItemRarity);
+		}
+		else
+		{
+			WeaponSlotWidget->SetEmptyState(FText::FromString(TEXT("Weapon")));
+		}
+	}
+
+	if (TopArmorSlotWidget)
+	{
+		if (InventoryComponent->TopArmorSlot.EquippedItem.IsValid())
+		{
+			const FText ItemName = ResolveItemDisplayName(InventoryComponent->TopArmorSlot.EquippedItem.ItemId);
+			const EEDItemRarity ItemRarity = ResolveItemRarity(InventoryComponent->TopArmorSlot.EquippedItem.ItemId);
+			TopArmorSlotWidget->SetItemState(FText::FromString(TEXT("Top Armor")), ItemName, ItemRarity);
+		}
+		else
+		{
+			TopArmorSlotWidget->SetEmptyState(FText::FromString(TEXT("Top Armor")));
+		}
+	}
+
+	if (BottomArmorSlotWidget)
+	{
+		if (InventoryComponent->BottomArmorSlot.EquippedItem.IsValid())
+		{
+			const FText ItemName = ResolveItemDisplayName(InventoryComponent->BottomArmorSlot.EquippedItem.ItemId);
+			const EEDItemRarity ItemRarity = ResolveItemRarity(InventoryComponent->BottomArmorSlot.EquippedItem.ItemId);
+			BottomArmorSlotWidget->SetItemState(FText::FromString(TEXT("Bottom Armor")), ItemName, ItemRarity);
+		}
+		else
+		{
+			BottomArmorSlotWidget->SetEmptyState(FText::FromString(TEXT("Bottom Armor")));
+		}
+	}
 }

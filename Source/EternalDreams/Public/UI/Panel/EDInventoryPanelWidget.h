@@ -9,6 +9,7 @@ class UUniformGridPanel;
 class UTextBlock;
 class UEDInventoryComponent;
 class UEDInventorySlotWidget;
+class UEDEquipmentSlotWidget;
 
 UCLASS()
 class ETERNALDREAMS_API UEDInventoryPanelWidget : public UCommonActivatableWidget
@@ -51,6 +52,18 @@ protected:
 	// 생성된 슬롯 위젯 배열
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Inventory")
 	TArray<TObjectPtr<UEDInventorySlotWidget>> InventorySlotWidgets;
+	
+	// 무기 슬롯 UI
+	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Equipment")
+	TObjectPtr<UEDEquipmentSlotWidget> WeaponSlotWidget;
+
+	// 상의 슬롯 UI
+	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Equipment")
+	TObjectPtr<UEDEquipmentSlotWidget> TopArmorSlotWidget;
+
+	// 하의 슬롯 UI
+	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Equipment")
+	TObjectPtr<UEDEquipmentSlotWidget> BottomArmorSlotWidget;
 
 private:
 	// 플레이어에서 인벤토리 컴포넌트를 찾음
@@ -80,4 +93,7 @@ private:
 
 	// ItemId로 아이템 희귀도를 구함
 	EEDItemRarity ResolveItemRarity(const FPrimaryAssetId& ItemId) const;
+	
+	// 장비 슬롯 UI를 갱신
+	void RefreshEquipmentSlots();
 };
