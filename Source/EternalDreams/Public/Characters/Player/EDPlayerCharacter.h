@@ -7,6 +7,8 @@
 #include "AbilitySystemInterface.h"
 #include "EDPlayerCharacter.generated.h"
 
+class UGameplayAbility;
+class AEDWeapon;
 class AEDPlayerController;
 class UWidgetComponent;
 class UEDBaseAttributeSet;
@@ -58,21 +60,41 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UZoneDetectorComponent> ZoneDetector;
 	
+	UPROPERTY()
+	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComp;
 	
+	//AttributeSet
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeSet")
 	TObjectPtr<UEDPlayerAttributeSet> PlayerAttributeSet;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeSet")
 	TObjectPtr<UEDBaseAttributeSet> BaseAttributeSet;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AttributeSet")
-	TSubclassOf<UEDPlayerAttributeSet> BPPlayerAttributeSet;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AttributeSet")
-	TSubclassOf<UEDBaseAttributeSet> BPBaseAttributeSet;
+	//Abilities for Grant
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Abilities")
+	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
 	
+	//Test Weapon
+protected:
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+	TSubclassOf<AEDWeapon> WeaponClass;
+	UPROPERTY()
+	TObjectPtr<AEDWeapon> WeaponMesh;
+	UPROPERTY()
+	FName WeaponSocketName=FName("handslot_r");
+	
+	//Get Attribute
+public:
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	float GetHealth() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	float GetMaxHealth() const;
+	
+	//Initialize AS
 	virtual void InitializeAbilitySystem();
 	
-
-	
-
+	// Ability Grant
+	void GiveDefaultAbilities();
 };

@@ -11,6 +11,8 @@
 #include "Characters/Player/GAS/EDPlayerAttributeSet.h"
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
+#include "Characters/Player/Weapon/EDWeapon.h"
+#include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -22,6 +24,10 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
+	
+	//AttributeSet 생성
+	BaseAttributeSet = CreateDefaultSubobject<UEDBaseAttributeSet>(TEXT("BaseAttributeSet"));
+	PlayerAttributeSet = CreateDefaultSubobject<UEDPlayerAttributeSet>(TEXT("EDAttributeSet"));
 	
 	//IMC 컴포넌트 생성
 	IMCComponent=CreateDefaultSubobject<UIMCComponent>(TEXT("IMCComponent"));
@@ -35,18 +41,15 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 void AEDPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	if (BPBaseAttributeSet)
-	{
-		BaseAttributeSet=NewObject<UEDBaseAttributeSet>();
-	}
-	if (BPPlayerAttributeSet)
-	{
-		PlayerAttributeSet=NewObject<UEDPlayerAttributeSet>();
-	}
-	
+
 	//AbilitySystem 초기화
 	InitializeAbilitySystem();
 	
+	//서버에서만, ASC가 있는 경우 실행
+	if (HasAuthority()&&IsValid(AbilitySystemComponent))
+	{
+		GiveDefaultAbilities();
+	}
 	//IMC 추가
 	AEDPlayerController* PC = Cast<AEDPlayerController>(GetController());
 	if (IsValid(PC))
@@ -56,7 +59,24 @@ void AEDPlayerCharacter::BeginPlay()
 			Subsystem->AddMappingContext(PC->PlayerInputMappingContext, 0);  // Gameplay
 		}
 	}
+	if (!GetWorld())
+	{
+		return;
+	}
 	
+	//Weapon Test
+	WeaponMesh=GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
+	if (IsValid(WeaponMesh))
+	{
+		SkeletalMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
+		if (!IsValid(SkeletalMeshComp))
+		{
+			return;
+		}
+		WeaponMesh->SetOwner(this);
+		WeaponMesh->AttachToComponent(GetMesh()->GetChildComponent(0),FAttachmentTransformRules::SnapToTargetNotIncludingScale,WeaponSocketName);
+		GetCapsuleComponent()->IgnoreActorWhenMoving(WeaponMesh,true);
+	}
 	
 }
 
@@ -83,5 +103,37 @@ void AEDPlayerCharacter::InitializeAbilitySystem()
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 	}
+}
+
+void AEDPlayerCharacter::GiveDefaultAbilities()
+{
+	for (TSubclassOf<UGameplayAbility>& AbilityClass : DefaultAbilities)
+	{
+		if (AbilityClass)
+		{
+			// Ability Spec 생성
+			FGameplayAbilitySpec AbilitySpec(AbilityClass, 1, INDEX_NONE, this);
+			// ASC에 Ability 부여
+			AbilitySystemComponent->GiveAbility(AbilitySpec);
+		}
+	}
+}
+
+float AEDPlayerCharacter::GetHealth() const
+{
+	if (BaseAttributeSet)
+	{
+		return BaseAttributeSet->GetHealth();
+	}
+	return 0.0f;
+}
+
+float AEDPlayerCharacter::GetMaxHealth() const
+{
+	if (BaseAttributeSet)
+	{
+		return BaseAttributeSet->GetMaxHealth();
+	}
+	return 0.0f;
 }
 

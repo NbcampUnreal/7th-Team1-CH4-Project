@@ -7,15 +7,6 @@
 UGA_Base::UGA_Base()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	const FEDGameplayTags& Tags = FEDGameplayTags::Get();
-	/*
-	//AbilityTags
-	AbilityTags.AddTag(Tags.Ability_Player_BasicAttack);
-	//ActivationBlockedTags
-	ActivationBlockedTags.AddTag(Tags.State_Player_CannotCanceled);
-	//ActivationOwnedTag
-	ActivationOwnedTags.AddTag(Tags.State_Player_CannotCanceled);
-	*/
 }
 
 void UGA_Base::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo,

@@ -34,4 +34,6 @@ protected:
 private:
 	UFUNCTION()
 	void OnMontageCompleted();
+	
+	virtual void PostInitProperties() override;
 };

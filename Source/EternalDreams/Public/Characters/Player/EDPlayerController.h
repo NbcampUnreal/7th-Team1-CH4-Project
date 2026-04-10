@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
+#include "GenericTeamAgentInterface.h"
 #include "EDPlayerController.generated.h"
 
 struct FInputActionValue;
@@ -19,11 +20,19 @@ DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
  * 플레이어 컨트롤러 클래스
  */
 UCLASS()
-class ETERNALDREAMS_API AEDPlayerController : public APlayerController
+class ETERNALDREAMS_API AEDPlayerController : public APlayerController, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
 	AEDPlayerController();
+
+	// -------------------------------------------------------
+	// IGenericTeamAgentInterface
+	// -------------------------------------------------------
+
+	virtual void SetGenericTeamId(const FGenericTeamId& NewTeamId) override;
+	virtual FGenericTeamId GetGenericTeamId() const override;
+	virtual ETeamAttitude::Type GetTeamAttitudeTowards(const AActor& Other) const override;
 
 protected:
 	virtual void BeginPlay() override;
@@ -70,6 +79,8 @@ public:
 	TObjectPtr<UInputAction> MoveAction=nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
 	TObjectPtr<UInputAction> LookAction=nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
+	TObjectPtr<UInputAction> BasicAttackAction=nullptr;
 #pragma endregion
 #pragma region Input Camera
 	//IMC_Camera
@@ -95,7 +106,7 @@ protected:
 	TSubclassOf<AEDCursorActor> CursorActorClass;
 	UPROPERTY()
 	TObjectPtr<AEDCursorActor> CursorActor;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Actor")
 	TSubclassOf<AEDCameraActor> CameraActorClass;
 	UPROPERTY()
@@ -117,6 +128,8 @@ private:
 	FOnOtherInput OnCameraScroll;
 	FOnOtherInput OnCameraFocus;
 #pragma endregion
+
+	FGenericTeamId CachedTeamId;
 	
 
 };
