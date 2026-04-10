@@ -4,15 +4,12 @@
 #include "Characters/Monster/GAS/EDMonsterAttackAbility.h"
 #include "Characters/Monster/EDMonsterBase.h"
 #include "AbilitySystemComponent.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 
 UEDMonsterAttackAbility::UEDMonsterAttackAbility()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
-	// BTTask_MonsterAttack에서 이 태그로 활성화
-	FGameplayTagContainer Tags;
-	Tags.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.Monster.Attack")));
-	SetAssetTags(Tags);
 }
 
 void UEDMonsterAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -63,4 +60,13 @@ void UEDMonsterAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle
 void UEDMonsterAttackAbility::OnMontageCompleted()
 {
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+}
+
+void UEDMonsterAttackAbility::PostInitProperties()
+{
+	Super::PostInitProperties();
+	// BTTask_MonsterAttack에서 이 태그로 활성화
+	FGameplayTagContainer Tags;
+	Tags.AddTag(FEDGameplayTags::Get().Ability_Monster_Attack);
+	SetAssetTags(Tags);
 }

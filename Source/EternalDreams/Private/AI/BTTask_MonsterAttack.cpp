@@ -6,6 +6,7 @@
 #include "AbilitySystemComponent.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Characters/Monster/EDMonsterBase.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
 
 UBTTask_MonsterAttack::UBTTask_MonsterAttack()
 {
@@ -34,8 +35,10 @@ EBTNodeResult::Type UBTTask_MonsterAttack::ExecuteTask(UBehaviorTreeComponent& O
 	AActor* TargetActor = Cast<AActor>(BB->GetValueAsObject(TEXT("TargetActor")));
 	if (IsValid(TargetActor) == false)
 		return EBTNodeResult::Failed;
+	
 	// 공격 어빌리티 활성화 시도
-	bool bActivated = ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(FGameplayTag::RequestGameplayTag(TEXT("Ability.Monster.Attack"))));
+	bool bActivated = ASC->TryActivateAbilitiesByTag(
+		FGameplayTagContainer(FEDGameplayTags::Get().Ability_Monster_Attack));
 	if (bActivated == false)
 		return EBTNodeResult::Failed;
 	

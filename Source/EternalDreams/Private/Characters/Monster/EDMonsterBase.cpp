@@ -128,11 +128,10 @@ void AEDMonsterBase::OnVisualsLoaded()
 {
 	if (IsValid(DataAsset) == false)
 		return;
-	
-	USkeletalMesh* Mesh = DataAsset->GetMesh().Get();
-	if (IsValid(Mesh) == false)
+	USkeletalMesh* SkelMesh = DataAsset->GetMesh().Get();
+	if (IsValid(SkelMesh) == false)
 		return;
-	GetMesh()->SetSkeletalMesh(Mesh);
+	GetMesh()->SetSkeletalMesh(SkelMesh);
 	
 	UClass* AnimInstance = DataAsset->GetAnimInstance().Get();
 	if (IsValid(AnimInstance) == false)
