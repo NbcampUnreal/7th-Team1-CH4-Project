@@ -45,7 +45,18 @@ public:
 	FGameplayTag State_Player_CannotCanceled;
 	FGameplayTag State_Player_Invincible;
 	FGameplayTag State_Player_Unstoppable;
-;
+	
+	FGameplayTag State_Player_RestrictedArea;
+	FGameplayTag State_Debuff_RestrictedArea;
+	//Phase
+	FGameplayTag Phase_Day1_Day;
+	FGameplayTag Phase_Day1_Night;
+	FGameplayTag Phase_Day2_Day;
+	FGameplayTag Phase_Day2_Night;
+	FGameplayTag Phase_Day3_Day;
+	FGameplayTag Phase_Day3_Night;
+	FGameplayTag Phase_Day4_Day;
+	FGameplayTag Phase_Day4_Night;
 	//Combat
 	FGameplayTag Combat_Window_Combo;
 	FGameplayTag Combat_Window_Parry;

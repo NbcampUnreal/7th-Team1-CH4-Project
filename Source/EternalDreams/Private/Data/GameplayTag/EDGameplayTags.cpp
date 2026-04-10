@@ -71,6 +71,49 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("State.Player.Unstoppable"),
 		FString("저지 불가 상태")
 		);
+	
+	Tags.State_Player_RestrictedArea = Manager.AddNativeGameplayTag(
+		FName("State.Player.RestrictedArea"),
+		FString("금지구역 진입 상태")
+		);
+	Tags.State_Debuff_RestrictedArea = Manager.AddNativeGameplayTag(
+		FName("State.Debuff.RestrictedArea"),
+		FString("금지구역 상태")
+		);
+	//Phase
+	Tags.Phase_Day1_Day = Manager.AddNativeGameplayTag(
+		FName("Phase.Day1.Day"),
+		FString("1일차 낮")
+		);
+	Tags.Phase_Day1_Night = Manager.AddNativeGameplayTag(
+		FName("Phase.Day1.Night"),
+		FString("1일차 밤")
+		);
+	Tags.Phase_Day2_Day = Manager.AddNativeGameplayTag(
+		FName("Phase.Day2.Day"),
+		FString("2일차 낮")
+		);
+	Tags.Phase_Day2_Night = Manager.AddNativeGameplayTag(
+		FName("Phase.Day2.Night"),
+		FString("2일차 밤")
+		);
+	Tags.Phase_Day3_Day = Manager.AddNativeGameplayTag(
+		FName("Phase.Day3.Day"),
+		FString("3일차 낮")
+		);
+	Tags.Phase_Day3_Night = Manager.AddNativeGameplayTag(
+		FName("Phase.Day3.Night"),
+		FString("3일차 밤")
+		);
+	Tags.Phase_Day4_Day = Manager.AddNativeGameplayTag(
+		FName("Phase.Day4.Day"),
+		FString("4일차 낮")
+		);
+	Tags.Phase_Day4_Night = Manager.AddNativeGameplayTag(
+		FName("Phase.Day4.Night"),
+		FString("4일차 밤")
+		);
+
 	//Combat
 	Tags.Combat_Window_Combo = Manager.AddNativeGameplayTag(
 		FName("Combat.Window.Combo"),

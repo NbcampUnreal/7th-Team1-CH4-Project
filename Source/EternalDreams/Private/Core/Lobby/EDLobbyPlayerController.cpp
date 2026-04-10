@@ -1,6 +1,7 @@
 // Copyright Eternal Dreams Team. All Rights Reserved.
 
 #include "Core/Lobby/EDLobbyPlayerController.h"
+#include "EternalDreams.h"
 #include "Core/EDPlayerState.h"
 #include "Core/Lobby/EDLobbyGameMode.h"
 #include "Core/Lobby/EDLobbyGameState.h"
@@ -10,6 +11,9 @@
 void AEDLobbyPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+
+	UE_LOG(LogEDCore, Warning, TEXT("[LobbyPC] BeginPlay — IsLocal: %s, NetMode: %d"),
+		IsLocalController() ? TEXT("true") : TEXT("false"), static_cast<int32>(GetNetMode()));
 
 	if (!IsLocalController()) return;
 
@@ -33,9 +37,15 @@ void AEDLobbyPlayerController::BeginPlay()
 void AEDLobbyPlayerController::Server_SetReady_Implementation()
 {
 	AEDPlayerState* PS = GetPlayerState<AEDPlayerState>();
-	if (!PS) return;
+	if (!PS)
+	{
+		UE_LOG(LogEDCore, Error, TEXT("[LobbyPC] Server_SetReady — PlayerState null"));
+		return;
+	}
 
 	PS->bReady = !PS->bReady;
+	UE_LOG(LogEDCore, Warning, TEXT("[LobbyPC] Server_SetReady — Player: %s, Ready: %s"),
+		*PS->GetPlayerName(), PS->bReady ? TEXT("true") : TEXT("false"));
 
 	if (AEDLobbyGameState* LobbyGS = GetWorld()->GetGameState<AEDLobbyGameState>())
 	{
