@@ -58,6 +58,43 @@ void UEDInventorySlotWidget::SetItemState(const FText& InItemName, int32 InQuant
 	}
 }
 
+void UEDInventorySlotWidget::SetSlotIndex(int32 InSlotIndex)
+{
+	SlotIndex = InSlotIndex;
+}
+
+void UEDInventorySlotWidget::SetSelectedState(bool bSelected)
+{
+	bIsSelected = bSelected;
+
+	if (SelectionBorder)
+	{
+		SelectionBorder->SetVisibility(bIsSelected ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	}
+}
+
+FReply UEDInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	if (SlotIndex == INDEX_NONE)
+	{
+		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+	}
+
+	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	{
+		OnSlotClicked.Broadcast(SlotIndex);
+		return FReply::Handled();
+	}
+
+	if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
+	{
+		OnSlotRightClicked.Broadcast(SlotIndex);
+		return FReply::Handled();
+	}
+
+	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+}
+
 FLinearColor UEDInventorySlotWidget::GetRarityColor(EEDItemRarity InRarity) const
 {
 	switch (InRarity)

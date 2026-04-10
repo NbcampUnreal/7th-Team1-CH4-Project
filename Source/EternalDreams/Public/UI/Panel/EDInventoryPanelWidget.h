@@ -5,11 +5,14 @@
 #include "Item/Core/EDItemTypes.h"
 #include "EDInventoryPanelWidget.generated.h"
 
+struct FEDInventorySlotData;
+enum class EEDInventoryActionFailure : uint8;
 class UUniformGridPanel;
 class UTextBlock;
 class UEDInventoryComponent;
 class UEDInventorySlotWidget;
 class UEDEquipmentSlotWidget;
+
 
 UCLASS()
 class ETERNALDREAMS_API UEDInventoryPanelWidget : public UCommonActivatableWidget
@@ -64,6 +67,10 @@ protected:
 	// 하의 슬롯 UI
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Equipment")
 	TObjectPtr<UEDEquipmentSlotWidget> BottomArmorSlotWidget;
+	
+	// 인벤토리 액션 실패 메시지 표시용 텍스트
+	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Inventory")
+	TObjectPtr<UTextBlock> ActionResultText;
 
 private:
 	// 플레이어에서 인벤토리 컴포넌트를 찾음
@@ -96,4 +103,25 @@ private:
 	
 	// 장비 슬롯 UI를 갱신
 	void RefreshEquipmentSlots();
+	
+	// 현재 선택된 슬롯 인덱스
+	int32 SelectedSlotIndex = INDEX_NONE;
+	
+	// 슬롯 좌클릭 처리
+	void HandleSlotClicked(int32 InSlotIndex);
+
+	// 슬롯 우클릭 처리
+	void HandleSlotRightClicked(int32 InSlotIndex);
+
+	// 선택 상태 UI를 갱신
+	void RefreshSelectedSlotState();
+
+	// 슬롯 인덱스로부터 아이템 데이터 접근 가능 여부를 확인
+	bool TryGetSlotData(int32 InSlotIndex, FEDInventorySlotData& OutSlotData) const;
+	
+	// 인벤토리 액션 실패 메시지를 표시
+	void ShowInventoryFailure(EEDInventoryActionFailure Failure) const;
+
+	// 인벤토리 액션 메시지를 초기화
+	void ClearInventoryActionMessage() const;
 };

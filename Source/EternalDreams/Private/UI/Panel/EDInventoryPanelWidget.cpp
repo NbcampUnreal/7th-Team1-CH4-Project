@@ -41,7 +41,7 @@ void UEDInventoryPanelWidget::NativeDestruct()
 {
 	UnbindInventoryChanged();
 
-	Super::NativeOnActivated();
+	Super::NativeDestruct();
 
 	UE_LOG(LogTemp, Log, TEXT("EDInventoryPanelWidget: 인벤토리 패널이 열렸습니다."));
 }
@@ -99,6 +99,10 @@ void UEDInventoryPanelWidget::CreateInventorySlotWidgets()
 			GridSlot->SetHorizontalAlignment(HAlign_Fill);
 			GridSlot->SetVerticalAlignment(VAlign_Fill);
 		}
+
+		SlotWidget->SetSlotIndex(SlotIndex);
+		SlotWidget->OnSlotClicked.AddUObject(this, &UEDInventoryPanelWidget::HandleSlotClicked);
+		SlotWidget->OnSlotRightClicked.AddUObject(this, &UEDInventoryPanelWidget::HandleSlotRightClicked);
 	}
 }
 
@@ -282,4 +286,137 @@ void UEDInventoryPanelWidget::RefreshEquipmentSlots()
 			BottomArmorSlotWidget->SetEmptyState(FText::FromString(TEXT("Bottom Armor")));
 		}
 	}
+}
+
+void UEDInventoryPanelWidget::HandleSlotClicked(int32 InSlotIndex)
+{
+	SelectedSlotIndex = InSlotIndex;
+	RefreshSelectedSlotState();
+}
+
+void UEDInventoryPanelWidget::HandleSlotRightClicked(int32 InSlotIndex)
+{
+	if (!InventoryComponent)
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidInventory);
+		return;
+	}
+
+	FEDInventorySlotData SlotData;
+	if (!TryGetSlotData(InSlotIndex, SlotData))
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
+		return;
+	}
+
+	if (SlotData.IsEmpty())
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::EmptySlot);
+		return;
+	}
+
+	UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(SlotData.Item.ItemId);
+	if (!ItemObject)
+	{
+		const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(SlotData.Item.ItemId);
+		if (AssetPath.IsValid())
+		{
+			ItemObject = AssetPath.TryLoad();
+		}
+	}
+
+	const UEDInventoryItemDataAsset* ItemData = Cast<UEDInventoryItemDataAsset>(ItemObject);
+	if (!ItemData)
+	{
+		return;
+	}
+
+	// 소비형 아이템이면 우선 사용
+	if (ItemData->ItemType == EEDInventoryItemType::Consumable)
+	{
+		EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+		const bool bSuccess = InventoryComponent->RequestConsumeItemAtSlotDetailed(InSlotIndex, Failure);
+
+		if (!bSuccess)
+		{
+			ShowInventoryFailure(Failure);
+			return;
+		}
+
+		ClearInventoryActionMessage();
+		return;
+	}
+
+	// 장비형 아이템이면 해당 장비 슬롯에 장착
+	if (ItemData->ItemType == EEDInventoryItemType::Equippable && ItemData->EquippableType != EEDEquippableType::None)
+	{
+		if (ItemData->EquippableType == EEDEquippableType::None)
+		{
+			ShowInventoryFailure(EEDInventoryActionFailure::MissingData);
+			return;
+		}
+
+		const bool bSuccess = InventoryComponent->RequestEquipItemFromSlot(InSlotIndex, ItemData->EquippableType);
+		if (!bSuccess)
+		{
+			ShowInventoryFailure(EEDInventoryActionFailure::SlotConflict);
+			return;
+		}
+
+		ClearInventoryActionMessage();
+		return;
+	}
+
+	// 우클릭 기본 동작이 없는 아이템
+	ShowInventoryFailure(EEDInventoryActionFailure::NotConsumable);
+}
+
+void UEDInventoryPanelWidget::RefreshSelectedSlotState()
+{
+	for (int32 Index = 0; Index < InventorySlotWidgets.Num(); ++Index)
+	{
+		if (InventorySlotWidgets[Index])
+		{
+			InventorySlotWidgets[Index]->SetSelectedState(Index == SelectedSlotIndex);
+		}
+	}
+}
+
+bool UEDInventoryPanelWidget::TryGetSlotData(int32 InSlotIndex, FEDInventorySlotData& OutSlotData) const
+{
+	if (!InventoryComponent)
+	{
+		return false;
+	}
+
+	if (!InventoryComponent->InventorySlots.IsValidIndex(InSlotIndex))
+	{
+		return false;
+	}
+
+	OutSlotData = InventoryComponent->InventorySlots[InSlotIndex];
+	return true;
+}
+
+void UEDInventoryPanelWidget::ShowInventoryFailure(EEDInventoryActionFailure Failure) const
+{
+	if (!ActionResultText)
+	{
+		return;
+	}
+
+	const FText FailureText = UEDInventoryBlueprintLibrary::GetInventoryActionFailureText(Failure);
+	ActionResultText->SetText(FailureText);
+	ActionResultText->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UEDInventoryPanelWidget::ClearInventoryActionMessage() const
+{
+	if (!ActionResultText)
+	{
+		return;
+	}
+
+	ActionResultText->SetText(FText::GetEmpty());
+	ActionResultText->SetVisibility(ESlateVisibility::Collapsed);
 }
