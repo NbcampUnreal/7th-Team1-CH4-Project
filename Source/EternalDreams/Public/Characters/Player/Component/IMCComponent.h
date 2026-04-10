@@ -33,19 +33,23 @@ public:
 	UFUNCTION()
 	void SetupPlayerInput(UInputComponent* PlayerInputComponent);
 	
+	//캐싱
 protected:
 	UPROPERTY()
 	TObjectPtr<AEDPlayerCharacter> PlayerCharacter;
-	
 	UPROPERTY()
 	TObjectPtr<AEDPlayerController> PlayerController;
 	
 
-	
+	//IA
+protected:
 	UFUNCTION()
 	void PlayerMove(const FInputActionValue& value);
 	UFUNCTION()
 	void PlayerLook(const FInputActionValue& value);
+	UFUNCTION()
+	void PlayerBasicAttack(const FInputActionValue& value);
+	
 	
 	
 
