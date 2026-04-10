@@ -15,6 +15,7 @@ void UEDGameDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UEDGameDataSubsystem::Deinitialize()
 {
+	UnloadAllData();
 	Super::Deinitialize();
 }
 
@@ -43,6 +44,14 @@ void UEDGameDataSubsystem::InitializeGameData()
 // ================================================================
 // 언로드
 // ================================================================
+
+void UEDGameDataSubsystem::UnloadAllData()
+{
+	UnloadPhaseData(LobbyAssetType, TEXT("Lobby"));
+	UnloadPhaseData(ItemAssetType, TEXT("Item"));
+	UnloadPhaseData(MonsterAssetType, TEXT("Monster"));
+	SetPhase(EDataLoadPhase::NotStarted);
+}
 
 void UEDGameDataSubsystem::UnloadPhaseData(const FPrimaryAssetType& AssetType, const FName& HandleKey)
 {
