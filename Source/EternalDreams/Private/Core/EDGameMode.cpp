@@ -1,6 +1,7 @@
 // Copyright Eternal Dreams Team. All Rights Reserved.
 
 #include "Core/EDGameMode.h"
+#include "EternalDreams.h"
 #include "Core/EDGameState.h"
 #include "Core/EDPlayerState.h"
 #include "Characters/Player/EDPlayerController.h"
@@ -21,14 +22,18 @@ AEDGameMode::AEDGameMode()
 
 void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 {
+	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PreLogin — Address: %s, Options: %s"), *Address, *Options);
+
 	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
 
 	if (!ErrorMessage.IsEmpty())
 	{
+		UE_LOG(LogEDCore, Error, TEXT("[GameMode] PreLogin 거부(Super) — Address: %s, Error: %s"), *Address, *ErrorMessage);
 		return;
 	}
 
 	ErrorMessage = TEXT("MatchAlreadyStarted");
+	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PreLogin 거부 — MatchAlreadyStarted, Address: %s"), *Address);
 }
 
 void AEDGameMode::BeginPlay()
