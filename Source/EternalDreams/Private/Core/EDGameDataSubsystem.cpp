@@ -36,7 +36,39 @@ void UEDGameDataSubsystem::InitializeGameData()
 		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - InitializeGameData] 로비 데이터가 아직 준비되지 않았습니다."));
 		return;
 	}
+	UnloadPhaseData(LobbyAssetType, TEXT("Lobby"));
 	LoadPhase_Item();
+}
+
+// ================================================================
+// 언로드
+// ================================================================
+
+void UEDGameDataSubsystem::UnloadPhaseData(const FPrimaryAssetType& AssetType, const FName& HandleKey)
+{
+	UEDAssetManager& AM = UEDAssetManager::Get();
+	
+	TArray<FPrimaryAssetId> Ids;
+	AM.GetPrimaryAssetIdList(AssetType, Ids);
+	
+	for (const FPrimaryAssetId& Id : Ids)
+	{
+		DataCache.Remove(Id);
+	}
+	
+	if (TSharedPtr<FStreamableHandle>* FoundHandle = PhaseHandles.Find(HandleKey))
+	{
+		if (FoundHandle->IsValid())
+		{
+			(*FoundHandle)->ReleaseHandle();
+		}
+		PhaseHandles.Remove(HandleKey);
+	}
+
+	if (!Ids.IsEmpty())
+	{
+		AM.UnloadPrimaryAssets(Ids);
+	}
 }
 
 // ================================================================
@@ -171,5 +203,3 @@ void UEDGameDataSubsystem::SetPhase(EDataLoadPhase NewPhase)
 	CurrentPhase = NewPhase;
 	OnPhaseChanged.Broadcast(NewPhase);
 }
-
-
