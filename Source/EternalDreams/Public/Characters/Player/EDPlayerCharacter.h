@@ -7,6 +7,7 @@
 #include "AbilitySystemInterface.h"
 #include "EDPlayerCharacter.generated.h"
 
+class UGameplayAbility;
 class AEDWeapon;
 class AEDPlayerController;
 class UWidgetComponent;
@@ -69,7 +70,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeSet")
 	TObjectPtr<UEDBaseAttributeSet> BaseAttributeSet;
 	
-	virtual void InitializeAbilitySystem();
+	//Abilities for Grant
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "GAS|Abilities")
+	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
 	
 	//Test Weapon
 protected:
@@ -88,6 +92,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
 	float GetMaxHealth() const;
 	
+	//Initialize AS
+	virtual void InitializeAbilitySystem();
 	
-
+	// Ability Grant
+	void GiveDefaultAbilities();
 };
