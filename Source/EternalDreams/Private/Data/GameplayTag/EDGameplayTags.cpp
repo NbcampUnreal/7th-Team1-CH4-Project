@@ -71,6 +71,12 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("State.Player.Unstoppable"),
 		FString("저지 불가 상태")
 		);
+	
+	Tags.State_Player_RestrictedArea = Manager.AddNativeGameplayTag(
+		FName("State.Player.RestrictedArea"),
+		FString("금지구역 진입 상태")
+		);
+	
 	//Combat
 	Tags.Combat_Window_Combo = Manager.AddNativeGameplayTag(
 		FName("Combat.Window.Combo"),

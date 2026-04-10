@@ -2,6 +2,7 @@
 
 
 #include "Characters/Player/Component/ZoneDetectorComponent.h"
+#include "Data/GameplayTag/EDGameplayTags.h"  // 네이티브 게임플레이 태그 선언 (ini에서 변경)
 #include "AbilitySystemGlobals.h"
 #include "AbilitySystemComponent.h"
 #include "Engine/Engine.h"
@@ -16,50 +17,61 @@ UZoneDetectorComponent::UZoneDetectorComponent()
 
 void UZoneDetectorComponent::EnterRestrictedArea(TSubclassOf<UGameplayEffect> EffectClass)
 {
-	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
-	if (!ASC) return;
+    UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+    if (!ASC) return;
 
-	OverlappingZoneCount++;
+    OverlappingZoneCount++;
 
-	if (OverlappingZoneCount == 1 && EffectClass)
-	{
-		FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
-		ContextHandle.AddInstigator(GetOwner(), GetOwner());
+    // 첫 번째 금지 구역 진입 시에만 상태를 설정하고 이펙트를 적용
+    if (OverlappingZoneCount == 1)
+    {
+       // Tag부착 '금지구역 상태'
+       ASC->AddLooseGameplayTag(FEDGameplayTags::Get().State_Player_RestrictedArea);
 
-		FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, ContextHandle);
+       // 이펙트적용 (`GE_RestricTimer`)
+       if (EffectClass)
+       {
+          FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
+          ContextHandle.AddInstigator(GetOwner(), GetOwner());
+          FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(EffectClass, 1.0f, ContextHandle);
 
-		if (SpecHandle.IsValid())
-		{
-			RestrictedAreaEffectHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-			UE_LOG(LogTemp, Warning, TEXT("[Server] 금지구역 진입 (중첩: %d)"), OverlappingZoneCount);
-		}
-	}
+          if (SpecHandle.IsValid())
+          {
+             // 적용된 이펙트의 Handle을 나중에 제거하기 위해 저장합니다.
+             RestrictedAreaEffectHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+          }
+       }
+       UE_LOG(LogTemp, Warning, TEXT("[Server] 금지구역 진입 (중첩: %d) / C++ 태그 'State.Player.RestrictedArea' 부여됨"), OverlappingZoneCount);
+    }
 
-	// 💡 서버에서 처리 완료 후, 해당 플레이어의 클라이언트 화면에 디버그 출력 명령
-	Client_ShowZoneDebugMessage(true, OverlappingZoneCount);
+    Client_ShowZoneDebugMessage(true, OverlappingZoneCount);
 }
 
 void UZoneDetectorComponent::ExitRestrictedArea()
 {
-	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
-	if (!ASC) return;
+    UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+    if (!ASC) return;
 
-	OverlappingZoneCount--;
+    OverlappingZoneCount--;
 
-	if (OverlappingZoneCount <= 0)
-	{
-		OverlappingZoneCount = 0;
+    // 금지구역카운트0일때 상태를 해제하고 이펙트를 제거
+    if (OverlappingZoneCount <= 0)
+    {
+       OverlappingZoneCount = 0;
 
-		if (RestrictedAreaEffectHandle.IsValid())
-		{
-			ASC->RemoveActiveGameplayEffect(RestrictedAreaEffectHandle);
-			RestrictedAreaEffectHandle.Invalidate();
-			UE_LOG(LogTemp, Warning, TEXT("[Server] 금지구역 이탈"));
-		}
-	}
+       // '금지구역 상태' Tag 제거
+       ASC->RemoveLooseGameplayTag(FEDGameplayTags::Get().State_Player_RestrictedArea);
 
-	// 클라이언트 화면에 이탈 디버그 출력 명령
-	Client_ShowZoneDebugMessage(false, OverlappingZoneCount);
+       // 저장해둔 Handle을 이용해 이펙트 제거
+       if (RestrictedAreaEffectHandle.IsValid())
+       {
+          ASC->RemoveActiveGameplayEffect(RestrictedAreaEffectHandle);
+          RestrictedAreaEffectHandle.Invalidate(); // 핸들 초기화
+       }
+       UE_LOG(LogTemp, Warning, TEXT("[Server] 금지구역 이탈 / C++ 태그 제거됨 및 로직 이펙트 제거됨"));
+    }
+
+    Client_ShowZoneDebugMessage(false, OverlappingZoneCount);
 }
 
 // 실제 클라이언트의 화면에서 실행되는 부분 (_Implementation을 붙여야 함)

@@ -45,6 +45,8 @@ public:
 	FGameplayTag State_Player_CannotCanceled;
 	FGameplayTag State_Player_Invincible;
 	FGameplayTag State_Player_Unstoppable;
+	
+	FGameplayTag State_Player_RestrictedArea;
 ;
 	//Combat
 	FGameplayTag Combat_Window_Combo;
