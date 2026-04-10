@@ -13,6 +13,7 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Engine/AssetManager.h"
+#include "Core/EDPlayerState.h"
 #include "Chaos/Deformable/ChaosDeformableSolverProxy.h"
 
 
@@ -62,13 +63,14 @@ AEDMonsterAIController::AEDMonsterAIController()
 	AIPerceptionComp->OnPerceptionUpdated.AddDynamic(this, &AEDMonsterAIController::OnPerceptionUpdated);
 	AIPerceptionComp->OnTargetPerceptionForgotten.AddDynamic(this, &AEDMonsterAIController::OnPerceptionForgotten);
 	
-	MonsterTeamId = FGenericTeamId(1);
+	MonsterTeamId = FGenericTeamId(100);
 }
 
 // Called when the game starts or when spawned
 void AEDMonsterAIController::BeginPlay()
 {
 	Super::BeginPlay();
+	
 }
 
 ETeamAttitude::Type AEDMonsterAIController::GetTeamAttitudeTowards(const AActor& Other) const
@@ -79,7 +81,16 @@ ETeamAttitude::Type AEDMonsterAIController::GetTeamAttitudeTowards(const AActor&
 	
 	const IGenericTeamAgentInterface* OtherTeam = Cast<IGenericTeamAgentInterface>(OtherPawn->GetController());
 	if (OtherTeam == nullptr)
-		return ETeamAttitude::Neutral;
+	{
+		// PlayerState기반 Team 체크
+		const AController* OtherController = OtherPawn->GetController();
+		if (IsValid(OtherController) == false)
+			return ETeamAttitude::Neutral;
+		
+		const AEDPlayerState* PS = OtherPawn->GetPlayerState<AEDPlayerState>();
+		if (IsValid(PS) && EDTeam::IsPlayerTeam(PS->TeamId))
+			return ETeamAttitude::Hostile;
+	}
 	
 	return MonsterTeamId == OtherTeam->GetGenericTeamId() 
 	? ETeamAttitude::Friendly 
@@ -115,11 +126,12 @@ void AEDMonsterAIController::OnPossess(APawn* InPawn)
 	AIPerceptionComp->ConfigureSense(*SightConfig);
 	AIPerceptionComp->ConfigureSense(*HearingConfig);
 	// BT 비동기 로드(임시)
-	if (DA->GetBehaviorTree().IsValid() == false)
+	if (DA->GetBehaviorTree().IsNull())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[%s] BehaviorTree 레퍼런스 없음"), *GetName());
 		return;
 	}
+	
 	FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
 	BTLoadHandle = Streamable.RequestAsyncLoad(
 		DA->GetBehaviorTree().ToSoftObjectPath(),
@@ -266,8 +278,12 @@ void AEDMonsterAIController::OnBTLoaded()
 		return;
 	}
 	
+
+	if (IsValid(this) == false || IsValid(GetPawn()) == false)
+		return;
 	bool bResult = RunBehaviorTree(BT);
 	UE_LOG(LogTemp, Warning, TEXT("[AICtrl][%s] RunBehaviorTree(Async): %s"), *GetName(), bResult ? TEXT("성공") : TEXT("실패"));
+
 }
 
 
