@@ -17,9 +17,7 @@
 
 UZoneDetectorComponent::UZoneDetectorComponent()
 {
-	//PrimaryComponentTick.bCanEverTick = false;
 	PrimaryComponentTick.bCanEverTick = true;
-	//PrimaryComponentTick.bStartWithTickEnabled = false;
 	PrimaryComponentTick.bStartWithTickEnabled = true;
 	
 	SetIsReplicatedByDefault(true); // 컴포넌트 리플리케이션 켜기 
@@ -29,15 +27,6 @@ void UZoneDetectorComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// ASC에서 태그가 추가/제거되는 것을 감시하는 리스너 등록
-	/*if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
-	{
-		FGameplayTag ZoneTag = FEDGameplayTags::Get().State_Player_RestrictedArea;
-		ASC->RegisterGameplayTagEvent(ZoneTag, EGameplayTagEventType::NewOrRemoved)
-		   .AddUObject(this, &UZoneDetectorComponent::OnRestrictedAreaTagChanged);
-	}*/
-	
-	// 서버일 때만 안전하게 ASC의 동기화 모드를 변경합니다.
 	if (GetOwner()->HasAuthority())
 	{
 		if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
@@ -50,78 +39,6 @@ void UZoneDetectorComponent::BeginPlay()
 	
 	
 }
-
-/*
-void UZoneDetectorComponent::OnRestrictedAreaTagChanged(const FGameplayTag Tag, int32 NewCount)
-{
-    // 데디케이티드 서버에서는 UI를 생성하면 안 되므로 예외 처리
-    if (GetWorld()->GetNetMode() == NM_DedicatedServer) return;
-
-    if (NewCount > 0) // 금지구역 진입 (태그 생김)
-    {
-        if (!TimerWidget && TimerWidgetClass)
-        {
-            // 위젯 생성 및 화면 바닥(-1 레이어)에 추가
-            TimerWidget = CreateWidget<UEDTimerWidget>(GetWorld(), TimerWidgetClass);
-            if (TimerWidget)
-            {
-                TimerWidget->AddToViewport(-1);
-                SetComponentTickEnabled(true); // 머리 위 추적을 위해 틱 켜기
-            }
-        }
-    }
-    else // 금지구역 이탈 (태그 사라짐)
-    {
-        if (TimerWidget)
-        {
-            TimerWidget->RemoveFromParent();
-            TimerWidget = nullptr;
-            SetComponentTickEnabled(false); // 틱 다시 끄기 (최적화)
-        }
-    }
-}
-*/
-
-/*
-void UZoneDetectorComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-    if (TimerWidget && GetOwner())
-    {
-        // 1. 남은 시간 업데이트
-        if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
-        {
-            float TimeRemaining = ASC->GetNumericAttribute(UEDPlayerAttributeSet::GetSurvivalTimeAttribute());
-            TimerWidget->UpdateTimeText(TimeRemaining);
-        }
-
-        // 2. 머리 위 좌표 추적
-        // 내 화면을 담당하는 로컬 플레이어 컨트롤러를 가져옴
-        APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
-        if (PC)
-        {
-            // 캐릭터 위치에서 Z축으로 약간 올려서 머리 위 지정 (숫자는 120.f 등 적절히 조절)
-            FVector WorldLocation = GetOwner()->GetActorLocation() + FVector(0.f, 0.f, 200.f);
-            FVector2D ScreenLocation;
-
-            // 캐릭터가 내 화면(카메라 앞)에 있을 때만 위치를 갱신
-            if (PC->ProjectWorldLocationToScreen(WorldLocation, ScreenLocation))
-            {
-                TimerWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
-                TimerWidget->SetPositionInViewport(ScreenLocation);
-            	
-            	TimerWidget->SetAlignmentInViewport(FVector2D(0.5f, 0.5f));
-            }
-            else
-            {
-                // 캐릭터가 내 등 뒤에 있거나 카메라 밖이면 UI를 숨김
-                TimerWidget->SetVisibility(ESlateVisibility::Collapsed);
-            }
-        }
-    }
-}
-*/
 
 void UZoneDetectorComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
