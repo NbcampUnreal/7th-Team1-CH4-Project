@@ -12,6 +12,8 @@
 #include "Perception/AISense_Team.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "Engine/AssetManager.h"
+#include "Chaos/Deformable/ChaosDeformableSolverProxy.h"
 
 
 // Sets default values
@@ -22,7 +24,7 @@ AEDMonsterAIController::AEDMonsterAIController()
 	// Perception
 	AIPerceptionComp = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("AIPerceptionComp"));
 	SetPerceptionComponent(*AIPerceptionComp);
-	// magic number는 추후에 수정 
+	// 기본값 - OnPossess에서 DA의 DetectRange로 덮어씀
 	SightConfig = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("SightConfig"));
 	SightConfig->SightRadius = 1000.f;
 	SightConfig->LoseSightRadius = 1200.f;
@@ -67,11 +69,6 @@ AEDMonsterAIController::AEDMonsterAIController()
 void AEDMonsterAIController::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	UE_LOG(LogTemp, Warning, TEXT("[AICtrl][%s] BeginPlay 진입 - Authority:%s / Pawn:%s"),
-	*GetName(),
-	HasAuthority() ? TEXT("YES") : TEXT("NO"),
-	IsValid(GetPawn()) ? *GetPawn()->GetName() : TEXT("NULL"));
 }
 
 ETeamAttitude::Type AEDMonsterAIController::GetTeamAttitudeTowards(const AActor& Other) const
@@ -88,7 +85,7 @@ ETeamAttitude::Type AEDMonsterAIController::GetTeamAttitudeTowards(const AActor&
 	? ETeamAttitude::Friendly 
 	: ETeamAttitude::Hostile;
 }
-// TODO: 비동기 로드로 교체 추후에
+
 void AEDMonsterAIController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
@@ -106,25 +103,40 @@ void AEDMonsterAIController::OnPossess(APawn* InPawn)
 	UEDMonsterDataAsset* DA = Monster->GetDataAsset();
 	if (IsValid(DA) == false)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] BeginPlay: DataAsset 없음"), *GetName());
+		UE_LOG(LogTemp, Warning, TEXT("[%s] OnPossess: DataAsset 없음"), *GetName());
 		return;
 	}
+	// DA의 DetectRange로 감지 범위 설정
+	const float DetectRange = DA->GetStat().DetectRange;
 	
-	UBehaviorTree* BT = DA->GetBehaviorTree().LoadSynchronous();
-	if (IsValid(BT) == false)
+	SightConfig->SightRadius = DetectRange;
+	SightConfig->LoseSightRadius = DetectRange * 1.2f;
+	HearingConfig->HearingRange = DetectRange * 0.8f;
+	AIPerceptionComp->ConfigureSense(*SightConfig);
+	AIPerceptionComp->ConfigureSense(*HearingConfig);
+	// BT 비동기 로드(임시)
+	if (DA->GetBehaviorTree().IsValid() == false)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] Failed to load BehaviorTree!"), *GetName());
+		UE_LOG(LogTemp, Warning, TEXT("[%s] BehaviorTree 레퍼런스 없음"), *GetName());
 		return;
 	}
-	
-	bool bResult = RunBehaviorTree(BT);
-	UE_LOG(LogTemp, Warning, TEXT("[AICtrl][%s] RunBehaviorTree: %s"), *GetName(), bResult ? TEXT("성공") : TEXT("실패"));
+	FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
+	BTLoadHandle = Streamable.RequestAsyncLoad(
+		DA->GetBehaviorTree().ToSoftObjectPath(),
+		FStreamableDelegate::CreateUObject(this, &AEDMonsterAIController::OnBTLoaded)
+		);
 }
 
 void AEDMonsterAIController::OnUnPossess()
 {
 	Super::OnUnPossess();
 	GetWorldTimerManager().ClearTimer(TeamReportTimerHandle);
+	
+	if (BTLoadHandle.IsValid())
+	{
+		BTLoadHandle->CancelHandle();
+		BTLoadHandle.Reset();
+	}
 }
 
 void AEDMonsterAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedActors)
@@ -136,6 +148,7 @@ void AEDMonsterAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedA
 	{
 		if (IsValid(Actor) == false)
 			continue;
+		
 		FActorPerceptionBlueprintInfo Info;
 		AIPerceptionComp->GetActorsPerception(Actor, Info);
 		
@@ -146,56 +159,31 @@ void AEDMonsterAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedA
 			TSubclassOf<UAISense> SenseClass = UAIPerceptionSystem::GetSenseClassForStimulus(GetWorld(), Stimulus);
 			if (IsValid(SenseClass) == false)
 				continue;
-			if (SenseClass == UAISense_Sight::StaticClass() ||
-				SenseClass == UAISense_Damage::StaticClass() ||
-				SenseClass == UAISense_Touch::StaticClass())
+			
+			UBlackboardComponent* BB = GetBlackboardComponent();
+			if (IsValid(BB) == false)
+				continue;
+			
+			if (SenseClass == UAISense_Sight::StaticClass())
 			{
-				UE_LOG(LogTemp, Warning, TEXT("[%s] 감지: %s (%s)"), *GetName(), *Actor->GetName(), *SenseClass->GetName());
-				
-				UBlackboardComponent* BB = GetBlackboardComponent();
-				if (IsValid(BB) == false)
+				if (IsEliteOrBoss() == false)
 					continue;
-				
+				UE_LOG(LogTemp, Warning, TEXT("[%s] Sight 감지(Elite/Boss): %s"), *GetName(), *Actor->GetName());
 				BB->SetValueAsObject(TEXT("TargetActor"), Actor);
-				
-				// Ramda함수 안에서 안전하게 사용하기 위한 TWeakObjectPtr
-				TWeakObjectPtr<AEDMonsterAIController> WeakThis(this);
-				TWeakObjectPtr<AActor> WeakActor(Actor);
-				
-				// Team Sense로 주변 아군에게 타겟 공유
-				GetWorld()->GetTimerManager().SetTimer(TeamReportTimerHandle,
-					[WeakThis, WeakActor]()
-					{
-						if (WeakThis.IsValid() == false)
-							return;
-						
-						UWorld* World = WeakThis->GetWorld();
-						if (IsValid(World) == false)
-							return;
-						
-						if (WeakActor.IsValid() == false)
-						{
-							WeakThis->GetWorldTimerManager().ClearTimer(WeakThis->TeamReportTimerHandle);
-							return;
-						}
-						
-						UAIPerceptionSystem* PerceptionSystem = UAIPerceptionSystem::GetCurrent(World);
-						if (IsValid(PerceptionSystem) == false)
-							return;
-						
-						FAITeamStimulusEvent Event = FAITeamStimulusEvent(WeakThis.Get(), WeakActor.Get(), WeakActor->GetActorLocation(), 1000.f);
-						PerceptionSystem->OnEvent(Event);
-					},
-					2.f, true, 0.5f);
+				StartTeamReport(Actor);
+			}
+			else if (SenseClass == UAISense_Damage::StaticClass() ||
+					 SenseClass == UAISense_Touch::StaticClass())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("[%s] 반격 감지(%s): %s"), *GetName(), *SenseClass->GetName(), *Actor->GetName());
+				BB->SetValueAsObject(TEXT("TargetActor"), Actor);
+				StartTeamReport(Actor);
 			}
 			// Hearing 감지
 			else if (SenseClass == UAISense_Hearing::StaticClass())
 			{
 				UE_LOG(LogTemp, Warning, TEXT("[%s] Hearing: %s 소리 감지"), *GetName(), *Actor->GetName());
 				// TODO: BB_Monster 생성 후 활성화
-				UBlackboardComponent* BB = GetBlackboardComponent();
-				if (IsValid(BB) == false)
-					continue;
 				BB->SetValueAsVector(TEXT("LastHearingLocation"), Actor->GetActorLocation());
 				BB->SetValueAsBool(TEXT("bIsTracking"), true);
 			}
@@ -203,9 +191,6 @@ void AEDMonsterAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedA
 			else if (SenseClass == UAISense_Team::StaticClass())
 			{
 				UE_LOG(LogTemp, Warning, TEXT("[%s] Team: %s 정보 수신"), *GetName(), *Actor->GetName());
-				UBlackboardComponent* BB = GetBlackboardComponent();
-				if (IsValid(BB) == false)
-					continue;
 				if (IsValid(BB->GetValueAsObject(TEXT("TargetActor"))) == false)
 					BB->SetValueAsObject(TEXT("TargetActor"), Actor);
 			}
@@ -227,6 +212,62 @@ void AEDMonsterAIController::OnPerceptionForgotten(AActor* Actor)
 	BB->SetValueAsObject(TEXT("TargetActor"), nullptr);
 	BB->SetValueAsVector(TEXT("LastHearingLocation"), FVector::ZeroVector);
 	BB->SetValueAsBool(TEXT("bIsTracking"), false);
+}
+
+bool AEDMonsterAIController::IsEliteOrBoss() const
+{
+	AEDMonsterBase* Monster = Cast<AEDMonsterBase>(GetPawn());
+	if (IsValid(Monster) == false || IsValid(Monster->GetDataAsset()) == false)
+		return false;
+	
+	EMonsterGrade Grade = Monster->GetDataAsset()->GetGrade();
+	return Grade == EMonsterGrade::Elite || Grade == EMonsterGrade::Boss;
+}
+
+void AEDMonsterAIController::BroadcastTeamSense()
+{
+	if (TeamReportTarget.IsValid() == false)
+	{
+		GetWorldTimerManager().ClearTimer(TeamReportTimerHandle);
+		return;
+	}
+	
+	UAIPerceptionSystem* PerceptionSystem = UAIPerceptionSystem::GetCurrent(GetWorld());
+	if (IsValid(PerceptionSystem) == false)
+		return;
+	
+	FAITeamStimulusEvent Event = FAITeamStimulusEvent(
+		this, TeamReportTarget.Get(), TeamReportTarget->GetActorLocation(), 1000.f);
+	PerceptionSystem->OnEvent(Event);
+}
+
+void AEDMonsterAIController::StartTeamReport(AActor* Target)
+{
+	TeamReportTarget = Target;
+	GetWorld()->GetTimerManager().SetTimer(
+		TeamReportTimerHandle,
+		this, &AEDMonsterAIController::BroadcastTeamSense,
+		2.f, true, 0.5f);
+}
+
+void AEDMonsterAIController::OnBTLoaded()
+{
+	AEDMonsterBase* Monster = Cast<AEDMonsterBase>(GetPawn());
+	if (IsValid(Monster) == false || IsValid(Monster->GetDataAsset()) == false)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[AICtrl][%s] OnBTLoaded: Pawn 또는 DataAsset 없음"), *GetName());
+		return;
+	}
+	
+	UBehaviorTree* BT = Monster->GetDataAsset()->GetBehaviorTree().Get();
+	if (IsValid(BT) == false)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[AICtrl][%s] OnBTLoaded: BT 유효하지 않음"), *GetName());
+		return;
+	}
+	
+	bool bResult = RunBehaviorTree(BT);
+	UE_LOG(LogTemp, Warning, TEXT("[AICtrl][%s] RunBehaviorTree(Async): %s"), *GetName(), bResult ? TEXT("성공") : TEXT("실패"));
 }
 
 

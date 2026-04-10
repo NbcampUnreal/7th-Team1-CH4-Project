@@ -13,6 +13,7 @@ DECLARE_MULTICAST_DELEGATE(FOnAttackFinished);
 
 class UAbilitySystemComponent;
 class UEDMonsterDataAsset;
+struct FStreamableHandle;
 
 UCLASS()
 class ETERNALDREAMS_API AEDMonsterBase : public ACharacter, public IAbilitySystemInterface
@@ -52,6 +53,11 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
 	TObjectPtr<UEDMonsterDataAsset> DataAsset;
 private:
+	// 비동기 로드(임시)
+	void LoadVisuals(UEDMonsterDataAsset* InDataAsset);
+	// 비동기 로드 완료 콜백
+	void OnVisualsLoaded();
+	
 	UPROPERTY(ReplicatedUsing = OnRep_MonsterState)
 	EMonsterState MonsterState;
 	
@@ -59,4 +65,5 @@ private:
 	TObjectPtr<UEDBaseAttributeSet> BaseAttributeSet;
 	
 	FVector OriginLocation;
+	TSharedPtr<FStreamableHandle> VisualLoadHandle;
 };
