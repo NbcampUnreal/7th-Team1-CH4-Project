@@ -40,8 +40,7 @@ protected:
 	UPROPERTY()
 	TObjectPtr<AEDPlayerController> PlayerController;
 	
-	UPROPERTY()
-	TObjectPtr<UWidgetComponent> CursorWidget=nullptr;
+
 	
 	UFUNCTION()
 	void PlayerMove(const FInputActionValue& value);
