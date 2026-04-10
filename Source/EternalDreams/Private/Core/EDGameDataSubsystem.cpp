@@ -4,6 +4,8 @@
 #include "Kismet/GameplayStatics.h"
 
 const FPrimaryAssetType UEDGameDataSubsystem::LobbyAssetType = FPrimaryAssetType(TEXT("LobbyData"));
+
+const FPrimaryAssetType UEDGameDataSubsystem::UIAssetType = FPrimaryAssetType(TEXT("UIData"));
 const FPrimaryAssetType UEDGameDataSubsystem::ItemAssetType = FPrimaryAssetType(TEXT("ItemData"));
 const FPrimaryAssetType UEDGameDataSubsystem::MonsterAssetType = FPrimaryAssetType(TEXT("MonsterData"));
 
@@ -38,7 +40,7 @@ void UEDGameDataSubsystem::InitializeGameData()
 		return;
 	}
 	UnloadPhaseData(LobbyAssetType, TEXT("Lobby"));
-	LoadPhase_Item();
+	LoadPhase_UI();
 }
 
 void UEDGameDataSubsystem::ReturnToLobby()
@@ -114,6 +116,27 @@ void UEDGameDataSubsystem::LoadPhase_Lobby()
 	PhaseHandles.Add(TEXT("Lobby"), Handle);
 }
 
+void UEDGameDataSubsystem::LoadPhase_UI()
+{
+	SetPhase(EDataLoadPhase::LoadingUI);
+	UEDAssetManager& AM = UEDAssetManager::Get();
+	TArray<FPrimaryAssetId> Ids;
+	AM.GetPrimaryAssetIdList(UIAssetType, Ids);
+	if (Ids.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - LoadPhase_UI] Data가 없습니다. 다음 단계로 건너뜁니다."));
+		OnUIDataLoaded();
+		return;
+	}
+	
+	TSharedPtr<FStreamableHandle> Handle = AM.LoadPrimaryAssetsAsync(
+		Ids,
+		{TEXT("UI")},
+		FStreamableDelegate::CreateUObject(this, &UEDGameDataSubsystem::OnUIDataLoaded)
+	);
+	PhaseHandles.Add(TEXT("UI"), Handle);
+}
+
 void UEDGameDataSubsystem::LoadPhase_Item()
 {
 	SetPhase(EDataLoadPhase::LoadingItem);
@@ -171,6 +194,13 @@ void UEDGameDataSubsystem::OnLobbyDataLoaded()
 	SetPhase(EDataLoadPhase::LobbyReady);
 	OnLobbyDataReady.Broadcast();
 	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem - OnLobbyDataLoaded] Lobby 데이터 로드 완료"));
+}
+
+void UEDGameDataSubsystem::OnUIDataLoaded()
+{
+	CacheLoadedAssets(ItemAssetType);
+	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem - OnUIDataLoaded] UI 데이터 로드 완료"));
+	LoadPhase_Item();
 }
 
 void UEDGameDataSubsystem::OnItemDataLoaded()

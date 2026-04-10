@@ -12,11 +12,11 @@ enum class EDataLoadPhase : uint8
 	LoadingLobby    UMETA(DisplayName = "로비 데이터 로딩"),
 	LobbyReady      UMETA(DisplayName = "로비 준비 완료"),
 	
+	LoadingUI		UMETA(DisplayName = "UI 데이터 로딩"),
 	LoadingItem     UMETA(DisplayName = "아이템 데이터 로딩"),
 	LoadingMonster  UMETA(DisplayName = "몬스터 데이터 로딩"),
 	
-	Completed       UMETA(DisplayName = "완료"),
-	ReturningToLobby UMETA(DisplayName = "로비 복귀 중")
+	Completed       UMETA(DisplayName = "완료")
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAllDataLoaded);
@@ -130,6 +130,7 @@ public:
     // Asset Type 상수 (Project Settings > Asset Manager 등록 이름과 일치)
     // ================================================================
     static const FPrimaryAssetType LobbyAssetType;
+	static const FPrimaryAssetType UIAssetType;
     static const FPrimaryAssetType ItemAssetType;
     static const FPrimaryAssetType MonsterAssetType;
 private:
@@ -137,11 +138,13 @@ private:
 	// 단계별 로드 함수
 	// ================================================================
 	void LoadPhase_Lobby();
+	void LoadPhase_UI();
 	void LoadPhase_Item();
 	void LoadPhase_Monster();
 
 	// 각 단계 완료 콜백
 	void OnLobbyDataLoaded();
+	void OnUIDataLoaded();
 	void OnItemDataLoaded();
 	void OnMonsterDataLoaded();
 
