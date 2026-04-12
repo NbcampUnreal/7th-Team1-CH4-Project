@@ -4,6 +4,8 @@
 #include "Kismet/GameplayStatics.h"
 
 const FPrimaryAssetType UEDGameDataSubsystem::LobbyAssetType = FPrimaryAssetType(TEXT("LobbyData"));
+
+const FPrimaryAssetType UEDGameDataSubsystem::UIAssetType = FPrimaryAssetType(TEXT("UIData"));
 const FPrimaryAssetType UEDGameDataSubsystem::ItemAssetType = FPrimaryAssetType(TEXT("ItemData"));
 const FPrimaryAssetType UEDGameDataSubsystem::MonsterAssetType = FPrimaryAssetType(TEXT("MonsterData"));
 
@@ -15,6 +17,7 @@ void UEDGameDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UEDGameDataSubsystem::Deinitialize()
 {
+	UnloadAllData();
 	Super::Deinitialize();
 }
 
@@ -36,7 +39,60 @@ void UEDGameDataSubsystem::InitializeGameData()
 		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - InitializeGameData] 로비 데이터가 아직 준비되지 않았습니다."));
 		return;
 	}
-	LoadPhase_Item();
+	UnloadPhaseData(LobbyAssetType, TEXT("Lobby"));
+	LoadPhase_UI();
+}
+
+// ================================================================
+// 언로드
+// ================================================================
+
+// 게임 종료 후 로비로
+void UEDGameDataSubsystem::ReturnToLobby()
+{
+	// 게임씬 데이터 언로드
+	UnloadPhaseData(UIAssetType, TEXT("UI"));
+	UnloadPhaseData(ItemAssetType, TEXT("Item"));
+	UnloadPhaseData(MonsterAssetType, TEXT("Monster"));
+	LoadPhase_Lobby();
+}
+
+// 게임 완전히 종료
+void UEDGameDataSubsystem::UnloadAllData()
+{
+	UnloadPhaseData(LobbyAssetType, TEXT("Lobby"));
+	UnloadPhaseData(UIAssetType, TEXT("UI"));
+	UnloadPhaseData(ItemAssetType, TEXT("Item"));
+	UnloadPhaseData(MonsterAssetType, TEXT("Monster"));
+	SetPhase(EDataLoadPhase::NotStarted);
+}
+
+// 해당 에셋 언로드
+void UEDGameDataSubsystem::UnloadPhaseData(const FPrimaryAssetType& AssetType, const FName& HandleKey)
+{
+	UEDAssetManager& AM = UEDAssetManager::Get();
+	
+	TArray<FPrimaryAssetId> Ids;
+	AM.GetPrimaryAssetIdList(AssetType, Ids);
+	
+	for (const FPrimaryAssetId& Id : Ids)
+	{
+		DataCache.Remove(Id);
+	}
+	
+	if (TSharedPtr<FStreamableHandle>* FoundHandle = PhaseHandles.Find(HandleKey))
+	{
+		if (FoundHandle->IsValid())
+		{
+			(*FoundHandle)->ReleaseHandle();
+		}
+		PhaseHandles.Remove(HandleKey);
+	}
+
+	if (!Ids.IsEmpty())
+	{
+		AM.UnloadPrimaryAssets(Ids);
+	}
 }
 
 // ================================================================
@@ -63,6 +119,27 @@ void UEDGameDataSubsystem::LoadPhase_Lobby()
 	);
 	
 	PhaseHandles.Add(TEXT("Lobby"), Handle);
+}
+
+void UEDGameDataSubsystem::LoadPhase_UI()
+{
+	SetPhase(EDataLoadPhase::LoadingUI);
+	UEDAssetManager& AM = UEDAssetManager::Get();
+	TArray<FPrimaryAssetId> Ids;
+	AM.GetPrimaryAssetIdList(UIAssetType, Ids);
+	if (Ids.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - LoadPhase_UI] Data가 없습니다. 다음 단계로 건너뜁니다."));
+		OnUIDataLoaded();
+		return;
+	}
+	
+	TSharedPtr<FStreamableHandle> Handle = AM.LoadPrimaryAssetsAsync(
+		Ids,
+		{TEXT("UI")},
+		FStreamableDelegate::CreateUObject(this, &UEDGameDataSubsystem::OnUIDataLoaded)
+	);
+	PhaseHandles.Add(TEXT("UI"), Handle);
 }
 
 void UEDGameDataSubsystem::LoadPhase_Item()
@@ -124,6 +201,13 @@ void UEDGameDataSubsystem::OnLobbyDataLoaded()
 	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem - OnLobbyDataLoaded] Lobby 데이터 로드 완료"));
 }
 
+void UEDGameDataSubsystem::OnUIDataLoaded()
+{
+	CacheLoadedAssets(UIAssetType);
+	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem - OnUIDataLoaded] UI 데이터 로드 완료"));
+	LoadPhase_Item();
+}
+
 void UEDGameDataSubsystem::OnItemDataLoaded()
 {
 	CacheLoadedAssets(ItemAssetType);
@@ -171,5 +255,3 @@ void UEDGameDataSubsystem::SetPhase(EDataLoadPhase NewPhase)
 	CurrentPhase = NewPhase;
 	OnPhaseChanged.Broadcast(NewPhase);
 }
-
-
