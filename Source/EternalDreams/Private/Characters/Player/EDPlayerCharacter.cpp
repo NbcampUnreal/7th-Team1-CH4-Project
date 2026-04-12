@@ -45,6 +45,11 @@ void AEDPlayerCharacter::BeginPlay()
 	//AbilitySystem 초기화
 	InitializeAbilitySystem();
 	
+	//서버에서만, ASC가 있는 경우 실행
+	if (HasAuthority()&&IsValid(AbilitySystemComponent))
+	{
+		GiveDefaultAbilities();
+	}
 	//IMC 추가
 	AEDPlayerController* PC = Cast<AEDPlayerController>(GetController());
 	if (IsValid(PC))
@@ -97,6 +102,20 @@ void AEDPlayerCharacter::InitializeAbilitySystem()
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	}
+}
+
+void AEDPlayerCharacter::GiveDefaultAbilities()
+{
+	for (TSubclassOf<UGameplayAbility>& AbilityClass : DefaultAbilities)
+	{
+		if (AbilityClass)
+		{
+			// Ability Spec 생성
+			FGameplayAbilitySpec AbilitySpec(AbilityClass, 1, INDEX_NONE, this);
+			// ASC에 Ability 부여
+			AbilitySystemComponent->GiveAbility(AbilitySpec);
+		}
 	}
 }
 

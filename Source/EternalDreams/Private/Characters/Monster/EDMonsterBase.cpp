@@ -6,7 +6,9 @@
 #include "Abilities/GameplayAbility.h"
 #include "Characters/Monster/EDMonsterAnimInstance.h"
 #include "Data/EDMonsterDataAsset.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Engine/AssetManager.h"
 
 // Sets default values
 AEDMonsterBase::AEDMonsterBase()
@@ -14,7 +16,8 @@ AEDMonsterBase::AEDMonsterBase()
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
-	
+	// 기본적으로 내부에서 true지만 명시적으로 표시
+	SetReplicateMovement(true);
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	// 몬스터 GE는 서버만 가지고있고 계산하기 때문에 Minimal로 설정
@@ -36,9 +39,12 @@ void AEDMonsterBase::BeginPlay()
 	
 	OriginLocation = GetActorLocation();
 	
-	if (HasAuthority() == false)
-		return;
 	if (IsValid(DataAsset) == false)
+		return;
+	
+	InitializeFromDataAsset(DataAsset);
+	
+	if (HasAuthority() == false)
 		return;
 	
 	for (const TSubclassOf<UGameplayAbility>& AbilityClass : DataAsset->GetDefaultAbilities())
@@ -55,6 +61,12 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 		return;
 	DataAsset = InDataAsset;
 	
+	// Mesh/AnimInstance 비동기 로드(임시) - 서버/클라이언트 공통이라 HasAuthority체크 이전
+	LoadVisuals(InDataAsset);
+	
+	if (HasAuthority() == false)
+		return;
+	// AttributeSet에 DA의 Stat 적용
 	const FMonsterStatRow& Stat = InDataAsset->GetStat();
 	UE_LOG(LogTemp, Warning, TEXT("[%s] InitializeFromDataAsset - MaxHP: %.1f, Atk: %.1f"),
 		*GetName(), Stat.MaxHP, Stat.Atk)
@@ -65,7 +77,14 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	BaseAttributeSet->InitMaxDefensive(Stat.Def);
 	BaseAttributeSet->InitMaxWalkSpeed(Stat.MoveSpeed);
 	BaseAttributeSet->InitWalkSpeed(Stat.MoveSpeed);
-	// TODO : Mesh, AnimInstance, BT - DataAsset에 getter 추가 후 비동기 로드
+	// 몬스터 이동속도 MovementComponent에 적용
+	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+	if (MoveComp == nullptr)
+		return;
+	MoveComp->MaxWalkSpeed = Stat.MoveSpeed;
+	MoveComp->bOrientRotationToMovement = true;
+	bUseControllerRotationYaw = false;
+
 }
 
 void AEDMonsterBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -83,6 +102,43 @@ void AEDMonsterBase::OnRep_MonsterState()
 		return;
 	
 	Anim->SetMonsterState(MonsterState);
+}
+
+void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)
+{
+	TArray<FSoftObjectPath> AssetsToLoad;
+	
+	if (InDataAsset->GetMesh().IsValid())
+		AssetsToLoad.Add(InDataAsset->GetMesh().ToSoftObjectPath());
+	if (InDataAsset->GetAnimInstance().IsValid())
+		AssetsToLoad.Add(InDataAsset->GetAnimInstance().ToSoftObjectPath());
+	
+	if (AssetsToLoad.IsEmpty())
+		return;
+	
+	FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
+	VisualLoadHandle = Streamable.RequestAsyncLoad(
+		AssetsToLoad,
+		FStreamableDelegate::CreateUObject(this, &AEDMonsterBase::OnVisualsLoaded)
+		);
+	
+}
+
+void AEDMonsterBase::OnVisualsLoaded()
+{
+	if (IsValid(DataAsset) == false)
+		return;
+	USkeletalMesh* SkelMesh = DataAsset->GetMesh().Get();
+	if (IsValid(SkelMesh) == false)
+		return;
+	GetMesh()->SetSkeletalMesh(SkelMesh);
+	
+	UClass* AnimInstance = DataAsset->GetAnimInstance().Get();
+	if (IsValid(AnimInstance) == false)
+		return;
+	GetMesh()->SetAnimInstanceClass(AnimInstance);
+	
+	UE_LOG(LogTemp, Warning, TEXT("[%s] Visuals 로드 완료"), *GetName());
 }
 
 
