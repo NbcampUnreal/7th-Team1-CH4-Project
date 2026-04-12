@@ -58,6 +58,7 @@ void UEDGameDataSubsystem::ReturnToLobby()
 void UEDGameDataSubsystem::UnloadAllData()
 {
 	UnloadPhaseData(LobbyAssetType, TEXT("Lobby"));
+	UnloadPhaseData(UIAssetType, TEXT("UI"));
 	UnloadPhaseData(ItemAssetType, TEXT("Item"));
 	UnloadPhaseData(MonsterAssetType, TEXT("Monster"));
 	SetPhase(EDataLoadPhase::NotStarted);
@@ -198,7 +199,7 @@ void UEDGameDataSubsystem::OnLobbyDataLoaded()
 
 void UEDGameDataSubsystem::OnUIDataLoaded()
 {
-	CacheLoadedAssets(ItemAssetType);
+	CacheLoadedAssets(UIAssetType);
 	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem - OnUIDataLoaded] UI 데이터 로드 완료"));
 	LoadPhase_Item();
 }
