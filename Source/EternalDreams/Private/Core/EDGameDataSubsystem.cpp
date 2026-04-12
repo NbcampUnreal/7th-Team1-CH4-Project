@@ -43,18 +43,21 @@ void UEDGameDataSubsystem::InitializeGameData()
 	LoadPhase_UI();
 }
 
+// ================================================================
+// 언로드
+// ================================================================
+
+// 게임 종료 후 로비로
 void UEDGameDataSubsystem::ReturnToLobby()
 {
 	// 게임씬 데이터 언로드
+	UnloadPhaseData(UIAssetType, TEXT("UI"));
 	UnloadPhaseData(ItemAssetType, TEXT("Item"));
 	UnloadPhaseData(MonsterAssetType, TEXT("Monster"));
 	LoadPhase_Lobby();
 }
 
-// ================================================================
-// 언로드
-// ================================================================
-
+// 게임 완전히 종료
 void UEDGameDataSubsystem::UnloadAllData()
 {
 	UnloadPhaseData(LobbyAssetType, TEXT("Lobby"));
@@ -64,6 +67,7 @@ void UEDGameDataSubsystem::UnloadAllData()
 	SetPhase(EDataLoadPhase::NotStarted);
 }
 
+// 해당 에셋 언로드
 void UEDGameDataSubsystem::UnloadPhaseData(const FPrimaryAssetType& AssetType, const FName& HandleKey)
 {
 	UEDAssetManager& AM = UEDAssetManager::Get();
