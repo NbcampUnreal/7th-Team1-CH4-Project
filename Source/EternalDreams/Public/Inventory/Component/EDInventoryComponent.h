@@ -247,4 +247,20 @@ protected:
     FActiveGameplayEffectHandle WeaponEquipEffectHandle;
     FActiveGameplayEffectHandle TopArmorEquipEffectHandle;
     FActiveGameplayEffectHandle BottomArmorEquipEffectHandle;
+    
+    // 테스트용 아이템을 BeginPlay 시 지급할지 여부
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")
+    bool bGiveDebugItemsOnBeginPlay = false;
+
+    // 테스트용 소비 아이템
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")
+    FPrimaryAssetId DebugConsumableItemId;
+    
+    // 테스트용 재료 아이템
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")
+    FPrimaryAssetId DebugMaterialItemId;
+
+    // 테스트용 장비 아이템
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")
+    FPrimaryAssetId DebugEquipItemId;
 };

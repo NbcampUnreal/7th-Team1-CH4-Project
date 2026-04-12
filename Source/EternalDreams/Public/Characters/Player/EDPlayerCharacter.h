@@ -13,6 +13,7 @@ class UEDBaseAttributeSet;
 class UEDPlayerAttributeSet;
 class UIMCComponent;
 class UZoneDetectorComponent;
+class UEDInventoryComponent;
 
 /*
  * 플레이어 캐릭터 클래스
@@ -58,8 +59,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UZoneDetectorComponent> ZoneDetector;
 	
-	
-protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeSet")
 	TObjectPtr<UEDPlayerAttributeSet> PlayerAttributeSet;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeSet")
@@ -72,7 +71,7 @@ protected:
 	
 	virtual void InitializeAbilitySystem();
 	
-
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	TObjectPtr<UEDInventoryComponent> InventoryComponent;
 	
-
 };
