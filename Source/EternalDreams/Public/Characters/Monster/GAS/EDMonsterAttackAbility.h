@@ -28,9 +28,11 @@ protected:
 	bool bReplicateEndAbility, 
 	bool bWasCancelled) override;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
 	TObjectPtr<UAnimMontage> AttackMontage;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
+	TSubclassOf<UGameplayEffect> DamageEffect;
 private:
 	UFUNCTION()
 	void OnMontageCompleted();
