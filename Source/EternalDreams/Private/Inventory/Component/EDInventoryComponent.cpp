@@ -277,6 +277,39 @@ void UEDInventoryComponent::BeginPlay()
     }
 
     RefreshCraftableRecipesCache();
+    
+    if (GetOwner() && GetOwner()->HasAuthority() && bGiveDebugItemsOnBeginPlay)
+    {
+        EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+
+        if (DebugConsumableItemId.IsValid())
+        {
+            if (!RequestAddItemAutoDetailed(DebugConsumableItemId, 5, Failure))
+            {
+                UE_LOG(LogTemp, Warning, TEXT("EDInventoryComponent: 테스트 소비 아이템 지급 실패"));
+            }
+        }
+
+        Failure = EEDInventoryActionFailure::None;
+
+        if (DebugMaterialItemId.IsValid())
+        {
+            if (!RequestAddItemAutoDetailed(DebugMaterialItemId, 10, Failure))
+            {
+                UE_LOG(LogTemp, Warning, TEXT("EDInventoryComponent: 테스트 재료 아이템 지급 실패"));
+            }
+        }
+
+        Failure = EEDInventoryActionFailure::None;
+
+        if (DebugEquipItemId.IsValid())
+        {
+            if (!RequestAddItemAutoDetailed(DebugEquipItemId, 1, Failure))
+            {
+                UE_LOG(LogTemp, Warning, TEXT("EDInventoryComponent: 테스트 장비 아이템 지급 실패"));
+            }
+        }
+    }
 }
 
 void UEDInventoryComponent::RequestInitializeInventorySlots()

@@ -479,11 +479,10 @@ void UEDUIManageSubsystem::RefreshInputMode()
 	// 현재 단계에서는 Game Layer 패널도 단축키 테스트를 위해 게임 입력을 유지
 	if (!OpenGamePanel.IsNone())
 	{
-		UWidgetBlueprintLibrary::SetInputMode_GameOnly(PlayerController);
-		PlayerController->bShowMouseCursor = false;
-		UWidgetBlueprintLibrary::SetFocusToGameViewport();
+		UWidgetBlueprintLibrary::SetInputMode_GameAndUIEx(PlayerController, nullptr, EMouseLockMode::DoNotLock, false);
+		PlayerController->bShowMouseCursor = true;
 
-		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 게임 레이어 패널이 열려 있어 게임 입력 모드와 포커스를 유지합니다."));
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 게임 레이어 패널이 열려 있어 게임과 UI 입력을 함께 유지합니다."));
 		return;
 	}
 
