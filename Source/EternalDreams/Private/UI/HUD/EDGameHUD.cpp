@@ -8,16 +8,17 @@
 #include "UI/Subsystem/EDUIManageSubsystem.h"
 #include "UI/Panel/EDPauseMenuWidget.h"
 #include "UI/Data/EDUIRegistryDataAsset.h"
+#include "Core/EDAssetManager.h"
 #include "Blueprint/UserWidget.h"
 
 void AEDGameHUD::BeginPlay()
 {
 	Super::BeginPlay();
-
+	
 	InitializeHUD();
 }
 
-void AEDGameHUD::RegisterWidgetsFromRegistry(UEDUIManageSubsystem* UIManageSubsystem) const
+void AEDGameHUD::RegisterWidgetsFromRegistry(UEDUIManageSubsystem* UIManageSubsystem)
 {
 	// Subsystem이 없으면 UI 등록 불가
 	if (!UIManageSubsystem)
@@ -39,50 +40,62 @@ void AEDGameHUD::RegisterWidgetsFromRegistry(UEDUIManageSubsystem* UIManageSubsy
 		UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: UIRegistry 검증에 실패했습니다."));
 		return;
 	}
-
+	
+	// 로드한 소프트 경로 수집
+	TArray<FSoftObjectPath> ClassPaths;
 	for (const FEDUIRegistryEntry& Entry : UIRegistry->Entries)
 	{
-		// HUD는 HUDLayoutClass로 등록
-		// Panel은 Panel 등록 흐름 사용
-		if (Entry.WidgetType == EEDUIWidgetType::HUD)
+		if (!Entry.WidgetClass.IsNull())
 		{
-			// Registry에 들어있는 위젯 클래스가 실제로 HUD용 클래스인지
-			// Panel용 클래스인지 확인하여 맞는 타입으로 넘김
-			TSubclassOf<UEDHUDLayout> HUDClass = Cast<UClass>(Entry.WidgetClass.Get());
-
-			// HUD 엔트리는 반드시 UEDHUDLayout 계열이어야 함
-			if (!HUDClass)
-			{
-				UE_LOG(LogTemp, Warning, TEXT("EDGameHUD: HUD 타입 위젯이지만 HUDLayout 클래스로 변환할 수 없습니다. WidgetId = %s"),
-				       *Entry.WidgetId.ToString());
-				continue;
-			}
-
-			UIManageSubsystem->SetHUDLayoutClass(HUDClass);
-			UE_LOG(LogTemp, Log, TEXT("EDGameHUD: HUD Registry 등록 완료. WidgetId = %s"), *Entry.WidgetId.ToString());
-			continue;
-		}
-
-		if (Entry.WidgetType == EEDUIWidgetType::Panel)
-		{
-			TSubclassOf<UCommonActivatableWidget> PanelClass = Cast<UClass>(Entry.WidgetClass.Get());
-
-			// Panel 엔트리는 CommonActivatableWidget 계열이어야 패널 열기/닫기 가능
-			if (!PanelClass)
-			{
-				UE_LOG(LogTemp, Warning,
-				       TEXT("EDGameHUD: Panel 타입 위젯이지만 CommonActivatableWidget 클래스로 변환할 수 없습니다. WidgetId = %s"),
-				       *Entry.WidgetId.ToString());
-				continue;
-			}
-
-			UIManageSubsystem->RegisterPanelClass(Entry.WidgetId, Entry.Layer, PanelClass);
-			UE_LOG(LogTemp, Log, TEXT("EDGameHUD: Panel Registry 등록 완료. WidgetId = %s"), *Entry.WidgetId.ToString());
+			ClassPaths.Add(Entry.WidgetClass.ToSoftObjectPath());
 		}
 	}
+	
+	// 등록할거 없으면 바로 보여줌
+	if (ClassPaths.IsEmpty())
+	{
+		UIManageSubsystem->ShowHUD();
+		return;
+	}
+	
+	UEDAssetManager& AM = UEDAssetManager::Get();
+	WidgetClassLoadHandle = AM.LoadAssetsAsync(
+		ClassPaths,
+		FStreamableDelegate::CreateUObject(this, &AEDGameHUD::OnWidgetClassesLoaded, UIManageSubsystem)
+	);
 }
 
-void AEDGameHUD::InitializeHUD() const
+void AEDGameHUD::OnWidgetClassesLoaded(UEDUIManageSubsystem* UIManageSubsystem)
+{
+	if (!UIManageSubsystem || !UIRegistry) { return; }
+	
+	for (const FEDUIRegistryEntry& Entry : UIRegistry->Entries)
+	{
+		UClass* LoadedClass = Entry.WidgetClass.Get();
+		UE_LOG(LogTemp, Log, TEXT("[TEST] WidgetId=%s | 클래스 로드됨=%s | 클래스명=%s"),
+			*Entry.WidgetId.ToString(),
+			LoadedClass ? TEXT("YES") : TEXT("NO"),           // NO면 로드 실패
+			LoadedClass ? *LoadedClass->GetName() : TEXT("null")
+		);
+		if (Entry.WidgetType == EEDUIWidgetType::HUD)
+		{
+			TSubclassOf<UEDHUDLayout> HUDClass = Cast<UClass>(Entry.WidgetClass.Get());
+			if (!HUDClass) { continue; }
+			UIManageSubsystem->SetHUDLayoutClass(HUDClass);
+		}
+		else if (Entry.WidgetType == EEDUIWidgetType::Panel)
+		{
+			TSubclassOf<UCommonActivatableWidget> PanelClass = Cast<UClass>(Entry.WidgetClass.Get());
+			if (!PanelClass) { continue; }
+			UIManageSubsystem->RegisterPanelClass(Entry.WidgetId, Entry.Layer, PanelClass);
+		}
+	}
+
+	UIManageSubsystem->ShowHUD();
+	UE_LOG(LogTemp, Log, TEXT("EDGameHUD: 비동기 위젯 클래스 로드 및 HUD 초기화 완료"));
+}
+
+void AEDGameHUD::InitializeHUD()
 {
 	// 로컬 컨트롤러만 UI 생성 대상
 	APlayerController* PlayerController = GetOwningPlayerController();
@@ -109,9 +122,4 @@ void AEDGameHUD::InitializeHUD() const
 
 	// Registry에 들어 있는 HUD/패널 정보를 먼저 등록
 	RegisterWidgetsFromRegistry(UIManageSubsystem);
-
-	// 등록된 HUDLayoutClass를 기반으로 HUD를 표시
-	UIManageSubsystem->ShowHUD();
-
-	UE_LOG(LogTemp, Log, TEXT("EDGameHUD: HUD 초기화 완료"));
 }
