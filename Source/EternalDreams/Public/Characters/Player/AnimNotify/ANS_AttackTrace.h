@@ -73,7 +73,7 @@ private:
 	//소켓이름
 	FName SocketName=FName("Socket");
 	//공격자 ASI 캐싱
-	TObjectPtr<IAbilitySystemInterface> AttackerASI;
+	IAbilitySystemInterface* AttackerASI;
 	//공격자 ASC 캐싱
 	UPROPERTY()
 	TObjectPtr<UAbilitySystemComponent> AttackerASC;
