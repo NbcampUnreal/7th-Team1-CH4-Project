@@ -280,36 +280,53 @@ void UEDInventoryComponent::BeginPlay()
     
     // ---
     // 작성자 : 김동주
+    if (GetOwner() && GetOwner()->HasAuthority())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s bGiveDebugItemsOnBeginPlay=%s MaxSlots=%d"),
+            *GetOwner()->GetName(),
+            bGiveDebugItemsOnBeginPlay ? TEXT("true") : TEXT("false"),
+            MaxInventorySlots);
+    }
+
     if (GetOwner() && GetOwner()->HasAuthority() && bGiveDebugItemsOnBeginPlay)
     {
         EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
 
+        UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s ConsumableId=%s MaterialId=%s EquipId=%s"),
+            *GetOwner()->GetName(),
+            *DebugConsumableItemId.ToString(),
+            *DebugMaterialItemId.ToString(),
+            *DebugEquipItemId.ToString());
+
         if (DebugConsumableItemId.IsValid())
         {
-            if (!RequestAddItemAutoDetailed(DebugConsumableItemId, 5, Failure))
-            {
-                UE_LOG(LogTemp, Warning, TEXT("EDInventoryComponent: 테스트 소비 아이템 지급 실패"));
-            }
+            const bool bSuccess = RequestAddItemAutoDetailed(DebugConsumableItemId, 5, Failure);
+            UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s AddConsumable success=%s failure=%d"),
+                *GetOwner()->GetName(),
+                bSuccess ? TEXT("true") : TEXT("false"),
+                static_cast<int32>(Failure));
         }
 
         Failure = EEDInventoryActionFailure::None;
 
         if (DebugMaterialItemId.IsValid())
         {
-            if (!RequestAddItemAutoDetailed(DebugMaterialItemId, 10, Failure))
-            {
-                UE_LOG(LogTemp, Warning, TEXT("EDInventoryComponent: 테스트 재료 아이템 지급 실패"));
-            }
+            const bool bSuccess = RequestAddItemAutoDetailed(DebugMaterialItemId, 10, Failure);
+            UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s AddMaterial success=%s failure=%d"),
+                *GetOwner()->GetName(),
+                bSuccess ? TEXT("true") : TEXT("false"),
+                static_cast<int32>(Failure));
         }
 
         Failure = EEDInventoryActionFailure::None;
 
         if (DebugEquipItemId.IsValid())
         {
-            if (!RequestAddItemAutoDetailed(DebugEquipItemId, 1, Failure))
-            {
-                UE_LOG(LogTemp, Warning, TEXT("EDInventoryComponent: 테스트 장비 아이템 지급 실패"));
-            }
+            const bool bSuccess = RequestAddItemAutoDetailed(DebugEquipItemId, 1, Failure);
+            UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s AddEquip success=%s failure=%d"),
+                *GetOwner()->GetName(),
+                bSuccess ? TEXT("true") : TEXT("false"),
+                static_cast<int32>(Failure));
         }
     }
     // ---

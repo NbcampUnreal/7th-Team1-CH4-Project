@@ -5,6 +5,7 @@
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
 #include "Engine/AssetManager.h"
+#include "Inventory/BP/EDInventoryBlueprintLibrary.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Inventory/Core/EDInventoryTypes.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
@@ -30,6 +31,8 @@ void UEDInventoryPanelWidget::NativeConstruct()
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("EDInventoryPanelWidget: 루팅 패널이 생성되었습니다."));
+	
+	InitializePlayerInventoryComponent();
 }
 
 void UEDInventoryPanelWidget::NativeDestruct()
@@ -97,6 +100,8 @@ void UEDInventoryPanelWidget::CreateInventorySlotWidgets()
 			GridSlot->SetVerticalAlignment(VAlign_Fill);
 		}
 	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("LootPanel: Created SlotWidgets=%d"), InventorySlotWidgets.Num());
 }
 
 void UEDInventoryPanelWidget::RefreshInventorySlots()
@@ -240,4 +245,28 @@ bool UEDInventoryPanelWidget::TryGetSlotData(int32 InSlotIndex, FEDInventorySlot
 
 	OutSlotData = DisplayedInventoryComponent->InventorySlots[InSlotIndex];
 	return true;
+}
+
+void UEDInventoryPanelWidget::InitializePlayerInventoryComponent()
+{
+	APawn* OwningPawn = GetOwningPlayerPawn();
+	if (!OwningPawn)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDInventoryPanelWidget: OwningPlayerPawn을 찾을 수 없습니다."));
+		return;
+	}
+
+	PlayerInventoryComponent = UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(OwningPawn);
+	if (!PlayerInventoryComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDInventoryPanelWidget: PlayerInventoryComponent를 찾을 수 없습니다."));
+	}
+}
+
+void UEDInventoryPanelWidget::HandleLootSlotDoubleClicked(int32 InSlotIndex)
+{
+}
+
+void UEDInventoryPanelWidget::TryTransferItemToPlayerInventory(int32 InSlotIndex)
+{
 }

@@ -182,6 +182,13 @@ public:
     bool RequestEnsureDefaultEquipment();
 
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+    
+    // ---
+    // 작성자 - 김동주
+    // 테스트용 아이템을 BeginPlay 시 지급할지 여부
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")
+    bool bGiveDebugItemsOnBeginPlay = false;
+    // ---
 
 protected:
     virtual void BeginPlay() override;
@@ -262,9 +269,6 @@ protected:
     
     // ---
     // 작성자 : 김동주
-    // 테스트용 아이템을 BeginPlay 시 지급할지 여부
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")
-    bool bGiveDebugItemsOnBeginPlay = false;
 
     // 테스트용 소비 아이템
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")

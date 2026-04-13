@@ -85,4 +85,17 @@ private:
 
 	// 슬롯 인덱스로부터 데이터 접근 가능 여부 확인
 	bool TryGetSlotData(int32 InSlotIndex, FEDInventorySlotData& OutSlotData) const;
+	
+	// 플레이어 인벤토리 컴포넌트
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UEDInventoryComponent> PlayerInventoryComponent;
+	
+	// 플레이어 인벤토리 컴포넌트 찾기
+	void InitializePlayerInventoryComponent();
+
+	// 루팅 슬롯 더블 클릭 처리
+	void HandleLootSlotDoubleClicked(int32 InSlotIndex);
+
+	// 외부 인벤토리 슬롯에서 플레이어 인벤토리로 아이템 이동
+	void TryTransferItemToPlayerInventory(int32 InSlotIndex);
 };
