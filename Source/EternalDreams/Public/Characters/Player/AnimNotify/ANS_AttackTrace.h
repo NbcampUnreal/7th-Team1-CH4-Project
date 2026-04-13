@@ -69,7 +69,7 @@ private:
 	TArray<AActor*> AttachedActors;
 	//중복 타격 방지를 위해 TArray에 저장
 	UPROPERTY()	
-	TArray<TObjectPtr<AActor>> HittedCharacterArray;
+	TArray<AActor*> HittedCharacterArray;
 	//소켓이름
 	FName SocketName=FName("Socket");
 	//공격자 ASI 캐싱
