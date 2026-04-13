@@ -1,0 +1,10 @@
+^C:\USERS\JP060\DOCUMENTS\GITHUB\7TH-TEAM1-CH4-PROJECT\EDMATCHSERVER\BUILD\CMAKEFILES\B5FC3BA7B2F43E32F464621C4381561E\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/Users/jp060/Documents/GitHub/7th-Team1-CH4-Project/EDMatchServer -BC:/Users/jp060/Documents/GitHub/7th-Team1-CH4-Project/EDMatchServer/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/Users/jp060/Documents/GitHub/7th-Team1-CH4-Project/EDMatchServer/build/EDMatchServer.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

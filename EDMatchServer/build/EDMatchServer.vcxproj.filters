@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="17.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Core\IOCPServer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Core\Session.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Core\PacketHandler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\DB\RedisClient.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\DB\MySQLPool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Auth\LoginHandler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Auth\TokenManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Match\MatchQueue.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Match\MatchMaker.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Common\Platform.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Common\Protocol.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Common\Packet.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Common\Logger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Core\IOCPServer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Core\Session.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Core\PacketHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\DB\RedisClient.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\DB\MySQLPool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Auth\LoginHandler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Auth\TokenManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Match\MatchQueue.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\Match\MatchMaker.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\vcpkg\installed\x64-windows\share\nlohmann_json\nlohmann_json.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{3B138948-0068-38E6-8EC9-9B6C7571353F}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{31DD4167-B2E6-3327-A16C-EAFFAB4D4CEE}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
