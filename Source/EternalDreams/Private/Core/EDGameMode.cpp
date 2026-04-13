@@ -5,6 +5,8 @@
 #include "Core/EDGameState.h"
 #include "Core/EDPlayerState.h"
 #include "Characters/Player/EDPlayerController.h"
+#include "Environment/EDRestrictedArea.h"
+#include "Kismet/GameplayStatics.h"
 
 AEDGameMode::AEDGameMode()
 {
@@ -39,6 +41,8 @@ void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const
 void AEDGameMode::BeginPlay()
 {
 	Super::BeginPlay();
+
+	InitRestrictedZones();
 
 	if (PhaseSequence.Num() > 0)
 	{
@@ -187,6 +191,45 @@ void AEDGameMode::OnPhaseStarted(int32 PhaseIndex, const FGameplayTag& PhaseTag)
 }
 
 // ============================================================
+//  금지구역 제어
+// ============================================================
+
+void AEDGameMode::InitRestrictedZones()
+{
+	TArray<AActor*> FoundActors;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEDRestrictedArea::StaticClass(), FoundActors);
+
+	for (AActor* Actor : FoundActors)
+	{
+		AEDRestrictedArea* Zone = Cast<AEDRestrictedArea>(Actor);
+		if (Zone && Zone->ZoneID > 0)
+		{
+			RestrictedAreaMap.Add(Zone->ZoneID, Zone);
+		}
+	}
+
+	// 매 판마다 무작위 금지 순서
+	for (auto& Pair : RestrictedAreaMap)
+	{
+		RestrictedZoneOrder.Add(Pair.Key);
+	}
+
+	for (int32 i = RestrictedZoneOrder.Num() - 1; i > 0; --i)
+	{
+		int32 j = FMath::RandRange(0, i);
+		RestrictedZoneOrder.Swap(i, j);
+	}
+}
+
+void AEDGameMode::ActivateRestrictedZone(int32 ZoneID)
+{
+	if (AEDRestrictedArea** Found = RestrictedAreaMap.Find(ZoneID))
+	{
+		(*Found)->ActivateZone();
+	}
+}
+
+// ============================================================
 //  Day 1 — 초반 성장 (구역 4/4)
 // ============================================================
 
@@ -213,7 +256,11 @@ void AEDGameMode::OnDay2_DayStarted()
 
 void AEDGameMode::OnDay2_NightStarted()
 {
-	// [금지구역] 1차 금지구역 경고 → 활성화 (4구역 → 3구역) — S6 담당
+	// [금지구역] 1차 금지구역 활성화 (4구역 → 3구역)
+	if (RestrictedZoneOrder.IsValidIndex(0))
+	{
+		ActivateRestrictedZone(RestrictedZoneOrder[0]);
+	}
 }
 
 // ============================================================
@@ -229,7 +276,11 @@ void AEDGameMode::OnDay3_DayStarted()
 
 void AEDGameMode::OnDay3_NightStarted()
 {
-	// [금지구역] 2차 금지구역 경고 → 활성화 (3구역 → 2구역) — S6 담당
+	// [금지구역] 2차 금지구역 활성화 (3구역 → 2구역)
+	if (RestrictedZoneOrder.IsValidIndex(1))
+	{
+		ActivateRestrictedZone(RestrictedZoneOrder[1]);
+	}
 }
 
 // ============================================================
@@ -238,7 +289,13 @@ void AEDGameMode::OnDay3_NightStarted()
 
 void AEDGameMode::OnDay4_DayStarted()
 {
-	// [금지구역] 최종 안전구역 수렴 — S6 담당
+	// [금지구역] 3차 금지구역 활성화 (2구역 → 최종)
+	if (RestrictedZoneOrder.IsValidIndex(2))
+	{
+		ActivateRestrictedZone(RestrictedZoneOrder[2]);
+	}
+	// RestrictedZoneOrder[3]이 최종 안전구역으로 남음
+
 	// [부활] 부활 불가 — S6 담당
 }
 
