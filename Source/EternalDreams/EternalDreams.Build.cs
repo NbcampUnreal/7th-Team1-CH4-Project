@@ -14,7 +14,11 @@ public class EternalDreams : ModuleRules
 			"UMG",
 			"CommonUI",
 			"CommonInput",
-			"GameplayAbilities", 
+			"GameplayAbilities",
+			"Sockets",
+			"Networking",
+			"Json",
+			"JsonUtilities",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]
