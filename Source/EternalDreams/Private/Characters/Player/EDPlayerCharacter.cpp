@@ -11,6 +11,7 @@
 #include "Characters/Player/GAS/EDPlayerAttributeSet.h"
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
+#include "Characters/Player/Component/SkillComponent.h"
 #include "Characters/Player/Weapon/EDWeapon.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
@@ -29,6 +30,9 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 	//AttributeSet 생성
 	BaseAttributeSet = CreateDefaultSubobject<UEDBaseAttributeSet>(TEXT("BaseAttributeSet"));
 	PlayerAttributeSet = CreateDefaultSubobject<UEDPlayerAttributeSet>(TEXT("EDAttributeSet"));
+	
+	//Skill 컴포넌트 생성
+	SkillComponent=CreateDefaultSubobject<USkillComponent>(TEXT("SkillComponent"));
 	
 	//IMC 컴포넌트 생성
 	IMCComponent=CreateDefaultSubobject<UIMCComponent>(TEXT("IMCComponent"));
@@ -93,6 +97,21 @@ void AEDPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
  		IMCComponent->SetupPlayerInput(PlayerInputComponent);
  	}
  }
+
+void AEDPlayerCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	
+	if (!IsValid(IMCComponent)||!IsValid(SkillComponent))
+	{
+		return;
+	}
+	IMCComponent->OnBasicAttackInput.BindUObject(SkillComponent,&USkillComponent::ActivateBasicAttack);
+	IMCComponent->OnQSkillInput.BindUObject(SkillComponent,&USkillComponent::ActivateQSkill);
+	IMCComponent->OnESkillInput.BindUObject(SkillComponent,&USkillComponent::ActivateESkill);
+	IMCComponent->OnSpaceSkillInput.BindUObject(SkillComponent,&USkillComponent::ActivateSpaceSkill);
+}
+
 
 UAbilitySystemComponent* AEDPlayerCharacter::GetAbilitySystemComponent() const
 {

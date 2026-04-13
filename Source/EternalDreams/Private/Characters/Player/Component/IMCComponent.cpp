@@ -13,18 +13,14 @@
 #include "Data/GameplayTag/EDGameplayTags.h"
 
 
-// Sets default values for this component's properties
-UIMCComponent::UIMCComponent()
-{
-
-	
-}
 
 
 // Called when the game starts
 void UIMCComponent::BeginPlay()
 {
 	Super::BeginPlay();
+	
+
 }
 
 
@@ -37,6 +33,10 @@ void UIMCComponent::SetupPlayerInput(UInputComponent* PlayerInputComponent)
 		return;
 	}
 	
+	//Tag 및 바인딩
+	PlayerCharacter->GetAbilitySystemComponent()->
+	RegisterGameplayTagEvent(FEDGameplayTags::Get().State_Player_Stop,EGameplayTagEventType::NewOrRemoved).
+	AddUObject(this,&UIMCComponent::OnStopTagChanged);
 	
 	PlayerController = Cast<AEDPlayerController>(PlayerCharacter->GetController());
 	if (!PlayerController)
@@ -72,17 +72,53 @@ void UIMCComponent::SetupPlayerInput(UInputComponent* PlayerInputComponent)
 			// BasicAttack 바인딩
 			InputComponents->BindAction(
 				PlayerController->BasicAttackAction,
-				ETriggerEvent::Triggered,
+				ETriggerEvent::Started,
 				this,
 				&UIMCComponent::PlayerBasicAttack
+			);
+			
+			// QSkill 바인딩
+			InputComponents->BindAction(
+				PlayerController->QSkillAction,
+				ETriggerEvent::Started,
+				this,
+				&UIMCComponent::PlayerQSkill
+			);
+			
+			// ESkill 바인딩
+			InputComponents->BindAction(
+				PlayerController->ESkillAction,
+				ETriggerEvent::Started,
+				this,
+				&UIMCComponent::PlayerESkill
+			);
+			
+			// SpaceSkill 바인딩
+			InputComponents->BindAction(
+				PlayerController->SpaceSkillAction,
+				ETriggerEvent::Started,
+				this,
+				&UIMCComponent::PlayerSpaceSkill
 			);
 		}
 	}
 }
 
+void UIMCComponent::OnStopTagChanged(const FGameplayTag Tag, int32 NewCount)
+{
+	if (NewCount>0)
+	{
+		bIsStop=true;
+	}
+	else
+	{
+		bIsStop=false;
+	}
+}
+
 void UIMCComponent::PlayerMove(const FInputActionValue& value)
 {
-	if (!PlayerController||!PlayerCharacter)
+	if (!PlayerController||!PlayerCharacter||bIsStop)
 	{
 		return;
 	}
@@ -94,7 +130,7 @@ void UIMCComponent::PlayerMove(const FInputActionValue& value)
 
 void UIMCComponent::PlayerLook(const FInputActionValue& value)
 {
-	if (!PlayerController||!PlayerCharacter)
+	if (!PlayerController||!PlayerCharacter||bIsStop)
 	{
 		return;
 	}
@@ -119,16 +155,22 @@ void UIMCComponent::PlayerLook(const FInputActionValue& value)
 
 void UIMCComponent::PlayerBasicAttack(const FInputActionValue& value)
 {
-	UAbilitySystemComponent* AbilitySystemComponent=GetOwner()->FindComponentByClass<UAbilitySystemComponent>();
-	if (IsValid(AbilitySystemComponent))
-	{
-		FGameplayTagContainer AbilityTagContainer;
-		const FEDGameplayTags& Tags = FEDGameplayTags::Get();
-		AbilityTagContainer.AddTag(Tags.Ability_Player_BasicAttack);
-		AbilitySystemComponent->TryActivateAbilitiesByTag(AbilityTagContainer);
-	}
-	
+	OnBasicAttackInput.ExecuteIfBound();
 }
 
+void UIMCComponent::PlayerQSkill(const FInputActionValue& value)
+{
+	OnQSkillInput.ExecuteIfBound();
+}
+
+void UIMCComponent::PlayerESkill(const FInputActionValue& value)
+{
+	OnESkillInput.ExecuteIfBound();
+}
+
+void UIMCComponent::PlayerSpaceSkill(const FInputActionValue& value)
+{
+	OnSpaceSkillInput.ExecuteIfBound();
+}
 
 

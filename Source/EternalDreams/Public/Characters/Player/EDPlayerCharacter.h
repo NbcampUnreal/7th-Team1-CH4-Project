@@ -16,6 +16,7 @@ class UEDPlayerAttributeSet;
 class UIMCComponent;
 class UZoneDetectorComponent;
 class UEDInventoryComponent;
+class USkillComponent;
 
 /*
  * 플레이어 캐릭터 클래스
@@ -38,9 +39,10 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
-	
+	virtual void PostInitializeComponents() override;
 	
 public:
+	//GAS Getter	
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
 	UEDPlayerAttributeSet* GetPlayerAttributeSet() const { return PlayerAttributeSet; }
 	
@@ -60,6 +62,9 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UZoneDetectorComponent> ZoneDetector;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
+	TObjectPtr<USkillComponent> SkillComponent;
 	
 	UPROPERTY()
 	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComp;

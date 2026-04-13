@@ -7,10 +7,12 @@
 #include "IMCComponent.generated.h"
 
 
+struct FInputActionValue;
 class UWidgetComponent;
 class AEDPlayerController;
 class AEDPlayerCharacter;
 
+DECLARE_DELEGATE(FOnSkillInput);
 /**
  * 캐릭터에 관한 인풋을 받아 적용하는 액터 컴포넌트
  */
@@ -20,8 +22,7 @@ class ETERNALDREAMS_API UIMCComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this component's properties
-	UIMCComponent();
+
 
 protected:
 	// Called when the game starts
@@ -32,6 +33,11 @@ protected:
 public:
 	UFUNCTION()
 	void SetupPlayerInput(UInputComponent* PlayerInputComponent);
+	UFUNCTION()
+	void OnStopTagChanged(const FGameplayTag Tag, int32 NewCount);
+	
+	protected:
+	bool bIsStop=false;
 	
 	//캐싱
 protected:
@@ -39,7 +45,7 @@ protected:
 	TObjectPtr<AEDPlayerCharacter> PlayerCharacter;
 	UPROPERTY()
 	TObjectPtr<AEDPlayerController> PlayerController;
-	
+
 
 	//IA
 protected:
@@ -49,6 +55,21 @@ protected:
 	void PlayerLook(const FInputActionValue& value);
 	UFUNCTION()
 	void PlayerBasicAttack(const FInputActionValue& value);
+	
+	UFUNCTION()
+	void PlayerQSkill(const FInputActionValue& value);
+	UFUNCTION()
+	void PlayerESkill(const FInputActionValue& value);
+	UFUNCTION()
+	void PlayerSpaceSkill(const FInputActionValue& value);
+
+	//Delegate
+public:
+
+	FOnSkillInput OnBasicAttackInput;
+	FOnSkillInput OnQSkillInput;
+	FOnSkillInput OnESkillInput;
+	FOnSkillInput OnSpaceSkillInput;
 	
 	
 	
