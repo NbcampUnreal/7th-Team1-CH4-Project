@@ -71,12 +71,6 @@ void AEDGameHUD::OnWidgetClassesLoaded(UEDUIManageSubsystem* UIManageSubsystem)
 	
 	for (const FEDUIRegistryEntry& Entry : UIRegistry->Entries)
 	{
-		UClass* LoadedClass = Entry.WidgetClass.Get();
-		UE_LOG(LogTemp, Log, TEXT("[TEST] WidgetId=%s | 클래스 로드됨=%s | 클래스명=%s"),
-			*Entry.WidgetId.ToString(),
-			LoadedClass ? TEXT("YES") : TEXT("NO"),           // NO면 로드 실패
-			LoadedClass ? *LoadedClass->GetName() : TEXT("null")
-		);
 		if (Entry.WidgetType == EEDUIWidgetType::HUD)
 		{
 			TSubclassOf<UEDHUDLayout> HUDClass = Cast<UClass>(Entry.WidgetClass.Get());
@@ -92,7 +86,6 @@ void AEDGameHUD::OnWidgetClassesLoaded(UEDUIManageSubsystem* UIManageSubsystem)
 	}
 
 	UIManageSubsystem->ShowHUD();
-	UE_LOG(LogTemp, Log, TEXT("EDGameHUD: 비동기 위젯 클래스 로드 및 HUD 초기화 완료"));
 }
 
 void AEDGameHUD::InitializeHUD()
@@ -122,4 +115,6 @@ void AEDGameHUD::InitializeHUD()
 
 	// Registry에 들어 있는 HUD/패널 정보를 먼저 등록
 	RegisterWidgetsFromRegistry(UIManageSubsystem);
+	
+	WidgetClassLoadHandle.Reset();
 }
