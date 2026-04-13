@@ -123,6 +123,7 @@ void FEDGameplayTags::InitializeNativeTags()
 		FString("사망 상태")
 		);
 	
+	
 	//Phase
 	Tags.Phase_Day1_Day = Manager.AddNativeGameplayTag(
 		FName("Phase.Day1.Day"),
