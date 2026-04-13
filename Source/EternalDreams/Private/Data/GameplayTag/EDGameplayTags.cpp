@@ -80,6 +80,12 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("State.Debuff.RestrictedArea"),
 		FString("금지구역 상태")
 		);
+	
+	Tags.State_Dead = Manager.AddNativeGameplayTag(
+		FName("State.Dead"),
+		FString("사망 상태")
+		);
+	
 	//Phase
 	Tags.Phase_Day1_Day = Manager.AddNativeGameplayTag(
 		FName("Phase.Day1.Day"),

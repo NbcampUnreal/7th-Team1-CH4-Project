@@ -46,7 +46,7 @@ protected:
 	
 	UFUNCTION(BlueprintCallable, Category = "Monster")
 	void SetMonsterState(EMonsterState NewState) { if (HasAuthority()) MonsterState = NewState; }
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 	
@@ -57,6 +57,10 @@ private:
 	void LoadVisuals(UEDMonsterDataAsset* InDataAsset);
 	// 비동기 로드 완료 콜백
 	void OnVisualsLoaded();
+	
+	// Health 가 0 이하가 됐을때 호출
+	void HandleDeath();
+	void OnHealthChanged(const FOnAttributeChangeData& Data);
 	
 	UPROPERTY(ReplicatedUsing = OnRep_MonsterState)
 	EMonsterState MonsterState;

@@ -37,5 +37,5 @@ private:
 	UFUNCTION()
 	void OnMontageCompleted();
 	
-	virtual void PostInitProperties() override;
+	// virtual void PostInitProperties() override;
 };
