@@ -39,6 +39,7 @@ EBTNodeResult::Type UBTTask_MonsterAttack::ExecuteTask(UBehaviorTreeComponent& O
 	// 공격 어빌리티 활성화 시도
 	bool bActivated = ASC->TryActivateAbilitiesByTag(
 		FGameplayTagContainer(FEDGameplayTags::Get().Ability_Monster_Attack));
+	UE_LOG(LogTemp, Warning, TEXT("[BTTask] TryActivate 결과: %s"), bActivated ? TEXT("성공") : TEXT("실패"));
 	if (bActivated == false)
 		return EBTNodeResult::Failed;
 	

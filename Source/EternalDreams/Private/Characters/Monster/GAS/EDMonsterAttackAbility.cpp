@@ -75,6 +75,10 @@ void UEDMonsterAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle H
 	// Monster ASC -> Player ASC 데미지 GE 적용
 	ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToTarget(
 		*SpecHandle.Data.Get(), TargetASC);
+	
+	// 데미지 적용 후 플레이어 HP 로그
+	float CurrentHP = TargetASC->GetNumericAttribute(UEDBaseAttributeSet::GetHealthAttribute());
+	UE_LOG(LogTemp, Warning, TEXT("[MonsterAttack] 플레이어 HP: %.1f"), CurrentHP);
 }
 
 void UEDMonsterAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
@@ -90,6 +94,7 @@ void UEDMonsterAttackAbility::EndAbility(const FGameplayAbilitySpecHandle Handle
 
 void UEDMonsterAttackAbility::OnMontageCompleted()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[MonsterAttackAbility] OnMontageCompleted 호출"));
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
