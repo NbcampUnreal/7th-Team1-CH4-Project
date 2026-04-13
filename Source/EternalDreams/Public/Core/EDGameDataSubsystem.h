@@ -12,6 +12,7 @@ enum class EDataLoadPhase : uint8
 	LoadingLobby    UMETA(DisplayName = "로비 데이터 로딩"),
 	LobbyReady      UMETA(DisplayName = "로비 준비 완료"),
 	
+	LoadingUI		UMETA(DisplayName = "UI 데이터 로딩"),
 	LoadingItem     UMETA(DisplayName = "아이템 데이터 로딩"),
 	LoadingMonster  UMETA(DisplayName = "몬스터 데이터 로딩"),
 	
@@ -36,8 +37,6 @@ public:
 	
 	/**
 	* FPrimaryAssetId로 캐시에서 즉시 반환
-	* 반드시 IsDataReady() == true 상태에서 호출할 것
-	*
 	* 사용 예
 	* UMonsterData* Wolf = UEDGameDataSubsystem->GetData<UMonsterData>(
 	*	FPrimaryAssetId(TEXT("MonsterData"), TEXT("Wolf"))
@@ -66,13 +65,13 @@ public:
 	// GameInstanceSubsystem 수명주기 종료시점 자동 호출
     virtual void Deinitialize() override;
 	
+public:
+	// ================================================================
+	// 공개 API
+	// ================================================================
+	
 	/**
 	 * UEDGameDataSubsystem의 전역 싱글톤 인스턴스
-	 * 
-	 * 
-	 * @param WorldContextObject 현재 World의 컨텍스트 오브젝트 ex) this
-	 * @return					 UEDGameDataSubsystem 인스턴스 포인터
-	 * 
 	 * 사용 예
 	 * UEDGameDataSubsystem::Get(this)->InitializeGameData();
 	 */
@@ -84,35 +83,45 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ED|EDGameDataSubsystem")
     void InitializeGameData();
-
+	
+	// 게임 종료되고 로비로 복귀
+	UFUNCTION(BlueprintCallable, Category = "ED|EDGameDataSubsystem")
+	void ReturnToLobby();
+	
     // 로딩 상태 조회
     UFUNCTION(BlueprintPure, Category = "ED|EDGameDataSubsystem")
     EDataLoadPhase GetCurrentPhase() const { return CurrentPhase; }
 	
+	// 전체 데이터가 준비되었는지 확인
     UFUNCTION(BlueprintPure, Category = "ED|EDGameDataSubsystem")
     bool IsDataReady() const { return CurrentPhase == EDataLoadPhase::Completed; }
+public:
+	// ================================================================
+	// 언로드
+	// ================================================================
+	
+	// 전체 언로드
+	UFUNCTION(BlueprintCallable, Category = "ED|EDGameDataSubsystem")
+	void UnloadAllData();
 public:
     // ================================================================
     // 델리게이트
     // ================================================================
 
 	/**
-	 * 로비 전용 완료 델리게이트
-	 * 로비 진입 신호
+	 * 로비 전용 완료 델리게이트, 로비 진입 신호
 	 */
 	UPROPERTY(BlueprintAssignable, Category = "ED|EDGameDataSubsystem")
 	FOnAllLobbyDataLoaded OnLobbyDataReady; 
 	
     /** 
-     * 모든 데이터 로드 완료 시 방송
-     * 게임 시작 신호 
+     * 모든 데이터 로드 완료 시 방송, 게임 시작 신호 
 	 */
     UPROPERTY(BlueprintAssignable, Category = "ED|EDGameDataSubsystem")
     FOnAllDataLoaded OnAllDataLoaded;
 
     /** 
-     * 단계가 바뀔 때마다 방송
-     * 로딩 화면 텍스트 업데이트용 
+     * 단계가 바뀔 때마다 방송 -> 로딩 화면있으면 텍스트 변경용으로도 사용가능 
      */
     UPROPERTY(BlueprintAssignable, Category = "ED|EDGameDataSubsystem")
     FOnDataPhaseChanged OnPhaseChanged;
@@ -121,6 +130,7 @@ public:
     // Asset Type 상수 (Project Settings > Asset Manager 등록 이름과 일치)
     // ================================================================
     static const FPrimaryAssetType LobbyAssetType;
+	static const FPrimaryAssetType UIAssetType;
     static const FPrimaryAssetType ItemAssetType;
     static const FPrimaryAssetType MonsterAssetType;
 private:
@@ -128,11 +138,13 @@ private:
 	// 단계별 로드 함수
 	// ================================================================
 	void LoadPhase_Lobby();
+	void LoadPhase_UI();
 	void LoadPhase_Item();
 	void LoadPhase_Monster();
 
 	// 각 단계 완료 콜백
 	void OnLobbyDataLoaded();
+	void OnUIDataLoaded();
 	void OnItemDataLoaded();
 	void OnMonsterDataLoaded();
 
@@ -142,6 +154,8 @@ private:
 	// 상태 전이 헬퍼
 	void SetPhase(EDataLoadPhase NewPhase);
 
+	UFUNCTION(BlueprintCallable, Category = "ED|EDGameDataSubsystem")
+	void UnloadPhaseData(const FPrimaryAssetType& AssetType, const FName& HandleKey);
 	/**
 	 * 에셋 캐시
 	 * Key: FPrimaryAssetId

@@ -15,7 +15,8 @@ AEDRestrictedArea::AEDRestrictedArea()
 	SetRootComponent(AreaMesh);
 
 	AreaMesh->SetHiddenInGame(true);
-	AreaMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	// 시작 시 콜리전 비활성 — ActivateZone()에서 켜짐
+	AreaMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	AreaMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
 	AreaMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	AreaMesh->SetGenerateOverlapEvents(true);
@@ -26,6 +27,34 @@ void AEDRestrictedArea::BeginPlay()
 	Super::BeginPlay();
 	AreaMesh->OnComponentBeginOverlap.AddDynamic(this, &AEDRestrictedArea::OnMeshBeginOverlap);
 	AreaMesh->OnComponentEndOverlap.AddDynamic(this, &AEDRestrictedArea::OnMeshEndOverlap);
+}
+
+void AEDRestrictedArea::ActivateZone()
+{
+	if (!HasAuthority()) return;
+
+	// 콜리전이 이미 켜져있으면 중복 활성화 방지
+	if (AreaMesh->GetCollisionEnabled() != ECollisionEnabled::NoCollision) return;
+
+	// 콜리전 활성화
+	AreaMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+
+	// 오버랩 정보 즉시 갱신 → 이미 안에 있는 플레이어 감지
+	AreaMesh->UpdateOverlaps();
+
+	TArray<AActor*> OverlappingActors;
+	AreaMesh->GetOverlappingActors(OverlappingActors);
+
+	for (AActor* Actor : OverlappingActors)
+	{
+		if (!IsValid(Actor)) continue;
+
+		UZoneDetectorComponent* ZoneDetector = Actor->FindComponentByClass<UZoneDetectorComponent>();
+		if (ZoneDetector)
+		{
+			ZoneDetector->EnterRestrictedArea(RestrictedAreaEffectClass);
+		}
+	}
 }
 
 void AEDRestrictedArea::OnMeshBeginOverlap(

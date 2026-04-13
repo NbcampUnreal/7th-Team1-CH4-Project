@@ -22,6 +22,13 @@ protected:
 	virtual void BeginPlay() override;
 
 public:
+	/** 이 금지구역이 덮는 구역 번호 (1~4). 레벨에서 인스턴스별로 지정 */
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "ED|Zone")
+	int32 ZoneID = 0;
+
+	/** 금지구역 활성화 — 콜리전 ON + 이미 안에 있는 플레이어 처리 (서버 전용) */
+	void ActivateZone();
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	UStaticMeshComponent* AreaMesh;
 

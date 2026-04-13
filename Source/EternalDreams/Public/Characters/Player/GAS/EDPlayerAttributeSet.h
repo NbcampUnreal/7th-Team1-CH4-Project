@@ -33,15 +33,18 @@ public:
 public:
 
 	
-	//현재 마나
-	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_Mana)
-	FGameplayAttributeData Mana;
-	ATTRIBUTE_ACCESSORS(UEDPlayerAttributeSet, Mana)
-	
-	//최대 마나
-	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_MaxMana)
-	FGameplayAttributeData MaxMana;
-	ATTRIBUTE_ACCESSORS(UEDPlayerAttributeSet, MaxMana)
+	//힘
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_Strength)
+	FGameplayAttributeData Strength;
+	ATTRIBUTE_ACCESSORS(UEDPlayerAttributeSet, Strength)
+	//민첩
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_Dexterity)
+	FGameplayAttributeData Dexterity;
+	ATTRIBUTE_ACCESSORS(UEDPlayerAttributeSet, Dexterity)
+	//지능
+    UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_Intelligence)
+	FGameplayAttributeData Intelligence;
+	ATTRIBUTE_ACCESSORS(UEDPlayerAttributeSet, Intelligence)
 	
 	//kSH --- 금지구역 시간 ---
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_SurvivalTime)
@@ -55,9 +58,12 @@ public:
 	//콜백 함수
 public:
 	UFUNCTION()
-	virtual void OnRep_Mana(const FGameplayAttributeData& OldMana);
+	virtual void OnRep_Strength(const FGameplayAttributeData& OldStrength);
 	UFUNCTION()
-	virtual void OnRep_MaxMana(const FGameplayAttributeData& OldMaxMana);
+	virtual void OnRep_Dexterity(const FGameplayAttributeData& OldDexterity);
+	UFUNCTION()
+	virtual void OnRep_Intelligence(const FGameplayAttributeData& OldIntelligence);
+
 	
 	//kSH --- 금지구역 콜백 ---
 	UFUNCTION()
@@ -72,4 +78,8 @@ public:
 	// Attribute 변경 후 호출
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 	
+	
+protected:
+	UPROPERTY()
+	float MaxAttributeValue=9999.f;
 };

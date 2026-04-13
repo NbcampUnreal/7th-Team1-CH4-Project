@@ -7,6 +7,8 @@
 #include "GameFramework/GameMode.h"
 #include "EDGameMode.generated.h"
 
+class AEDRestrictedArea;
+
 /**
  * AEDGameMode
  *
@@ -96,6 +98,24 @@ protected:
 
 	/** 모든 Phase 소진 → 매치 종료 */
 	virtual void OnMatchFinished();
+
+	// -------------------------------------------------------
+	// 금지구역 제어
+	// -------------------------------------------------------
+
+	/** ZoneID → RestrictedArea 매핑. BeginPlay에서 자동 수집 */
+	UPROPERTY()
+	TMap<int32, AEDRestrictedArea*> RestrictedAreaMap;
+
+	/** 금지구역 활성화 순서 (BeginPlay에서 셔플). 마지막 원소가 최종 안전구역 */
+	UPROPERTY(VisibleInstanceOnly, Category = "ED|Zone")
+	TArray<int32> RestrictedZoneOrder;
+
+	/** 특정 구역의 금지구역을 활성화 */
+	void ActivateRestrictedZone(int32 ZoneID);
+
+	/** 레벨에 배치된 RestrictedArea를 수집하고 활성화 순서를 셔플 */
+	void InitRestrictedZones();
 
 private:
 	// -------------------------------------------------------
