@@ -182,6 +182,7 @@ void AEDMonsterAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedA
 					continue;
 				UE_LOG(LogTemp, Warning, TEXT("[%s] Sight 감지(Elite/Boss): %s"), *GetName(), *Actor->GetName());
 				BB->SetValueAsObject(TEXT("TargetActor"), Actor);
+				UE_LOG(LogTemp, Warning, TEXT("[%s] BB TargetActor 세팅 완료"), *GetName());
 				StartTeamReport(Actor);
 			}
 			else if (SenseClass == UAISense_Damage::StaticClass() ||
