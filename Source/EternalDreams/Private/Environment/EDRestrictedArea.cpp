@@ -20,6 +20,22 @@ AEDRestrictedArea::AEDRestrictedArea()
 	AreaMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
 	AreaMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	AreaMesh->SetGenerateOverlapEvents(true);
+	
+	// 금지구역 라인
+	LineRestrictMesh = CreateDefaultSubobject<UStaticMeshComponent>("LineRestrictMesh");
+	LineRestrictMesh->SetupAttachment(RootComponent);
+	LineRestrictMesh->SetHiddenInGame(true);
+	LineRestrictMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); // 충돌 완전 제거
+	LineRestrictMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+	LineRestrictMesh->SetGenerateOverlapEvents(false); // 오버랩 이벤트 끄기
+	
+	// 기본 구역 라인
+	LineAreaMesh = CreateDefaultSubobject<UStaticMeshComponent>("LineAreaMesh");
+	LineAreaMesh->SetupAttachment(RootComponent);
+	LineAreaMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision); // 충돌 완전 제거
+	LineAreaMesh->SetCollisionResponseToAllChannels(ECR_Ignore);
+	LineAreaMesh->SetGenerateOverlapEvents(false); // 오버랩 이벤트 끄기
+	
 }
 
 void AEDRestrictedArea::BeginPlay()
@@ -27,21 +43,32 @@ void AEDRestrictedArea::BeginPlay()
 	Super::BeginPlay();
 	AreaMesh->OnComponentBeginOverlap.AddDynamic(this, &AEDRestrictedArea::OnMeshBeginOverlap);
 	AreaMesh->OnComponentEndOverlap.AddDynamic(this, &AEDRestrictedArea::OnMeshEndOverlap);
+
+	LineAreaMesh->SetCustomPrimitiveDataVector4(0, DefaultLineColor);
 }
 
 void AEDRestrictedArea::ActivateZone()
 {
 	if (!HasAuthority()) return;
-
+	if (!IsValid(LineRestrictMesh)) return;
+	if (!IsValid(LineAreaMesh)) return;
+	
 	// 콜리전이 이미 켜져있으면 중복 활성화 방지
 	if (AreaMesh->GetCollisionEnabled() != ECollisionEnabled::NoCollision) return;
 
 	// 콜리전 활성화
 	AreaMesh->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 
+	// 금지구역 라인 활성화
+	LineRestrictMesh->SetHiddenInGame(false);
+	
+	// 기본구역 라인 색상변경
+	LineAreaMesh->SetCustomPrimitiveDataVector4(0, FLinearColor::Red);
+	
 	// 오버랩 정보 즉시 갱신 → 이미 안에 있는 플레이어 감지
 	AreaMesh->UpdateOverlaps();
 
+	/*
 	TArray<AActor*> OverlappingActors;
 	AreaMesh->GetOverlappingActors(OverlappingActors);
 
@@ -55,6 +82,9 @@ void AEDRestrictedArea::ActivateZone()
 			ZoneDetector->EnterRestrictedArea(RestrictedAreaEffectClass);
 		}
 	}
+	*/
+	
+	
 }
 
 void AEDRestrictedArea::OnMeshBeginOverlap(
