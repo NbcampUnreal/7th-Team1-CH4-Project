@@ -7,10 +7,10 @@
 
 class UBorder;
 class UTextBlock;
-class UEDEquipmentSlotWidget;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDInventorySlotClicked, int32);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDInventorySlotRightClicked, int32);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDInventorySlotDoubleClicked, int32);
 
 UCLASS()
 class ETERNALDREAMS_API UEDInventorySlotWidget : public UCommonUserWidget
@@ -37,8 +37,15 @@ public:
 
 	// 우클릭 이벤트
 	FOnEDInventorySlotRightClicked OnSlotRightClicked;
+
+	// 좌클릭 더블 클릭 이벤트
+	FOnEDInventorySlotDoubleClicked OnSlotDoubleClicked;
 	
+	// 마우스 버튼 입력 처리
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+
+	// 마우스 더블 클릭 입력 처리
+	virtual FReply NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
 protected:
 	// 빈 슬롯 텍스트

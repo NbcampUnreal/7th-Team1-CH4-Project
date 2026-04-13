@@ -16,6 +16,9 @@
 #include "UI/Types/EDUIWidgetIds.h"
 #include "InputMappingContext.h"
 
+#include "UI/EDTestLootContainer.h"
+#include "UI/Panel/EDInventoryPanelWidget.h"
+
 AEDPlayerController::AEDPlayerController()
 {
 }
@@ -146,7 +149,40 @@ void AEDPlayerController::HandleToggleInventory()
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 인벤토리 토글 입력을 처리합니다."));
-	UIManageSubsystem->TogglePanel(EDUIWidgetIds::Panel_Inventory);
+
+	// 이미 열려 있으면 닫음
+	if (UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_Inventory))
+	{
+		UIManageSubsystem->ClosePanel(EDUIWidgetIds::Panel_Inventory);
+		return;
+	}
+
+	// 테스트용으로 레벨에 배치된 첫 번째 상자 액터를 찾아 인벤토리 패널에 연결
+	UCommonActivatableWidget* OpenedPanel = UIManageSubsystem->OpenPanel(EDUIWidgetIds::Panel_Inventory);
+	UEDInventoryPanelWidget* InventoryPanel = Cast<UEDInventoryPanelWidget>(OpenedPanel);
+	if (!InventoryPanel)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: InventoryPanel 캐스팅에 실패했습니다."));
+		return;
+	}
+
+	TArray<AActor*> FoundContainers;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEDTestLootContainer::StaticClass(), FoundContainers);
+
+	if (FoundContainers.Num() <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: 테스트용 루팅 컨테이너를 찾지 못했습니다."));
+		return;
+	}
+
+	AEDTestLootContainer* TestContainer = Cast<AEDTestLootContainer>(FoundContainers[0]);
+	if (!TestContainer || !TestContainer->GetInventoryComponent())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: 테스트용 루팅 컨테이너의 InventoryComponent가 유효하지 않습니다."));
+		return;
+	}
+
+	InventoryPanel->SetDisplayedInventoryComponent(TestContainer->GetInventoryComponent());
 }
 
 void AEDPlayerController::HandleUIBack()

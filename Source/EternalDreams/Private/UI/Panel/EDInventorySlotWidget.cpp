@@ -3,7 +3,6 @@
 
 #include "Components/Border.h"
 #include "Components/TextBlock.h"
-#include "Inventory/Component/EDInventoryComponent.h"
 
 void UEDInventorySlotWidget::SetEmptyState()
 {
@@ -80,12 +79,14 @@ FReply UEDInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeomet
 		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
 	}
 
+	// 좌클릭은 슬롯 선택 이벤트로 전달
 	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
 		OnSlotClicked.Broadcast(SlotIndex);
 		return FReply::Handled();
 	}
 
+	// 우클릭은 보조 액션 이벤트로 전달
 	if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
 	{
 		OnSlotRightClicked.Broadcast(SlotIndex);
@@ -93,6 +94,24 @@ FReply UEDInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeomet
 	}
 
 	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+}
+
+FReply UEDInventorySlotWidget::NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry,
+	const FPointerEvent& InMouseEvent)
+{
+	if (SlotIndex == INDEX_NONE)
+	{
+		return Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
+	}
+
+	// 좌클릭 더블 클릭은 빠른 이동/사용 같은 상위 위젯 동작으로 전달
+	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	{
+		OnSlotDoubleClicked.Broadcast(SlotIndex);
+		return FReply::Handled();
+	}
+
+	return Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
 }
 
 FLinearColor UEDInventorySlotWidget::GetRarityColor(EEDItemRarity InRarity) const
