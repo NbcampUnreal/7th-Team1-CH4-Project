@@ -106,6 +106,13 @@ void AEDMonsterBase::OnRep_MonsterState()
 
 void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)
 {
+	// 이전 로드가 진행 중이면 취소
+	if (VisualLoadHandle.IsValid())
+	{
+		VisualLoadHandle->CancelHandle();
+		VisualLoadHandle.Reset();
+	}
+	
 	TArray<FSoftObjectPath> AssetsToLoad;
 	
 	if (InDataAsset->GetMesh().IsValid())

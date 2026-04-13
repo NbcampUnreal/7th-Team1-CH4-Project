@@ -85,19 +85,19 @@ void UEDBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 {
 	Super::PostGameplayEffectExecute(Data);
 	//Clamp
-	if (Data.EvaluatedData.Attribute != GetHealthAttribute())
+	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
 	{
 		// Health가 변경되었을 때
 		SetHealth(FMath::Clamp(GetHealth(), 0.0f, GetMaxHealth()));
 
 		//TODO: Health가 0이면 Death 처리 
 	}
-	if (Data.EvaluatedData.Attribute != GetDefensiveAttribute())
+	if (Data.EvaluatedData.Attribute == GetDefensiveAttribute())
 	{
 		// Defensive가 변경되었을 때
 		SetDefensive(FMath::Clamp(GetDefensive(), 0.0f, GetMaxDefensive()));
 	}
-	if (Data.EvaluatedData.Attribute != GetWalkSpeedAttribute())
+	if (Data.EvaluatedData.Attribute == GetWalkSpeedAttribute())
 	{
 		// WalkSpeed가 변경되었을 때
 		SetWalkSpeed(FMath::Clamp(GetWalkSpeed(), 0.0f, GetMaxWalkSpeed()));
