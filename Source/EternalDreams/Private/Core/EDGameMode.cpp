@@ -6,6 +6,7 @@
 #include "Core/EDPlayerState.h"
 #include "Core/PlayerStart/EDPlayerStart.h"
 #include "Characters/Player/EDPlayerController.h"
+#include "Core/Network/EDDediServerSubsystem.h"
 #include "Environment/EDRestrictedArea.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
@@ -86,6 +87,32 @@ void AEDGameMode::HandleSeamlessTravelPlayer(AController*& C)
 	}
 
 	Super::HandleSeamlessTravelPlayer(C);
+	// Token verification via DediServerSubsystem
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UEDDediServerSubsystem* DediSub = GI->GetSubsystem<UEDDediServerSubsystem>())
+		{
+			if (DediSub->IsMatchAssigned())
+			{
+				// Extract auth_token from Options (client sends ?token=xxx)
+				FString Token = UGameplayStatics::ParseOption(Options, TEXT("token"));
+
+				if (Token.IsEmpty() || !DediSub->IsTokenAuthorized(Token))
+				{
+					ErrorMessage = TEXT("InvalidToken");
+					UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PreLogin 거부 — InvalidToken, Address: %s"), *Address);
+					return;
+				}
+
+				UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PreLogin 허용 — Token verified, Address: %s"), *Address);
+				return;
+			}
+		}
+	}
+
+	// No DediServerSubsystem (non-dedi build or no match assigned) → reject
+	ErrorMessage = TEXT("MatchNotAssigned");
+	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PreLogin 거부 — MatchNotAssigned, Address: %s"), *Address);
 }
 
 void AEDGameMode::BeginPlay()

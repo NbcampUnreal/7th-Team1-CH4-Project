@@ -10,6 +10,8 @@
 #include "Auth/TokenManager.h"
 #include "Auth/LoginHandler.h"
 #include "Match/MatchMaker.h"
+#include "Match/LobbyManager.h"
+#include "DediServer/DediPool.h"
 
 #include <csignal>
 
@@ -70,25 +72,35 @@ int main()
     g_Server = &server;
 
     // ---------------------------------------------------------
-    //  MatchMaker
+    //  DediPool + MatchMaker + LobbyManager
     // ---------------------------------------------------------
+    DediPool dediPool(server, redis);
     MatchMaker matchMaker(server, redis, tokenMgr, mysql);
+    LobbyManager lobbyMgr(server, redis, tokenMgr, dediPool);
 
     // Register packet handlers
     loginHandler.Register(*server.GetPacketHandler());
     matchMaker.Register(*server.GetPacketHandler());
+    lobbyMgr.Register(*server.GetPacketHandler());
+    dediPool.Register(*server.GetPacketHandler());
 
     server.SetOnSessionConnected([](std::shared_ptr<Session> session)
     {
         LOG_INFO("Session[%llu] Connected", session->GetId());
     });
 
-    server.SetOnSessionDisconnected([&tokenMgr, &matchMaker](std::shared_ptr<Session> session)
+    server.SetOnSessionDisconnected([&tokenMgr, &matchMaker, &lobbyMgr, &dediPool](std::shared_ptr<Session> session)
     {
         // Remove from matchmaking queue on disconnect
         matchMaker.OnSessionDisconnected(session->GetId());
 
-        // Revoke token on disconnect
+        // Remove from lobby on disconnect
+        lobbyMgr.OnSessionDisconnected(session->GetId());
+
+        // Remove from dedi pool on disconnect
+        dediPool.OnSessionDisconnected(session->GetId());
+
+        // Revoke token on disconnect (client sessions only)
         if (!session->GetAuthToken().empty())
         {
             tokenMgr.RevokeToken(session->GetAuthToken());

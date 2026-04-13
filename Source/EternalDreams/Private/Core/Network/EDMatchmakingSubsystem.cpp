@@ -275,10 +275,13 @@ void UEDMatchmakingSubsystem::HandleGameStart(const FString& JsonBody)
 
 	OnGameStart.Broadcast(ServerIP, ServerPort);
 
-	// Auto-join the dedicated server
+	// Auto-join the dedicated server with auth token
 	if (UEDGameInstance* GI = Cast<UEDGameInstance>(GetGameInstance()))
 	{
-		FString TravelURL = FString::Printf(TEXT("%s:%d"), *ServerIP, ServerPort);
+		FString GameAuthToken = Json->HasField(TEXT("auth_token"))
+			? Json->GetStringField(TEXT("auth_token"))
+			: AuthToken;
+		FString TravelURL = FString::Printf(TEXT("%s:%d?token=%s"), *ServerIP, ServerPort, *GameAuthToken);
 		GI->JoinGame(TravelURL);
 	}
 }

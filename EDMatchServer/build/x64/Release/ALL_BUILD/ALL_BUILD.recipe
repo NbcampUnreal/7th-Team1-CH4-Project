@@ -2,13 +2,13 @@
 <Project>
   <ProjectOutputs>
     <ProjectOutput>
-      <FullPath>C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\build\x64\Release\ZERO_CHECK</FullPath>
+      <FullPath>C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\build3\x64\Release\ZERO_CHECK</FullPath>
     </ProjectOutput>
     <ProjectOutput>
-      <FullPath>C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\build\Release\EDMatchServer.exe</FullPath>
+      <FullPath>C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\build3\Release\EDMatchServer.exe</FullPath>
     </ProjectOutput>
     <ProjectOutput>
-      <FullPath>C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\build\x64\Release\ALL_BUILD</FullPath>
+      <FullPath>C:\Users\jp060\Documents\GitHub\7th-Team1-CH4-Project\EDMatchServer\build3\x64\Release\ALL_BUILD</FullPath>
     </ProjectOutput>
   </ProjectOutputs>
   <ContentFiles />

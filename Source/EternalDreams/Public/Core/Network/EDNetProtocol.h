@@ -25,4 +25,12 @@ namespace EDNet
 	constexpr uint16 S2C_MATCH_FOUND       = 0x0012;
 	constexpr uint16 S2C_LOBBY_STATE       = 0x0022;
 	constexpr uint16 S2C_GAME_START        = 0x0030;
+
+	// DediServer -> MatchServer
+	constexpr uint16 D2S_DEDI_REGISTER     = 0x1001;
+	constexpr uint16 D2S_DEDI_HEARTBEAT    = 0x1003;
+	constexpr uint16 D2S_DEDI_MATCH_RESULT = 0x1004;
+
+	// MatchServer -> DediServer
+	constexpr uint16 S2D_DEDI_ASSIGN       = 0x1002;
 }

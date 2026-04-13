@@ -19,6 +19,8 @@ set(SOURCES
     Auth/TokenManager.cpp
     Match/MatchQueue.cpp
     Match/MatchMaker.cpp
+    Match/LobbyManager.cpp
+    DediServer/DediPool.cpp
 )
 
 set(HEADERS
@@ -35,6 +37,8 @@ set(HEADERS
     Auth/TokenManager.h
     Match/MatchQueue.h
     Match/MatchMaker.h
+    Match/LobbyManager.h
+    DediServer/DediPool.h
 )
 
 add_executable(${PROJECT_NAME} ${SOURCES} ${HEADERS})

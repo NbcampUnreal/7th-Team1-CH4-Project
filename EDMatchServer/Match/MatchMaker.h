@@ -41,8 +41,8 @@ public:
     // Called when a session disconnects (remove from queue)
     void OnSessionDisconnected(uint64_t sessionId);
 
-    // Configuration
-    static constexpr int PLAYERS_PER_MATCH = 6;
+    // Configuration (change to 2 for testing, 6 for production)
+    static constexpr int PLAYERS_PER_MATCH = 2;
 
 private:
     void HandleMatchQueueReq(std::shared_ptr<Session> session, const std::string& jsonBody);

@@ -280,9 +280,14 @@ void MatchMaker::CreateMatch(const std::vector<QueueEntry>& matchedPlayers)
     lobbyState["status"]  = "waiting"; // waiting for ready
 
     std::string lobbyKey = "lobby:" + matchId;
-    m_Redis.Set(lobbyKey, lobbyState.dump());
     // TTL 10 minutes for lobby
     m_Redis.SetEx(lobbyKey, lobbyState.dump(), 600);
+
+    // Store session -> matchId mapping (for lobby disconnect handling)
+    for (auto& p : matchedPlayers)
+    {
+        m_Redis.SetEx("session_lobby:" + std::to_string(p.SessionId), matchId, 600);
+    }
 
     // Build MATCH_FOUND packet
     json matchFoundBody;
