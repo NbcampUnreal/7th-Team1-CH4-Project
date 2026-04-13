@@ -21,7 +21,19 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	
 protected:
+	// 클라 레플리케이션 실행 변수
+	UPROPERTY(ReplicatedUsing = OnRep_IsZoneActive)
+	bool bIsZoneActive = false;
+
+	UFUNCTION()
+	void OnRep_IsZoneActive();
+
+	// 멀티플레이어 변수 복제
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+protected:
+	
 	// 금지구역용 메시
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<class UStaticMeshComponent> AreaMesh;
@@ -33,12 +45,7 @@ protected:
 	TObjectPtr<class UStaticMeshComponent> LineAreaMesh;
 	
 	
-	// 메시 컬러 옵션
-	UPROPERTY()
-	TObjectPtr<class UMaterialInstanceDynamic> DynamicLineMaterial;
-
-	UPROPERTY(EditAnywhere, Category = "Settings|Visual")
-	FName ColorParamName = TEXT("LineColor");
+	// --- 메시 컬러 옵션 ---
 	
 	// 기본 색상 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Settings|Visual")
