@@ -9,6 +9,11 @@
 
 UEDPlayerAttributeSet::UEDPlayerAttributeSet()
 {
+	//초기화
+	InitStrength(0.0f);
+	InitDexterity(0.0f);
+	InitIntelligence(0.0f);
+	
 	//KSH --- 금지구역시간 초기화 (필요시 수치 변경)
 	InitSurvivalTime(30.0f);
 	InitMaxSurvivalTime(30.0f);
@@ -18,19 +23,29 @@ void UEDPlayerAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
+	DOREPLIFETIME(UEDPlayerAttributeSet,Strength);
+	DOREPLIFETIME(UEDPlayerAttributeSet,Dexterity);
+	DOREPLIFETIME(UEDPlayerAttributeSet,Intelligence);
+	
 	// KSH --- 금지구역 시간 복제 
 	DOREPLIFETIME_CONDITION_NOTIFY(UEDPlayerAttributeSet, SurvivalTime, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UEDPlayerAttributeSet, MaxSurvivalTime, COND_None, REPNOTIFY_Always);
 }
 
-void UEDPlayerAttributeSet::OnRep_Mana(const FGameplayAttributeData& OldMana)
+
+void UEDPlayerAttributeSet::OnRep_Strength(const FGameplayAttributeData& OldStrength)
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDPlayerAttributeSet, Mana, OldMana);
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDPlayerAttributeSet, Strength, OldStrength);
 }
 
-void UEDPlayerAttributeSet::OnRep_MaxMana(const FGameplayAttributeData& OldMaxMana)
+void UEDPlayerAttributeSet::OnRep_Dexterity(const FGameplayAttributeData& OldDexterity)
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDPlayerAttributeSet, MaxMana, OldMaxMana);
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDPlayerAttributeSet, Dexterity, OldDexterity);
+}
+
+void UEDPlayerAttributeSet::OnRep_Intelligence(const FGameplayAttributeData& OldIntelligence)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDPlayerAttributeSet, Intelligence, OldIntelligence);
 }
 
 // KSH --- 금지구역 콜백 함수 구현
@@ -50,9 +65,9 @@ void UEDPlayerAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribu
 	Super::PreAttributeChange(Attribute, NewValue);
 
 	//Clamp
-	if (Attribute == GetManaAttribute())
+	if (Attribute == GetStrengthAttribute()||Attribute==GetDexterityAttribute()||Attribute==GetIntelligenceAttribute())
 	{
-		NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxMana());
+		NewValue = FMath::Clamp(NewValue, 0.0f, MaxAttributeValue);
 	}
 	
 	// KSH --- 금지구역 생존시간 Clamp 추가
@@ -66,10 +81,20 @@ void UEDPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
 {
 	Super::PostGameplayEffectExecute(Data);
 
-	if (Data.EvaluatedData.Attribute != GetManaAttribute())
+	if (Data.EvaluatedData.Attribute == GetStrengthAttribute())
 	{
-		// Mana가 변경되었을 때
-		SetMana(FMath::Clamp(GetMana(), 0.0f, GetMaxMana()));
+		// Strength가 변경되었을 때
+		SetStrength(FMath::Clamp(GetStrength(), 0.0f, MaxAttributeValue));
+	}
+	if (Data.EvaluatedData.Attribute == GetDexterityAttribute())
+	{
+		// Dexterity가 변경되었을 때
+		SetDexterity(FMath::Clamp(GetDexterity(), 0.0f, MaxAttributeValue));
+	}
+	if (Data.EvaluatedData.Attribute == GetIntelligenceAttribute())
+	{
+		// Intelligence가 변경되었을 때
+		SetIntelligence(FMath::Clamp(GetIntelligence(), 0.0f, MaxAttributeValue));
 	}
 	
 	// KSH --- 금지구역 생존시간 감소 및 디버그 메시지 처리
