@@ -5,36 +5,31 @@
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
 #include "Engine/AssetManager.h"
-#include "GameFramework/Pawn.h"
-#include "Inventory/BP/EDInventoryBlueprintLibrary.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Inventory/Core/EDInventoryTypes.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "UI/Panel/EDInventorySlotWidget.h"
-#include "UI/Panel/EDEquipmentSlotWidget.h"
 
 void UEDInventoryPanelWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	// 패널 생성 시 플레이어 인벤토리와 연결하고 슬롯 UI를 준비
-	InitializeInventoryComponent();
+	// 패널 생성 시 슬롯 위젯만 먼저 준비
+	// 실제 표시 대상 인벤토리는 SetDisplayedInventoryComponent로 외부에서 주입
 	CreateInventorySlotWidgets();
 	RefreshInventorySlots();
-	RefreshEquipmentSlots();
-	BindInventoryChanged();
 
 	if (TitleText)
 	{
-		TitleText->SetText(FText::FromString(TEXT("Inventory")));
+		TitleText->SetText(FText::FromString(TEXT("Loot")));
 	}
 
-	if (HintText)
+	if (ContainerNameText)
 	{
-		HintText->SetText(FText::FromString(TEXT("I : 열기/닫기\n우클릭 : 사용 / 장착 / 버리기")));
+		ContainerNameText->SetText(FText::FromString(TEXT("Container")));
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("EDInventoryPanelWidget: 인벤토리 패널이 생성되었습니다."));
+	UE_LOG(LogTemp, Log, TEXT("EDInventoryPanelWidget: 루팅 패널이 생성되었습니다."));
 }
 
 void UEDInventoryPanelWidget::NativeDestruct()
@@ -43,23 +38,24 @@ void UEDInventoryPanelWidget::NativeDestruct()
 
 	Super::NativeDestruct();
 
-	UE_LOG(LogTemp, Log, TEXT("EDInventoryPanelWidget: 인벤토리 패널이 열렸습니다."));
+	UE_LOG(LogTemp, Log, TEXT("EDInventoryPanelWidget: 루팅 패널이 닫혔습니다."));
 }
 
-void UEDInventoryPanelWidget::InitializeInventoryComponent()
+void UEDInventoryPanelWidget::SetDisplayedInventoryComponent(UEDInventoryComponent* InInventoryComponent)
 {
-	APawn* OwningPawn = GetOwningPlayerPawn();
-	if (!OwningPawn)
+	// 표시 대상이 같으면 다시 바인딩하지 않음
+	if (DisplayedInventoryComponent == InInventoryComponent)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDInventoryPanelWidget: OwningPlayerPawn을 찾을 수 없습니다."));
+		RefreshInventorySlots();
 		return;
 	}
 
-	InventoryComponent = UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(OwningPawn);
-	if (!InventoryComponent)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("EDInventoryPanelWidget: InventoryComponent를 찾을 수 없습니다."));
-	}
+	UnbindInventoryChanged();
+	DisplayedInventoryComponent = InInventoryComponent;
+	BindInventoryChanged();
+	RefreshInventorySlots();
+
+	UE_LOG(LogTemp, Log, TEXT("EDInventoryPanelWidget: 표시 대상 인벤토리를 갱신했습니다."));
 }
 
 void UEDInventoryPanelWidget::CreateInventorySlotWidgets()
@@ -79,7 +75,8 @@ void UEDInventoryPanelWidget::CreateInventorySlotWidgets()
 	InventoryGrid->ClearChildren();
 	InventorySlotWidgets.Reset();
 
-	const int32 SlotCount = InventoryComponent ? InventoryComponent->MaxInventorySlots : 20;
+	// 루팅 패널은 5 x 2 그리드 기준으로 10칸을 기본 사용
+	const int32 SlotCount = 10;
 
 	for (int32 SlotIndex = 0; SlotIndex < SlotCount; ++SlotIndex)
 	{
@@ -99,20 +96,12 @@ void UEDInventoryPanelWidget::CreateInventorySlotWidgets()
 			GridSlot->SetHorizontalAlignment(HAlign_Fill);
 			GridSlot->SetVerticalAlignment(VAlign_Fill);
 		}
-
-		SlotWidget->SetSlotIndex(SlotIndex);
-		SlotWidget->OnSlotClicked.AddUObject(this, &UEDInventoryPanelWidget::HandleSlotClicked);
-		SlotWidget->OnSlotRightClicked.AddUObject(this, &UEDInventoryPanelWidget::HandleSlotRightClicked);
 	}
 }
 
 void UEDInventoryPanelWidget::RefreshInventorySlots()
 {
-	if (!InventoryComponent)
-	{
-		return;
-	}
-
+	// 표시 대상이 없으면 패널을 빈 슬롯 상태로 유지
 	for (int32 Index = 0; Index < InventorySlotWidgets.Num(); ++Index)
 	{
 		UEDInventorySlotWidget* SlotWidget = InventorySlotWidgets[Index];
@@ -121,14 +110,8 @@ void UEDInventoryPanelWidget::RefreshInventorySlots()
 			continue;
 		}
 
-		if (!InventoryComponent->InventorySlots.IsValidIndex(Index))
-		{
-			SlotWidget->SetEmptyState();
-			continue;
-		}
-
-		const FEDInventorySlotData& SlotData = InventoryComponent->InventorySlots[Index];
-		if (SlotData.IsEmpty())
+		FEDInventorySlotData SlotData;
+		if (!TryGetSlotData(Index, SlotData) || SlotData.IsEmpty())
 		{
 			SlotWidget->SetEmptyState();
 			continue;
@@ -145,13 +128,19 @@ void UEDInventoryPanelWidget::RefreshInventorySlots()
 
 void UEDInventoryPanelWidget::RefreshCapacityText() const
 {
-	if (!CapacityText || !InventoryComponent)
+	if (!CapacityText)
 	{
 		return;
 	}
 
+	if (!DisplayedInventoryComponent)
+	{
+		CapacityText->SetText(FText::FromString(TEXT("0 / 0")));
+		return;
+	}
+
 	int32 UsedSlotCount = 0;
-	for (const FEDInventorySlotData& SlotData : InventoryComponent->InventorySlots)
+	for (const FEDInventorySlotData& SlotData : DisplayedInventoryComponent->InventorySlots)
 	{
 		if (!SlotData.IsEmpty())
 		{
@@ -160,35 +149,34 @@ void UEDInventoryPanelWidget::RefreshCapacityText() const
 	}
 
 	CapacityText->SetText(
-		FText::FromString(FString::Printf(TEXT("%d / %d"), UsedSlotCount, InventoryComponent->MaxInventorySlots))
+		FText::FromString(FString::Printf(TEXT("%d / %d"), UsedSlotCount, DisplayedInventoryComponent->MaxInventorySlots))
 	);
 }
 
 void UEDInventoryPanelWidget::BindInventoryChanged()
 {
-	if (!InventoryComponent)
+	if (!DisplayedInventoryComponent)
 	{
 		return;
 	}
 
-	InventoryComponent->OnInventoryChanged.AddUniqueDynamic(this, &UEDInventoryPanelWidget::HandleInventoryChanged);
+	DisplayedInventoryComponent->OnInventoryChanged.AddUniqueDynamic(this, &UEDInventoryPanelWidget::HandleInventoryChanged);
 }
 
 void UEDInventoryPanelWidget::UnbindInventoryChanged()
 {
-	if (!InventoryComponent)
+	if (!DisplayedInventoryComponent)
 	{
 		return;
 	}
 
-	InventoryComponent->OnInventoryChanged.RemoveDynamic(this, &UEDInventoryPanelWidget::HandleInventoryChanged);
+	DisplayedInventoryComponent->OnInventoryChanged.RemoveDynamic(this, &UEDInventoryPanelWidget::HandleInventoryChanged);
 }
 
 void UEDInventoryPanelWidget::HandleInventoryChanged()
 {
-	// 인벤토리 내용이 바뀌면 슬롯 전체를 다시 그림
+	// 표시 중인 외부 인벤토리가 바뀌면 슬롯 전체를 다시 그림
 	RefreshInventorySlots();
-	RefreshEquipmentSlots();
 }
 
 FText UEDInventoryPanelWidget::ResolveItemDisplayName(const FPrimaryAssetId& ItemId) const
@@ -238,185 +226,18 @@ EEDItemRarity UEDInventoryPanelWidget::ResolveItemRarity(const FPrimaryAssetId& 
 	return ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
 }
 
-void UEDInventoryPanelWidget::RefreshEquipmentSlots()
-{
-	if (!InventoryComponent)
-	{
-		return;
-	}
-
-	if (WeaponSlotWidget)
-	{
-		if (InventoryComponent->WeaponSlot.EquippedItem.IsValid())
-		{
-			const FText ItemName = ResolveItemDisplayName(InventoryComponent->WeaponSlot.EquippedItem.ItemId);
-			const EEDItemRarity ItemRarity = ResolveItemRarity(InventoryComponent->WeaponSlot.EquippedItem.ItemId);
-			WeaponSlotWidget->SetItemState(FText::FromString(TEXT("Weapon")), ItemName, ItemRarity);
-		}
-		else
-		{
-			WeaponSlotWidget->SetEmptyState(FText::FromString(TEXT("Weapon")));
-		}
-	}
-
-	if (TopArmorSlotWidget)
-	{
-		if (InventoryComponent->TopArmorSlot.EquippedItem.IsValid())
-		{
-			const FText ItemName = ResolveItemDisplayName(InventoryComponent->TopArmorSlot.EquippedItem.ItemId);
-			const EEDItemRarity ItemRarity = ResolveItemRarity(InventoryComponent->TopArmorSlot.EquippedItem.ItemId);
-			TopArmorSlotWidget->SetItemState(FText::FromString(TEXT("Top Armor")), ItemName, ItemRarity);
-		}
-		else
-		{
-			TopArmorSlotWidget->SetEmptyState(FText::FromString(TEXT("Top Armor")));
-		}
-	}
-
-	if (BottomArmorSlotWidget)
-	{
-		if (InventoryComponent->BottomArmorSlot.EquippedItem.IsValid())
-		{
-			const FText ItemName = ResolveItemDisplayName(InventoryComponent->BottomArmorSlot.EquippedItem.ItemId);
-			const EEDItemRarity ItemRarity = ResolveItemRarity(InventoryComponent->BottomArmorSlot.EquippedItem.ItemId);
-			BottomArmorSlotWidget->SetItemState(FText::FromString(TEXT("Bottom Armor")), ItemName, ItemRarity);
-		}
-		else
-		{
-			BottomArmorSlotWidget->SetEmptyState(FText::FromString(TEXT("Bottom Armor")));
-		}
-	}
-}
-
-void UEDInventoryPanelWidget::HandleSlotClicked(int32 InSlotIndex)
-{
-	SelectedSlotIndex = InSlotIndex;
-	RefreshSelectedSlotState();
-}
-
-void UEDInventoryPanelWidget::HandleSlotRightClicked(int32 InSlotIndex)
-{
-	if (!InventoryComponent)
-	{
-		ShowInventoryFailure(EEDInventoryActionFailure::InvalidInventory);
-		return;
-	}
-
-	FEDInventorySlotData SlotData;
-	if (!TryGetSlotData(InSlotIndex, SlotData))
-	{
-		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
-		return;
-	}
-
-	if (SlotData.IsEmpty())
-	{
-		ShowInventoryFailure(EEDInventoryActionFailure::EmptySlot);
-		return;
-	}
-
-	UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(SlotData.Item.ItemId);
-	if (!ItemObject)
-	{
-		const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(SlotData.Item.ItemId);
-		if (AssetPath.IsValid())
-		{
-			ItemObject = AssetPath.TryLoad();
-		}
-	}
-
-	const UEDInventoryItemDataAsset* ItemData = Cast<UEDInventoryItemDataAsset>(ItemObject);
-	if (!ItemData)
-	{
-		return;
-	}
-
-	// 소비형 아이템이면 우선 사용
-	if (ItemData->ItemType == EEDInventoryItemType::Consumable)
-	{
-		EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-		const bool bSuccess = InventoryComponent->RequestConsumeItemAtSlotDetailed(InSlotIndex, Failure);
-
-		if (!bSuccess)
-		{
-			ShowInventoryFailure(Failure);
-			return;
-		}
-
-		ClearInventoryActionMessage();
-		return;
-	}
-
-	// 장비형 아이템이면 해당 장비 슬롯에 장착
-	if (ItemData->ItemType == EEDInventoryItemType::Equippable && ItemData->EquippableType != EEDEquippableType::None)
-	{
-		if (ItemData->EquippableType == EEDEquippableType::None)
-		{
-			ShowInventoryFailure(EEDInventoryActionFailure::MissingData);
-			return;
-		}
-
-		const bool bSuccess = InventoryComponent->RequestEquipItemFromSlot(InSlotIndex, ItemData->EquippableType);
-		if (!bSuccess)
-		{
-			ShowInventoryFailure(EEDInventoryActionFailure::SlotConflict);
-			return;
-		}
-
-		ClearInventoryActionMessage();
-		return;
-	}
-
-	// 우클릭 기본 동작이 없는 아이템
-	ShowInventoryFailure(EEDInventoryActionFailure::NotConsumable);
-}
-
-void UEDInventoryPanelWidget::RefreshSelectedSlotState()
-{
-	for (int32 Index = 0; Index < InventorySlotWidgets.Num(); ++Index)
-	{
-		if (InventorySlotWidgets[Index])
-		{
-			InventorySlotWidgets[Index]->SetSelectedState(Index == SelectedSlotIndex);
-		}
-	}
-}
-
 bool UEDInventoryPanelWidget::TryGetSlotData(int32 InSlotIndex, FEDInventorySlotData& OutSlotData) const
 {
-	if (!InventoryComponent)
+	if (!DisplayedInventoryComponent)
 	{
 		return false;
 	}
 
-	if (!InventoryComponent->InventorySlots.IsValidIndex(InSlotIndex))
+	if (!DisplayedInventoryComponent->InventorySlots.IsValidIndex(InSlotIndex))
 	{
 		return false;
 	}
 
-	OutSlotData = InventoryComponent->InventorySlots[InSlotIndex];
+	OutSlotData = DisplayedInventoryComponent->InventorySlots[InSlotIndex];
 	return true;
-}
-
-void UEDInventoryPanelWidget::ShowInventoryFailure(EEDInventoryActionFailure Failure) const
-{
-	if (!ActionResultText)
-	{
-		return;
-	}
-
-	const FText FailureText = UEDInventoryBlueprintLibrary::GetInventoryActionFailureText(Failure);
-	ActionResultText->SetText(FailureText);
-	ActionResultText->SetVisibility(ESlateVisibility::Visible);
-}
-
-void UEDInventoryPanelWidget::ClearInventoryActionMessage() const
-{
-	if (!ActionResultText)
-	{
-		return;
-	}
-
-	ActionResultText->SetText(FText::GetEmpty());
-	ActionResultText->SetVisibility(ESlateVisibility::Collapsed);
 }
