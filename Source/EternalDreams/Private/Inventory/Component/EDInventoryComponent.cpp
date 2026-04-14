@@ -707,6 +707,23 @@ bool UEDInventoryComponent::RequestEquipItemFromSlot(int32 FromSlotIndex, EEDEqu
         return false;
     }
 
+    if (!InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        return false;
+    }
+
+    const FEDInventorySlotData& SourceSlot = InventorySlots[FromSlotIndex];
+    if (SourceSlot.IsEmpty())
+    {
+        return false;
+    }
+
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Component(SourceSlot.Item.ItemId);
+    if (!FEDInventoryValidationService::CanEquipToSlot(ItemData, TargetSlotType))
+    {
+        return false;
+    }
+
     if (!GetOwner()->HasAuthority())
     {
         ServerRequestEquipItemFromSlot(FromSlotIndex, TargetSlotType);
