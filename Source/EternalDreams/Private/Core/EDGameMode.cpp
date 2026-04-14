@@ -10,6 +10,7 @@
 #include "Environment/EDRestrictedArea.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/NetConnection.h"
 
 AEDGameMode::AEDGameMode()
 {
@@ -18,7 +19,6 @@ AEDGameMode::AEDGameMode()
 	PlayerControllerClass = AEDPlayerController::StaticClass();
 
 	PrimaryActorTick.bCanEverTick = true;
-	bUseSeamlessTravel = true;
 }
 
 void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
@@ -104,6 +104,9 @@ void AEDGameMode::HandleSeamlessTravelPlayer(AController*& C)
 					return;
 				}
 
+				// PostLogin에서 팀 배정에 사용하기 위해 Address → Token 매핑 저장
+				DediSub->StorePendingToken(Address, Token);
+
 				UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PreLogin 허용 — Token verified, Address: %s"), *Address);
 				return;
 			}
@@ -113,6 +116,48 @@ void AEDGameMode::HandleSeamlessTravelPlayer(AController*& C)
 	// No DediServerSubsystem (non-dedi build or no match assigned) → reject
 	ErrorMessage = TEXT("MatchNotAssigned");
 	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PreLogin 거부 — MatchNotAssigned, Address: %s"), *Address);
+}
+
+void AEDGameMode::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
+
+	if (!NewPlayer) return;
+
+	AEDPlayerState* PS = NewPlayer->GetPlayerState<AEDPlayerState>();
+	if (!PS) return;
+
+	// IOCP에서 받은 팀 정보를 PlayerState에 적용
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UEDDediServerSubsystem* DediSub = GI->GetSubsystem<UEDDediServerSubsystem>())
+		{
+			// PreLogin에서 저장한 Address → Token 매핑으로 조회
+			FString PlayerAddress;
+			if (NewPlayer->GetNetConnection())
+			{
+				PlayerAddress = NewPlayer->GetNetConnection()->LowLevelGetRemoteAddress(true);
+			}
+
+			FString Token = DediSub->ConsumePendingToken(PlayerAddress);
+			if (!Token.IsEmpty())
+			{
+				const auto* Info = DediSub->GetPlayerInfoByToken(Token);
+				if (Info)
+				{
+					PS->TeamId = Info->TeamId;
+					UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PostLogin — IOCP 팀 배정: %s → Team %d"),
+						*Info->Nickname, Info->TeamId);
+				}
+			}
+		}
+	}
+
+	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PostLogin — Player: %s, TeamId: %d"),
+		*PS->GetPlayerName(), PS->TeamId);
+
+	// 전원 접속 시 자동으로 Phase 시작
+	TryStartPhaseSequence();
 }
 
 void AEDGameMode::BeginPlay()
@@ -129,6 +174,7 @@ void AEDGameMode::BeginPlay()
 	{
 		StartPhaseSequence();
 	}
+	// Phase 시작은 BeginPlay가 아닌 전원 접속 후 TryStartPhaseSequence에서 처리
 }
 
 void AEDGameMode::Tick(float DeltaSeconds)
@@ -153,6 +199,32 @@ void AEDGameMode::Tick(float DeltaSeconds)
 // ============================================================
 //  Phase 제어
 // ============================================================
+
+void AEDGameMode::TryStartPhaseSequence()
+{
+	if (bPhaseSequenceActive) return;
+	if (PhaseSequence.Num() == 0) return;
+
+	// DediServerSubsystem에서 예상 플레이어 수 확인
+	if (UGameInstance* GI = GetGameInstance())
+	{
+		if (UEDDediServerSubsystem* DediSub = GI->GetSubsystem<UEDDediServerSubsystem>())
+		{
+			const int32 ExpectedCount = DediSub->GetExpectedPlayerCount();
+			const int32 CurrentCount = GetNumPlayers();
+
+			if (ExpectedCount > 0 && CurrentCount < ExpectedCount)
+			{
+				UE_LOG(LogEDCore, Warning, TEXT("[GameMode] TryStartPhaseSequence — 대기 중: %d/%d"),
+					CurrentCount, ExpectedCount);
+				return;
+			}
+		}
+	}
+
+	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] TryStartPhaseSequence — 전원 접속! Phase 시작"));
+	StartPhaseSequence();
+}
 
 void AEDGameMode::StartPhaseSequence()
 {

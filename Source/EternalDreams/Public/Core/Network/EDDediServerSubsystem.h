@@ -57,6 +57,33 @@ public:
 	bool IsMatchAssigned() const { return !CurrentMatchId.IsEmpty(); }
 
 	// -------------------------------------------------------
+	//  Player Info (from IOCP DEDI_ASSIGN)
+	// -------------------------------------------------------
+
+	/** IOCP에서 받은 플레이어 정보 */
+	struct FAssignedPlayerInfo
+	{
+		FString Nickname;
+		int32 TeamId = -1;
+	};
+
+	/** 토큰으로 플레이어 팀/닉네임 조회. 없으면 nullptr */
+	const FAssignedPlayerInfo* GetPlayerInfoByToken(const FString& Token) const;
+
+	/** 매치에 할당된 총 플레이어 수 */
+	int32 GetExpectedPlayerCount() const { return PlayerInfoMap.Num(); }
+
+	// -------------------------------------------------------
+	//  PreLogin → PostLogin Token Bridging
+	// -------------------------------------------------------
+
+	/** PreLogin에서 Address→Token 매핑 저장 (EDGameMode에서 호출) */
+	void StorePendingToken(const FString& Address, const FString& Token) { PendingTokenMap.Add(Address, Token); }
+
+	/** PostLogin에서 Address로 토큰 조회 후 제거 */
+	FString ConsumePendingToken(const FString& Address);
+
+	// -------------------------------------------------------
 	//  Match Result Reporting
 	// -------------------------------------------------------
 
@@ -77,4 +104,10 @@ private:
 	FString CurrentMatchId;
 	TArray<FString> AuthorizedTokens;
 	FString ServerStatus; // "idle", "ingame"
+
+	/** 토큰 → 플레이어 정보 매핑 (DEDI_ASSIGN에서 수신) */
+	TMap<FString, FAssignedPlayerInfo> PlayerInfoMap;
+
+	/** PreLogin에서 검증 성공한 토큰을 UniqueNetId 문자열과 매핑 (PostLogin에서 조회용) */
+	TMap<FString, FString> PendingTokenMap; // Key: Address or UniqueNetId string, Value: Token
 };

@@ -83,6 +83,7 @@ public:
 protected:
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
@@ -181,6 +182,9 @@ private:
 	void AdvanceToPhase(int32 PhaseIndex);
 	float GetPhaseDuration(int32 PhaseIndex) const;
 	void SetPhase(FGameplayTag NewPhase);
+
+	/** 전원 접속 여부 확인 후 Phase 시작 */
+	void TryStartPhaseSequence();
 
 	// -------------------------------------------------------
 	// Starting System 내부

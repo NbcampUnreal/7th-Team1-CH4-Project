@@ -170,6 +170,7 @@ void UEDDediServerSubsystem::ReportMatchResult(const FString& ResultJson)
 	// Reset state
 	CurrentMatchId.Empty();
 	AuthorizedTokens.Empty();
+	PlayerInfoMap.Empty();
 	ServerStatus = TEXT("idle");
 
 	UE_LOG(LogEDCore, Warning, TEXT("[DediServerSubsystem] Match result reported, back to idle"));
@@ -201,6 +202,21 @@ void UEDDediServerSubsystem::HandleDisconnect()
 //  DEDI_ASSIGN_MATCH handler
 // ============================================================
 
+const UEDDediServerSubsystem::FAssignedPlayerInfo* UEDDediServerSubsystem::GetPlayerInfoByToken(const FString& Token) const
+{
+	return PlayerInfoMap.Find(Token);
+}
+
+FString UEDDediServerSubsystem::ConsumePendingToken(const FString& Address)
+{
+	FString Token;
+	if (PendingTokenMap.RemoveAndCopyValue(Address, Token))
+	{
+		return Token;
+	}
+	return FString();
+}
+
 void UEDDediServerSubsystem::HandleDediAssignMatch(const FString& JsonBody)
 {
 	UE_LOG(LogEDCore, Warning, TEXT("[DediServerSubsystem] DEDI_ASSIGN_MATCH: %s"), *JsonBody);
@@ -213,6 +229,8 @@ void UEDDediServerSubsystem::HandleDediAssignMatch(const FString& JsonBody)
 
 	// Store authorized tokens
 	AuthorizedTokens.Empty();
+	PlayerInfoMap.Empty();
+
 	const TArray<TSharedPtr<FJsonValue>>* TokenArray;
 	if (Json->TryGetArrayField(TEXT("auth_tokens"), TokenArray))
 	{
@@ -222,8 +240,29 @@ void UEDDediServerSubsystem::HandleDediAssignMatch(const FString& JsonBody)
 		}
 	}
 
+	// Store player info (token → team/nickname mapping)
+	const TArray<TSharedPtr<FJsonValue>>* PlayersArray;
+	if (Json->TryGetArrayField(TEXT("players"), PlayersArray))
+	{
+		int32 TokenIdx = 0;
+		for (auto& PlayerVal : *PlayersArray)
+		{
+			const TSharedPtr<FJsonObject>& PlayerObj = PlayerVal->AsObject();
+			if (!PlayerObj.IsValid()) continue;
+
+			if (AuthorizedTokens.IsValidIndex(TokenIdx))
+			{
+				FAssignedPlayerInfo Info;
+				Info.Nickname = PlayerObj->GetStringField(TEXT("nickname"));
+				Info.TeamId = PlayerObj->GetIntegerField(TEXT("team"));
+				PlayerInfoMap.Add(AuthorizedTokens[TokenIdx], Info);
+			}
+			TokenIdx++;
+		}
+	}
+
 	ServerStatus = TEXT("ingame");
 
-	UE_LOG(LogEDCore, Warning, TEXT("[DediServerSubsystem] Match assigned: %s, %d authorized tokens"),
-		*CurrentMatchId, AuthorizedTokens.Num());
+	UE_LOG(LogEDCore, Warning, TEXT("[DediServerSubsystem] Match assigned: %s, %d players"),
+		*CurrentMatchId, PlayerInfoMap.Num());
 }
