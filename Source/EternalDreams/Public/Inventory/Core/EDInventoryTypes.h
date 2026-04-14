@@ -6,6 +6,7 @@
 #include "EDInventoryTypes.generated.h"
 
 class AActor;
+class UTexture2D;
 
 UENUM(BlueprintType)
 enum class EEDInventoryDropReason : uint8
@@ -94,6 +95,120 @@ enum class EEDCraftableRecipeSortOption : uint8
     ByRarity,
     ByResultItemId,
     ByResultItemName
+};
+
+UENUM(BlueprintType)
+enum class EEDItemDictionarySortOption : uint8
+{
+    ByRarity,
+    ByDisplayName,
+    ByItemId,
+    ByPrice
+};
+
+USTRUCT(BlueprintType)
+struct ETERNALDREAMS_API FEDItemDictionaryEntry
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Dictionary")
+    FPrimaryAssetId ItemId;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Dictionary")
+    FText DisplayName;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Dictionary")
+    EEDInventoryItemType ItemType = EEDInventoryItemType::Ingredient;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Dictionary")
+    EEDEquippableType EquippableType = EEDEquippableType::None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Dictionary")
+    EEDItemRarity Rarity = EEDItemRarity::Normal;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Dictionary")
+    int32 MaxStack = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Dictionary")
+    int32 Price = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Dictionary")
+    FGameplayTagContainer ItemTags;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Dictionary")
+    TObjectPtr<UTexture2D> IconTexture = nullptr;
+};
+
+USTRUCT(BlueprintType)
+struct ETERNALDREAMS_API FEDCraftTreeFlatNode
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    int32 NodeId = -1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    int32 ParentNodeId = -1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    int32 Depth = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    FName RowId = NAME_None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    FName RecipeId = NAME_None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    FPrimaryAssetId ItemId;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    int32 Quantity = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    bool bIsCraftable = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    bool bCyclePruned = false;
+};
+
+USTRUCT(BlueprintType)
+struct ETERNALDREAMS_API FEDCraftTreePathNode
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    int32 Depth = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    FName RowId = NAME_None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    FName RecipeId = NAME_None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    FPrimaryAssetId ItemId;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    int32 Quantity = 1;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    bool bCyclePruned = false;
+};
+
+USTRUCT(BlueprintType)
+struct ETERNALDREAMS_API FEDCraftTreePath
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    FName RootRowId = NAME_None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    FName RootRecipeId = NAME_None;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|CraftTree")
+    TArray<FEDCraftTreePathNode> Nodes;
 };
 
 USTRUCT(BlueprintType)
