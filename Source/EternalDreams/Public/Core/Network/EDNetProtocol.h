@@ -14,6 +14,7 @@ namespace EDNet
 
 	// Client -> MatchServer
 	constexpr uint16 C2S_LOGIN_REQ         = 0x0001;
+	constexpr uint16 C2S_REGISTER_REQ      = 0x0003;
 	constexpr uint16 C2S_MATCH_QUEUE_REQ   = 0x0010;
 	constexpr uint16 C2S_MATCH_CANCEL      = 0x0040;
 	constexpr uint16 C2S_LOBBY_READY       = 0x0020;
@@ -21,6 +22,7 @@ namespace EDNet
 
 	// MatchServer -> Client
 	constexpr uint16 S2C_LOGIN_RES         = 0x0002;
+	constexpr uint16 S2C_REGISTER_RES      = 0x0004;
 	constexpr uint16 S2C_MATCH_QUEUE_RES   = 0x0011;
 	constexpr uint16 S2C_MATCH_FOUND       = 0x0012;
 	constexpr uint16 S2C_LOBBY_STATE       = 0x0022;

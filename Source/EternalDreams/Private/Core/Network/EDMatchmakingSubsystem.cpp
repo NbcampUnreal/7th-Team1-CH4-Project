@@ -107,6 +107,27 @@ void UEDMatchmakingSubsystem::Login(const FString& LoginId, const FString& Passw
 	TCPClient->SendPacket(EDNet::C2S_LOGIN_REQ, Body);
 }
 
+void UEDMatchmakingSubsystem::Register(const FString& LoginId, const FString& Password, const FString& InNickname)
+{
+	if (!IsConnectedToMatchServer())
+	{
+		UE_LOG(LogEDCore, Error, TEXT("[MatchmakingSubsystem] Not connected"));
+		OnRegisterResult.Broadcast(false, TEXT("not_connected"));
+		return;
+	}
+
+	TSharedPtr<FJsonObject> Json = MakeShared<FJsonObject>();
+	Json->SetStringField(TEXT("id"), LoginId);
+	Json->SetStringField(TEXT("pw"), Password);
+	Json->SetStringField(TEXT("nickname"), InNickname);
+
+	FString Body;
+	auto Writer = TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>::Create(&Body);
+	FJsonSerializer::Serialize(Json.ToSharedRef(), Writer);
+
+	TCPClient->SendPacket(EDNet::C2S_REGISTER_REQ, Body);
+}
+
 // ============================================================
 //  Matchmaking
 // ============================================================
@@ -183,6 +204,7 @@ void UEDMatchmakingSubsystem::HandlePacket(uint16 OpCode, const FString& JsonBod
 	switch (OpCode)
 	{
 	case EDNet::S2C_LOGIN_RES:      HandleLoginRes(JsonBody);      break;
+	case EDNet::S2C_REGISTER_RES:   HandleRegisterRes(JsonBody);   break;
 	case EDNet::S2C_MATCH_QUEUE_RES: HandleMatchQueueRes(JsonBody); break;
 	case EDNet::S2C_MATCH_FOUND:    HandleMatchFound(JsonBody);    break;
 	case EDNet::S2C_LOBBY_STATE:    HandleLobbyState(JsonBody);    break;
@@ -237,6 +259,31 @@ void UEDMatchmakingSubsystem::HandleLoginRes(const FString& JsonBody)
 		FString Reason = Json->GetStringField(TEXT("reason"));
 		UE_LOG(LogEDCore, Warning, TEXT("[MatchmakingSubsystem] Login failed: %s"), *Reason);
 		OnLoginResult.Broadcast(false, TEXT(""), Reason);
+	}
+}
+
+void UEDMatchmakingSubsystem::HandleRegisterRes(const FString& JsonBody)
+{
+	TSharedPtr<FJsonObject> Json;
+	auto Reader = TJsonReaderFactory<>::Create(JsonBody);
+	if (!FJsonSerializer::Deserialize(Reader, Json) || !Json.IsValid())
+	{
+		OnRegisterResult.Broadcast(false, TEXT("parse_error"));
+		return;
+	}
+
+	FString Result = Json->GetStringField(TEXT("result"));
+
+	if (Result == TEXT("ok"))
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[MatchmakingSubsystem] Register OK"));
+		OnRegisterResult.Broadcast(true, TEXT(""));
+	}
+	else
+	{
+		FString Reason = Json->GetStringField(TEXT("reason"));
+		UE_LOG(LogEDCore, Warning, TEXT("[MatchmakingSubsystem] Register failed: %s"), *Reason);
+		OnRegisterResult.Broadcast(false, Reason);
 	}
 }
 

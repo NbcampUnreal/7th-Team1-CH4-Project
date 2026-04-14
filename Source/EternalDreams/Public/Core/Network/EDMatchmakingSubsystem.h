@@ -13,6 +13,7 @@ class FEDTCPClient;
 // ============================================================
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnLoginResult, bool, bSuccess, const FString&, Nickname, const FString&, Reason);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnRegisterResult, bool, bSuccess, const FString&, Reason);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMatchQueued);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMatchFound, const FString&, MatchId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLobbyStateChanged, const FString&, JsonState);
@@ -57,6 +58,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ED|Matchmaking")
 	void Login(const FString& LoginId, const FString& Password);
 
+	UFUNCTION(BlueprintCallable, Category = "ED|Matchmaking")
+	void Register(const FString& LoginId, const FString& Password, const FString& InNickname);
+
 	UFUNCTION(BlueprintPure, Category = "ED|Matchmaking")
 	bool IsLoggedIn() const { return !AuthToken.IsEmpty(); }
 
@@ -94,6 +98,9 @@ public:
 	FOnLoginResult OnLoginResult;
 
 	UPROPERTY(BlueprintAssignable, Category = "ED|Matchmaking")
+	FOnRegisterResult OnRegisterResult;
+
+	UPROPERTY(BlueprintAssignable, Category = "ED|Matchmaking")
 	FOnMatchQueued OnMatchQueued;
 
 	UPROPERTY(BlueprintAssignable, Category = "ED|Matchmaking")
@@ -114,6 +121,7 @@ private:
 
 	// Packet handlers
 	void HandleLoginRes(const FString& JsonBody);
+	void HandleRegisterRes(const FString& JsonBody);
 	void HandleMatchQueueRes(const FString& JsonBody);
 	void HandleMatchFound(const FString& JsonBody);
 	void HandleLobbyState(const FString& JsonBody);

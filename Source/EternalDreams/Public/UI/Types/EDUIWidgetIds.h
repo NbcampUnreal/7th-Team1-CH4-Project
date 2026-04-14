@@ -25,6 +25,9 @@ namespace EDUIWidgetIds
 	// 상호작용 프롬프트 위젯 ID
 	static const FName HUD_InteractionPrompt(TEXT("HUD.InteractionPrompt"));
 
+	// 메인메뉴 위젯 ID
+	static const FName Panel_MainMenu(TEXT("Panel.MainMenu"));
+
 	// 사망 오버레이 패널 ID
 	static const FName Panel_DeathOverlay(TEXT("Panel.DeathOverlay"));
 
