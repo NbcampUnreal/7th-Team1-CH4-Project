@@ -1,6 +1,8 @@
 // Copyright Eternal Dreams Team. All Rights Reserved.
 
 #include "Core/EDGameState.h"
+
+#include "Core/EDGameDataSubsystem.h"
 #include "Engine/Engine.h"
 #include "Net/UnrealNetwork.h"
 
@@ -40,6 +42,14 @@ void AEDGameState::Tick(float DeltaSeconds)
 			GEngine->AddOnScreenDebugMessage(1000, 0.f, FColor::Yellow, DebugMsg);
 		}
 	}
+}
+
+void AEDGameState::BeginPlay()
+{
+	Super::BeginPlay();
+	UEDGameDataSubsystem* DS = UEDGameDataSubsystem::Get(this);
+	if (!DS) return;
+	if (!DS->IsDataReady()) DS->InitializeGameData();
 }
 
 // ============================================================
