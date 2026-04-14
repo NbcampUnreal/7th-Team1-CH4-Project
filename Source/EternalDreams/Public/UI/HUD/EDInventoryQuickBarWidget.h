@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "CommonUserWidget.h"
 #include "Item/Core/EDItemTypes.h"
+#include "Engine/StreamableManager.h"
 #include "EDInventoryQuickBarWidget.generated.h"
 
 enum class EEDInventoryActionFailure : uint8;
@@ -13,6 +14,7 @@ class UEDEquipmentSlotWidget;
 class UTextBlock;
 class UEDQuickBarSlotWidget;
 class UEDInventoryQuantityPopupWidget;
+class UEDInventoryItemDataAsset;
 
 UCLASS()
 class ETERNALDREAMS_API UEDInventoryQuickBarWidget : public UCommonUserWidget
@@ -130,4 +132,16 @@ private:
 
 	// 수량 팝업으로 넘길 대기 중 슬롯
 	int32 PendingDropSlotIndex = INDEX_NONE;
+	
+	// 인벤토리 에셋을 비동기 로드 요청
+	UFUNCTION()
+	void PreloadInventoryAssets();
+	// 비동기 요청에 대한 콜백
+	void DoRefresh();
+	// ResolveItemDisplayName + ResolveItemRarity를 합쳐서 비동기로 만든 함수
+	const UEDInventoryItemDataAsset* ResolveItemData(const FPrimaryAssetId& ItemId) const;
+	// 리프레시 방지 변수
+	bool bRefreshPending = false;
+	// GC방지용 핸들
+	TSharedPtr<FStreamableHandle> PreloadHandle;
 };

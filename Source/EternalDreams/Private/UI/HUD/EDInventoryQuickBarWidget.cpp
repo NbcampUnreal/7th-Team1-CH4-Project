@@ -1,9 +1,7 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/HUD/EDInventoryQuickBarWidget.h"
-
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
-#include "Engine/AssetManager.h"
 #include "GameFramework/Pawn.h"
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
 #include "Inventory/Component/EDInventoryComponent.h"
@@ -11,19 +9,37 @@
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "UI/Panel/EDEquipmentSlotWidget.h"
 #include "UI/HUD/EDQuickBarSlotWidget.h"
+#include "Core/EDAssetManager.h"
+#include "Core/EDGameDataSubsystem.h"
+
 #include "Components/TextBlock.h"
 #include "UI/Panel/EDInventoryQuantityPopupWidget.h"
 
 void UEDInventoryQuickBarWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-
 	InitializeInventoryComponent();
 	CreateQuickSlotWidgets();
-	RefreshQuickSlots();
-	RefreshEquipmentSlots();
 	BindInventoryChanged();
-
+	// PreloadInventoryAssets();
+	
+	UEDGameDataSubsystem* DS = UEDGameDataSubsystem::Get(this);
+	if (!DS) return;
+	if (DS->IsDataReady())
+	{
+		// 이미 로드 완료 → 다음 틱에 바로 실행
+		GetWorld()->GetTimerManager().SetTimerForNextTick(
+			FTimerDelegate::CreateUObject(this, &UEDInventoryQuickBarWidget::PreloadInventoryAssets)
+		);
+	}
+	else
+	{
+		// 아직 로드 중 → 완료 콜백에서 실행
+		DS->OnAllDataLoaded.AddDynamic(
+			this, &UEDInventoryQuickBarWidget::PreloadInventoryAssets);
+	}
+	
+	
 	if (QuantityPopupWidget)
 	{
 		QuantityPopupWidget->OnQuantityConfirmed.AddUObject(
@@ -42,6 +58,17 @@ void UEDInventoryQuickBarWidget::NativeConstruct()
 void UEDInventoryQuickBarWidget::NativeDestruct()
 {
 	UnbindInventoryChanged();
+	
+	if (UEDGameDataSubsystem* DS = UEDGameDataSubsystem::Get(this))
+	{
+		DS->OnAllDataLoaded.RemoveDynamic(this, &UEDInventoryQuickBarWidget::PreloadInventoryAssets);
+	}
+	
+	if (PreloadHandle.IsValid())
+	{
+		PreloadHandle->ReleaseHandle();
+		PreloadHandle.Reset();
+	}
 
 	Super::NativeDestruct();
 }
@@ -134,6 +161,7 @@ void UEDInventoryQuickBarWidget::RefreshQuickSlots()
 {
 	if (!InventoryComponent)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[UEDInventoryQuickBarWidget - RefreshQuickSlots] InventoryComponent nullptr"));
 		return;
 	}
 
@@ -148,13 +176,15 @@ void UEDInventoryQuickBarWidget::RefreshQuickSlots()
 		FEDInventorySlotData SlotData;
 		if (!TryGetQuickSlotData(Index, SlotData) || SlotData.IsEmpty())
 		{
-			SlotWidget->SetEmptyState();
 			continue;
 		}
-
-		const FText ItemName = ResolveItemDisplayName(SlotData.Item.ItemId);
-		const EEDItemRarity ItemRarity = ResolveItemRarity(SlotData.Item.ItemId);
-
+		// 기존 두번 호출하던 함수를 하나로 통합하고 비동기로 변경
+		const UEDInventoryItemDataAsset* ItemData = ResolveItemData(SlotData.Item.ItemId);
+		const FText ItemName = (ItemData && !ItemData->DisplayName.IsEmpty())
+			? ItemData->DisplayName
+			: FText::FromName(SlotData.Item.ItemId.PrimaryAssetName);
+		const EEDItemRarity ItemRarity = ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
+		
 		SlotWidget->SetItemState(ItemName, SlotData.Item.Quantity, ItemRarity);
 	}
 }
@@ -170,10 +200,13 @@ void UEDInventoryQuickBarWidget::RefreshEquipmentSlots()
 	{
 		if (InventoryComponent->WeaponSlot.EquippedItem.IsValid())
 		{
-			WeaponSlotWidget->SetItemState(
-				FText::FromString(TEXT("Weapon")),
-				ResolveItemDisplayName(InventoryComponent->WeaponSlot.EquippedItem.ItemId),
-				ResolveItemRarity(InventoryComponent->WeaponSlot.EquippedItem.ItemId));
+			const UEDInventoryItemDataAsset* Data =
+				ResolveItemData(InventoryComponent->WeaponSlot.EquippedItem.ItemId);
+			const FText ItemName = (Data && !Data->DisplayName.IsEmpty())
+				? Data->DisplayName
+				: FText::FromName(InventoryComponent->WeaponSlot.EquippedItem.ItemId.PrimaryAssetName);
+			const EEDItemRarity Rarity = Data ? Data->Rarity : EEDItemRarity::Normal;
+			WeaponSlotWidget->SetItemState(FText::FromString(TEXT("Weapon")), ItemName, Rarity);
 		}
 		else
 		{
@@ -185,10 +218,13 @@ void UEDInventoryQuickBarWidget::RefreshEquipmentSlots()
 	{
 		if (InventoryComponent->TopArmorSlot.EquippedItem.IsValid())
 		{
-			TopArmorSlotWidget->SetItemState(
-				FText::FromString(TEXT("Top Armor")),
-				ResolveItemDisplayName(InventoryComponent->TopArmorSlot.EquippedItem.ItemId),
-				ResolveItemRarity(InventoryComponent->TopArmorSlot.EquippedItem.ItemId));
+			const UEDInventoryItemDataAsset* Data =
+				ResolveItemData(InventoryComponent->TopArmorSlot.EquippedItem.ItemId);
+			const FText ItemName = (Data && !Data->DisplayName.IsEmpty())
+				? Data->DisplayName
+				: FText::FromName(InventoryComponent->TopArmorSlot.EquippedItem.ItemId.PrimaryAssetName);
+			const EEDItemRarity Rarity = Data ? Data->Rarity : EEDItemRarity::Normal;
+			TopArmorSlotWidget->SetItemState(FText::FromString(TEXT("Top Armor")), ItemName, Rarity);
 		}
 		else
 		{
@@ -200,10 +236,13 @@ void UEDInventoryQuickBarWidget::RefreshEquipmentSlots()
 	{
 		if (InventoryComponent->BottomArmorSlot.EquippedItem.IsValid())
 		{
-			BottomArmorSlotWidget->SetItemState(
-				FText::FromString(TEXT("Bottom Armor")),
-				ResolveItemDisplayName(InventoryComponent->BottomArmorSlot.EquippedItem.ItemId),
-				ResolveItemRarity(InventoryComponent->BottomArmorSlot.EquippedItem.ItemId));
+			const UEDInventoryItemDataAsset* Data =
+				ResolveItemData(InventoryComponent->BottomArmorSlot.EquippedItem.ItemId);
+			const FText ItemName = (Data && !Data->DisplayName.IsEmpty())
+				? Data->DisplayName
+				: FText::FromName(InventoryComponent->BottomArmorSlot.EquippedItem.ItemId.PrimaryAssetName);
+			const EEDItemRarity Rarity = Data ? Data->Rarity : EEDItemRarity::Normal;
+			BottomArmorSlotWidget->SetItemState(FText::FromString(TEXT("Bottom Armor")), ItemName, Rarity);
 		}
 		else
 		{
@@ -214,8 +253,15 @@ void UEDInventoryQuickBarWidget::RefreshEquipmentSlots()
 
 void UEDInventoryQuickBarWidget::HandleInventoryChanged()
 {
-	RefreshQuickSlots();
-	RefreshEquipmentSlots();
+	// 같은 프레임에 중복요청 들어왔을때 다음 틱에 한번만 실행
+	if (bRefreshPending)
+	{
+		return;
+	}
+	bRefreshPending = true;
+	GetWorld()->GetTimerManager().SetTimerForNextTick(
+		FTimerDelegate::CreateUObject(this, &UEDInventoryQuickBarWidget::DoRefresh)
+	);
 }
 
 FText UEDInventoryQuickBarWidget::ResolveItemDisplayName(const FPrimaryAssetId& ItemId) const
@@ -459,18 +505,9 @@ void UEDInventoryQuickBarWidget::HandleQuickSlotDoubleClicked(int32 InSlotIndex)
 		ShowInventoryFailure(EEDInventoryActionFailure::EmptySlot);
 		return;
 	}
-
-	UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(SlotData.Item.ItemId);
-	if (!ItemObject)
-	{
-		const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(SlotData.Item.ItemId);
-		if (AssetPath.IsValid())
-		{
-			ItemObject = AssetPath.TryLoad();
-		}
-	}
-
-	const UEDInventoryItemDataAsset* ItemData = Cast<UEDInventoryItemDataAsset>(ItemObject);
+	
+	// 기존 Object가져오는 로직에서 ResolveItemData를 통해 캐시된 데이터 반환
+	const UEDInventoryItemDataAsset* ItemData = ResolveItemData(SlotData.Item.ItemId);
 	if (!ItemData)
 	{
 		ShowInventoryFailure(EEDInventoryActionFailure::MissingData);
@@ -526,4 +563,79 @@ void UEDInventoryQuickBarWidget::RefreshSelectedSlotState()
 			QuickSlotWidgets[Index]->SetSelectedState(Index == SelectedSlotIndex);
 		}
 	}
+}
+
+const UEDInventoryItemDataAsset* UEDInventoryQuickBarWidget::ResolveItemData(const FPrimaryAssetId& ItemId) const
+{
+	if (!ItemId.IsValid())
+	{
+		return nullptr;
+	}
+	
+	const UEDGameDataSubsystem* DS = UEDGameDataSubsystem::Get(this);
+	if (!DS) return nullptr;
+	
+	const UEDInventoryItemDataAsset* Cached = DS->GetData<UEDInventoryItemDataAsset>(ItemId);
+	if (Cached)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Cache HIT] %s"), *ItemId.ToString());
+		return Cached;
+	} else
+	{
+		// 캐시 미스면 AssetManager의 인메모리 확인
+		UE_LOG(LogTemp, Warning, TEXT("[Cache MISS] %s"), *ItemId.ToString());
+		return UEDAssetManager::Get().GetPrimaryAsset<UEDInventoryItemDataAsset>(ItemId);
+	}
+}
+
+void UEDInventoryQuickBarWidget::PreloadInventoryAssets()
+{
+	if (!InventoryComponent)
+	{
+		// 인벤토리가 없어도 빈 슬롯 상태로 화면을 표시
+		DoRefresh();
+		return;
+	}
+	UEDAssetManager& AM = UEDAssetManager::Get();
+	
+	// 메모리에 없는 에셋 경로만 수집
+	TArray<FSoftObjectPath> PathsToLoad;
+	for (const FEDInventorySlotData& InventorySlot : InventoryComponent->InventorySlots)
+	{
+		if (!InventorySlot.Item.ItemId.IsValid())
+		{
+			continue;
+		}
+
+		// 이미 메모리에 있으므로 스킵
+		if (AM.IsPrimaryAssetLoaded(InventorySlot.Item.ItemId))
+		{
+			continue;
+		}
+
+		const FSoftObjectPath Path = AM.GetPrimaryAssetPath(InventorySlot.Item.ItemId);
+		if (Path.IsValid())
+		{
+			PathsToLoad.AddUnique(Path);
+		}
+	}
+	
+	// 로드할 에셋이 없으면 즉시 리프레시
+	if (PathsToLoad.IsEmpty())
+	{
+		DoRefresh();
+		return;
+	}
+	PreloadHandle = AM.LoadAssetsAsync(
+		PathsToLoad,
+		FStreamableDelegate::CreateUObject(this, &UEDInventoryQuickBarWidget::DoRefresh)
+	);
+}
+
+// 콜백
+void UEDInventoryQuickBarWidget::DoRefresh()
+{
+	bRefreshPending = false;
+	RefreshQuickSlots();
+	RefreshEquipmentSlots();
 }
