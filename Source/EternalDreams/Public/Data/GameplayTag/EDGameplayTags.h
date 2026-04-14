@@ -48,6 +48,8 @@ public:
 	
 	FGameplayTag State_Player_RestrictedArea;
 	FGameplayTag State_Debuff_RestrictedArea;
+	// State_Common
+	FGameplayTag State_Dead;
 	//Phase
 	FGameplayTag Phase_Day1_Day;
 	FGameplayTag Phase_Day1_Night;

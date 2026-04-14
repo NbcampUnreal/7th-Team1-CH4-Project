@@ -13,6 +13,10 @@
 UEDMonsterAttackAbility::UEDMonsterAttackAbility()
 {
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	// TryActivateAbilitiesByTag를 위한 AssetTag 등록
+	FGameplayTagContainer Tags;
+	Tags.AddTag(FEDGameplayTags::Get().Ability_Monster_Attack);
+	SetAssetTags(Tags);
 }
 
 void UEDMonsterAttackAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
@@ -98,11 +102,11 @@ void UEDMonsterAttackAbility::OnMontageCompleted()
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
 
-void UEDMonsterAttackAbility::PostInitProperties()
-{
-	Super::PostInitProperties();
-	// BTTask_MonsterAttack에서 이 태그로 활성화
-	FGameplayTagContainer Tags;
-	Tags.AddTag(FEDGameplayTags::Get().Ability_Monster_Attack);
-	SetAssetTags(Tags);
-}
+// void UEDMonsterAttackAbility::PostInitProperties()
+// {
+// 	Super::PostInitProperties();
+// 	// BTTask_MonsterAttack에서 이 태그로 활성화
+// 	FGameplayTagContainer Tags;
+// 	Tags.AddTag(FEDGameplayTags::Get().Ability_Monster_Attack);
+// 	SetAssetTags(Tags);
+// }

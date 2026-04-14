@@ -46,6 +46,9 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	TArray<TSubclassOf<UGameplayAbility>> GetDefaultAbilities() const { return DefaultAbilities; }
+	
+	UFUNCTION(BlueprintCallable)
+	TSubclassOf<AEDMonsterBase> GetMonsterClass() const { return MonsterClass; }
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
 	FText MonsterName;
