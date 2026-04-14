@@ -653,6 +653,53 @@ bool UEDInventoryComponent::RequestDropSingleFromSlot(int32 FromSlotIndex)
     return true;
 }
 
+bool UEDInventoryComponent::RequestDropCountFromSlot(int32 FromSlotIndex, int32 DropCount)
+{
+    if (!GetOwner())
+    {
+        return false;
+    }
+
+    if (DropCount <= 0)
+    {
+        return false;
+    }
+
+    if (!GetOwner()->HasAuthority())
+    {
+        ServerRequestDropCountFromSlot(FromSlotIndex, DropCount);
+        return true;
+    }
+
+    if (!InventorySlots.IsValidIndex(FromSlotIndex) || InventorySlots[FromSlotIndex].IsEmpty())
+    {
+        return false;
+    }
+
+    FEDInventoryItemHandle& SlotItem = InventorySlots[FromSlotIndex].Item;
+    const int32 ActualDropCount = FMath::Min(DropCount, SlotItem.Quantity);
+    if (ActualDropCount <= 0)
+    {
+        return false;
+    }
+
+    FEDInventoryDropRequest DropRequest;
+    DropRequest.Item.ItemId = SlotItem.ItemId;
+    DropRequest.Item.Quantity = ActualDropCount;
+    DropRequest.SourceOwner = GetOwner();
+    DropRequest.Reason = EEDInventoryDropReason::UserRequested;
+
+    SlotItem.Quantity -= ActualDropCount;
+    if (SlotItem.Quantity <= 0)
+    {
+        SlotItem = FEDInventoryItemHandle();
+    }
+
+    OnInventoryDropRequested.Broadcast(DropRequest);
+    OnInventoryChanged.Broadcast();
+    return true;
+}
+
 bool UEDInventoryComponent::RequestEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType)
 {
     if (!GetOwner())
@@ -764,20 +811,44 @@ void UEDInventoryComponent::GetCraftableRecipes(TArray<FEDCraftableRecipeEntry>&
     FEDInventoryCraftService::GetCraftableRecipes(this, OutRecipes, SortOption, bDescending);
 }
 
+void UEDInventoryComponent::GetAllCraftingRecipeTables(TArray<UDataTable*>& OutTables) const
+{
+    OutTables.Reset();
+
+    for (UDataTable* RecipeTable : CraftingRecipeTables)
+    {
+        if (RecipeTable)
+        {
+            OutTables.AddUnique(RecipeTable);
+        }
+    }
+}
+
 bool UEDInventoryComponent::CanCraftRecipeByRowId(FName RecipeRowId) const
 {
-    if (!CraftingRecipeTable || RecipeRowId.IsNone())
+    if (RecipeRowId.IsNone())
     {
         return false;
     }
 
-    const FEDCraftingRecipeRow* RecipeRow = CraftingRecipeTable->FindRow<FEDCraftingRecipeRow>(RecipeRowId, TEXT("CanCraftRecipeByRowId"));
-    if (!RecipeRow)
+    TArray<UDataTable*> RecipeTables;
+    GetAllCraftingRecipeTables(RecipeTables);
+
+    for (UDataTable* RecipeTable : RecipeTables)
     {
-        return false;
+        if (!RecipeTable)
+        {
+            continue;
+        }
+
+        const FEDCraftingRecipeRow* RecipeRow = RecipeTable->FindRow<FEDCraftingRecipeRow>(RecipeRowId, TEXT("CanCraftRecipeByRowId"));
+        if (RecipeRow)
+        {
+            return FEDInventoryCraftService::CanCraftRecipe(this, *RecipeRow, nullptr);
+        }
     }
 
-    return FEDInventoryCraftService::CanCraftRecipe(this, *RecipeRow, nullptr);
+    return false;
 }
 
 void UEDInventoryComponent::RefreshCraftableRecipesCache()
@@ -1202,6 +1273,11 @@ void UEDInventoryComponent::ServerRequestDropAllFromSlot_Implementation(int32 Fr
 void UEDInventoryComponent::ServerRequestDropSingleFromSlot_Implementation(int32 FromSlotIndex)
 {
     RequestDropSingleFromSlot(FromSlotIndex);
+}
+
+void UEDInventoryComponent::ServerRequestDropCountFromSlot_Implementation(int32 FromSlotIndex, int32 DropCount)
+{
+    RequestDropCountFromSlot(FromSlotIndex, DropCount);
 }
 
 void UEDInventoryComponent::ServerRequestEquipItemFromSlot_Implementation(int32 FromSlotIndex, EEDEquippableType TargetSlotType)

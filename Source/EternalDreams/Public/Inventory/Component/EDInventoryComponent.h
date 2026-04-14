@@ -32,7 +32,10 @@ public:
     FPrimaryAssetId DefaultWeaponItemId;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Data")
-    TObjectPtr<UDataTable> CraftingRecipeTable = nullptr;
+    TArray<TObjectPtr<UDataTable>> CraftingRecipeTables;
+
+    UFUNCTION(BlueprintPure, Category = "Inventory|Craft")
+    void GetAllCraftingRecipeTables(TArray<UDataTable*>& OutTables) const;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Loot")
     TObjectPtr<UDataTable> RandomLootTable = nullptr;
@@ -114,6 +117,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RequestDropSingleFromSlot(int32 FromSlotIndex);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory")
+    bool RequestDropCountFromSlot(int32 FromSlotIndex, int32 DropCount);
     
     // ---
     // 작성자: 김동주
@@ -216,6 +222,9 @@ protected:
     UFUNCTION(Server, Reliable)
     void ServerRequestDropPartialFromSlot(int32 FromSlotIndex, int32 Quantity);
     // ---
+
+    UFUNCTION(Server, Reliable)
+    void ServerRequestDropCountFromSlot(int32 FromSlotIndex, int32 DropCount);
 
     UFUNCTION(Server, Reliable)
     void ServerRequestAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity);
