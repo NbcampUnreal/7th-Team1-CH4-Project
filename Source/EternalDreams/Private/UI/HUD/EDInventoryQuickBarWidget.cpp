@@ -27,22 +27,22 @@ void UEDInventoryQuickBarWidget::NativeConstruct()
 	if (WeaponSlotWidget)
 	{
 		WeaponSlotWidget->SetSlotType(EEDEquippableType::Weapon);
-		WeaponSlotWidget->OnEquipmentSlotDoubleClicked.AddUObject(
-			this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked);
+		WeaponSlotWidget->OnEquipmentSlotClicked.AddUObject(this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotClicked);
+		WeaponSlotWidget->OnEquipmentSlotDoubleClicked.AddUObject(this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked);
 	}
 
 	if (TopArmorSlotWidget)
 	{
 		TopArmorSlotWidget->SetSlotType(EEDEquippableType::TopArmor);
-		TopArmorSlotWidget->OnEquipmentSlotDoubleClicked.AddUObject(
-			this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked);
+		TopArmorSlotWidget->OnEquipmentSlotClicked.AddUObject(this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotClicked);
+		TopArmorSlotWidget->OnEquipmentSlotDoubleClicked.AddUObject(this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked);
 	}
 
 	if (BottomArmorSlotWidget)
 	{
 		BottomArmorSlotWidget->SetSlotType(EEDEquippableType::BottomArmor);
-		BottomArmorSlotWidget->OnEquipmentSlotDoubleClicked.AddUObject(
-			this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked);
+		BottomArmorSlotWidget->OnEquipmentSlotClicked.AddUObject(this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotClicked);
+		BottomArmorSlotWidget->OnEquipmentSlotDoubleClicked.AddUObject(this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked);
 	}
 
 	if (QuantityPopupWidget)
@@ -525,11 +525,39 @@ void UEDInventoryQuickBarWidget::TryUnequipEquipmentSlot(EEDEquippableType SlotT
 	}
 }
 
+void UEDInventoryQuickBarWidget::HandleEquipmentSlotClicked(EEDEquippableType SlotType)
+{
+	SelectedEquipmentSlotType = SlotType;
+	SelectedSlotIndex = INDEX_NONE;
+	RefreshSelectedSlotState();
+	RefreshEquipmentSelectedState();
+}
+
+void UEDInventoryQuickBarWidget::RefreshEquipmentSelectedState()
+{
+	if (WeaponSlotWidget)
+	{
+		WeaponSlotWidget->SetSelectedState(SelectedEquipmentSlotType == EEDEquippableType::Weapon);
+	}
+
+	if (TopArmorSlotWidget)
+	{
+		TopArmorSlotWidget->SetSelectedState(SelectedEquipmentSlotType == EEDEquippableType::TopArmor);
+	}
+
+	if (BottomArmorSlotWidget)
+	{
+		BottomArmorSlotWidget->SetSelectedState(SelectedEquipmentSlotType == EEDEquippableType::BottomArmor);
+	}
+}
+
 void UEDInventoryQuickBarWidget::HandleQuickSlotClicked(int32 InSlotIndex)
 {
 	// 좌클릭 - 슬롯 선택 처리
 	SelectedSlotIndex = InSlotIndex;
+	SelectedEquipmentSlotType = EEDEquippableType::None;
 	RefreshSelectedSlotState();
+	RefreshEquipmentSelectedState();
 }
 
 void UEDInventoryQuickBarWidget::HandleQuickSlotDoubleClicked(int32 InSlotIndex)

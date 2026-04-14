@@ -136,4 +136,13 @@ private:
 
 	// 상의/하의 장비 해제 
 	void TryUnequipEquipmentSlot(EEDEquippableType SlotType);
+	
+	// 현재 선택된 장비 슬롯 타입
+	EEDEquippableType SelectedEquipmentSlotType = EEDEquippableType::None;
+
+	// 장비 슬롯 좌클릭 처리
+	void HandleEquipmentSlotClicked(EEDEquippableType SlotType);
+
+	// 장비 슬롯 선택 상태 갱신
+	void RefreshEquipmentSelectedState();
 };

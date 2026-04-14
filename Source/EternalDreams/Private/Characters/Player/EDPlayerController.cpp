@@ -197,9 +197,17 @@ void AEDPlayerController::ClearCurrentLootTarget(AActor* InLootTarget)
 		return;
 	}
 
+	const bool bHadLootTarget = CurrentLootTarget.IsValid();
+
 	CurrentLootTarget.Reset();
 
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 현재 루팅 대상을 해제했습니다."));
+
+	// 루팅 대상이 사라졌으면 열려 있는 루팅 패널도 함께 닫음.
+	if (bHadLootTarget)
+	{
+		CloseLootPanelIfOpen();
+	}
 }
 
 AActor* AEDPlayerController::GetCurrentLootTarget() const
@@ -227,14 +235,14 @@ bool AEDPlayerController::ConsumePendingLootPanelResult(EEDInventoryActionFailur
 }
 
 void AEDPlayerController::Client_NotifyLootTransferResult_Implementation(bool bSuccess,
-	EEDInventoryActionFailure Failure)
+                                                                         EEDInventoryActionFailure Failure)
 {
 	SetPendingLootPanelResult(bSuccess, Failure);
 }
 
 void AEDPlayerController::Server_RequestLootTransfer_Implementation(
 	UEDInventoryComponent* FromInventory,
-	int32 FromSlotIndex, 
+	int32 FromSlotIndex,
 	int32 Quantity)
 {
 	APawn* ControlledPawn = GetPawn();
@@ -288,7 +296,7 @@ void AEDPlayerController::HandleToggleInventory()
 		UIManageSubsystem->ClosePanel(EDUIWidgetIds::Panel_Inventory);
 		return;
 	}
-	
+
 	if (!CanOpenLootPanel())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: 현재 루팅 가능한 대상이 없습니다."));
@@ -413,6 +421,26 @@ void AEDPlayerController::OpenLootPanelForCurrentTarget()
 	}
 
 	InventoryPanel->SetDisplayedInventoryComponent(LootInventoryComponent);
+}
+
+void AEDPlayerController::CloseLootPanelIfOpen()
+{
+	ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	if (!LocalPlayer)
+	{
+		return;
+	}
+
+	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIManageSubsystem)
+	{
+		return;
+	}
+
+	if (UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_Inventory))
+	{
+		UIManageSubsystem->ClosePanel(EDUIWidgetIds::Panel_Inventory);
+	}
 }
 
 void AEDPlayerController::CameraZoom(const FInputActionValue& value)

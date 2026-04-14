@@ -70,6 +70,16 @@ void UEDEquipmentSlotWidget::SetSlotType(EEDEquippableType InSlotType)
 	SlotType = InSlotType;
 }
 
+void UEDEquipmentSlotWidget::SetSelectedState(bool bSelected)
+{
+	bIsSelected = bSelected;
+
+	if (SelectionBorder)
+	{
+		SelectionBorder->SetVisibility(bIsSelected ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	}
+}
+
 FReply UEDEquipmentSlotWidget::NativeOnMouseButtonDoubleClick(
 	const FGeometry& InGeometry,
 	const FPointerEvent& InMouseEvent)
@@ -87,6 +97,24 @@ FReply UEDEquipmentSlotWidget::NativeOnMouseButtonDoubleClick(
 	}
 
 	return Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
+}
+
+FReply UEDEquipmentSlotWidget::NativeOnMouseButtonDown(
+	const FGeometry& InGeometry, 
+	const FPointerEvent& InMouseEvent)
+{
+	if (SlotType == EEDEquippableType::None)
+	{
+		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
+	}
+
+	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	{
+		OnEquipmentSlotClicked.Broadcast(SlotType);
+		return FReply::Handled();
+	}
+
+	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
 }
 
 FLinearColor UEDEquipmentSlotWidget::GetRarityColor(EEDItemRarity InRarity) const

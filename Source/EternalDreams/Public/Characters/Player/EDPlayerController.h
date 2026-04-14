@@ -169,6 +169,9 @@ private:
 	bool bPendingLootTransferSuccess = false;
 	EEDInventoryActionFailure PendingLootTransferFailure = EEDInventoryActionFailure::None;
 	
+	// 현재 열려 있는 루팅 패널을 닫음.
+	void CloseLootPanelIfOpen();
+	
 #pragma endregion 김동주
 
 #pragma region Delegate
