@@ -15,6 +15,7 @@ class UEDBaseAttributeSet;
 class UEDPlayerAttributeSet;
 class UIMCComponent;
 class UZoneDetectorComponent;
+class UEDInventoryComponent;
 
 /*
  * 플레이어 캐릭터 클래스
@@ -64,7 +65,6 @@ protected:
 	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComp;
 	
 	//AttributeSet
-protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeSet")
 	TObjectPtr<UEDPlayerAttributeSet> PlayerAttributeSet;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AttributeSet")
@@ -94,7 +94,11 @@ public:
 	
 	//Initialize AS
 	virtual void InitializeAbilitySystem();
-	
+
 	// Ability Grant
 	void GiveDefaultAbilities();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	TObjectPtr<UEDInventoryComponent> InventoryComponent;
+	
 };
