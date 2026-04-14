@@ -96,7 +96,8 @@ FReply UEDInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeomet
 	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
 }
 
-FReply UEDInventorySlotWidget::NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry,
+FReply UEDInventorySlotWidget::NativeOnMouseButtonDoubleClick(
+	const FGeometry& InGeometry,
 	const FPointerEvent& InMouseEvent)
 {
 	if (SlotIndex == INDEX_NONE)

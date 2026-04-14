@@ -58,13 +58,17 @@ protected:
 	TArray<TObjectPtr<UEDInventorySlotWidget>> InventorySlotWidgets;
 
 private:
+	// 플레이어 인벤토리 컴포넌트
+	UPROPERTY(Transient, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UEDInventoryComponent> PlayerInventoryComponent;
+
 	// 그리드에 슬롯 위젯 생성
 	void CreateInventorySlotWidgets();
 
 	// 현재 표시 대상 인벤토리를 기준으로 슬롯 UI 갱신
 	void RefreshInventorySlots();
 
-	// 슬롯 사용량 텍스트 갱신
+	// 슬롯 사용량 텍스트를 갱신
 	void RefreshCapacityText() const;
 
 	// 표시 대상 인벤토리 변경 델리게이트에 바인딩
@@ -73,9 +77,18 @@ private:
 	// 표시 대상 인벤토리 변경 델리게이트 바인딩 해제
 	void UnbindInventoryChanged();
 
-	// 인벤토리 변경 시 호출
+	// 플레이어 인벤토리 컴포넌트 찾기
+	void InitializePlayerInventoryComponent();
+
+	// 외부 인벤토리 변경 시 호출
 	UFUNCTION()
 	void HandleInventoryChanged();
+
+	// 루팅 슬롯 좌클릭 더블 클릭 처리
+	void HandleLootSlotDoubleClicked(int32 InSlotIndex);
+
+	// 외부 인벤토리 슬롯에서 플레이어 인벤토리로 아이템 이동
+	void TryTransferItemToPlayerInventory(int32 InSlotIndex);
 
 	// ItemId로 아이템 표시 이름 가져오기
 	FText ResolveItemDisplayName(const FPrimaryAssetId& ItemId) const;
@@ -85,17 +98,4 @@ private:
 
 	// 슬롯 인덱스로부터 데이터 접근 가능 여부 확인
 	bool TryGetSlotData(int32 InSlotIndex, FEDInventorySlotData& OutSlotData) const;
-	
-	// 플레이어 인벤토리 컴포넌트
-	UPROPERTY(Transient, BlueprintReadOnly, Category = "Inventory", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UEDInventoryComponent> PlayerInventoryComponent;
-	
-	// 플레이어 인벤토리 컴포넌트 찾기
-	void InitializePlayerInventoryComponent();
-
-	// 루팅 슬롯 더블 클릭 처리
-	void HandleLootSlotDoubleClicked(int32 InSlotIndex);
-
-	// 외부 인벤토리 슬롯에서 플레이어 인벤토리로 아이템 이동
-	void TryTransferItemToPlayerInventory(int32 InSlotIndex);
 };
