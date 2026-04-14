@@ -214,6 +214,26 @@ void UEDInventoryQuickBarWidget::RefreshEquipmentSlots()
 
 void UEDInventoryQuickBarWidget::HandleInventoryChanged()
 {
+	UE_LOG(LogTemp, Warning, TEXT("QuickBar: HandleInventoryChanged Owner=%s"),
+	InventoryComponent && InventoryComponent->GetOwner()
+		? *InventoryComponent->GetOwner()->GetName()
+		: TEXT("None"));
+	
+	if (InventoryComponent)
+	{
+		for (int32 Index = 0; Index < InventoryComponent->InventorySlots.Num(); ++Index)
+		{
+			const FEDInventorySlotData& SlotData = InventoryComponent->InventorySlots[Index];
+			if (!SlotData.IsEmpty())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("QuickBar: Player Slot=%d ItemId=%s Quantity=%d"),
+					Index,
+					*SlotData.Item.ItemId.ToString(),
+					SlotData.Item.Quantity);
+			}
+		}
+	}
+	
 	RefreshQuickSlots();
 	RefreshEquipmentSlots();
 }

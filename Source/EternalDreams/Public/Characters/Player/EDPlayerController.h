@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
 #include "GenericTeamAgentInterface.h"
+#include "Inventory/Core/EDInventoryTypes.h"
 #include "EDPlayerController.generated.h"
 
 struct FInputActionValue;
@@ -13,6 +14,9 @@ class AEDCursorActor;
 class UWidgetComponent;
 class UInputMappingContext;
 class UInputAction;
+class AActor;
+class UEDInventoryComponent;
+enum class EEDInventoryActionFailure : uint8;
 
 DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
 
@@ -55,6 +59,32 @@ public:
 	// ESC 입력 처리용 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
 	TObjectPtr<UInputAction> UIBackAction = nullptr;
+#pragma endregion 김동주
+	
+#pragma region Loot UI
+	// 현재 플레이어가 상호작용 가능한 루팅 대상 액터 설정
+	UFUNCTION(BlueprintCallable, Category = "Loot")
+	void SetCurrentLootTarget(AActor* InLootTarget);
+	
+	// 현재 루팅 대상 액터를 해제
+	UFUNCTION(BlueprintCallable, Category = "Loot")
+	void ClearCurrentLootTarget(AActor* InLootTarget = nullptr);
+	
+	// 현재 루팅 대상 액터를 반환
+	UFUNCTION(BlueprintPure, Category = "Loot")
+	AActor* GetCurrentLootTarget() const;
+	
+	// 최근 루팅 요청 결과를 저장한다.
+	void SetPendingLootPanelResult(bool bInSuccess, EEDInventoryActionFailure InFailure);
+
+	// 최근 루팅 요청 결과를 가져온다.
+	bool ConsumePendingLootPanelResult(EEDInventoryActionFailure& OutFailure);
+	
+	UFUNCTION(Server, Reliable)
+	void Server_RequestLootTransfer(UEDInventoryComponent* FromInventory, int32 FromSlotIndex, int32 Quantity);
+	
+	UFUNCTION(Client, Reliable)
+	void Client_NotifyLootTransferResult(bool bSuccess, EEDInventoryActionFailure Failure);
 #pragma endregion 김동주
 	
 	// -------------------------------------------------------
@@ -122,6 +152,23 @@ private:
 
 	// 애플리케이션 복귀 시 현재 열린 UI 상태에 맞게 입력 모드와 포커스 복구를 요청
 	void HandleApplicationReactivated();
+	
+	// 현재 루팅 패널을 열 수 있는지 확인
+	bool CanOpenLootPanel() const;
+	
+	// 현재 루팅 대상 액터에서 인벤토리 컴포넌트를 가져옴
+	UEDInventoryComponent* ResolveCurrentLootInventoryComponent() const;
+	
+	// 현재 루팅 대상 기준으로 루팅 패널을 띄움
+	void OpenLootPanelForCurrentTarget();
+	
+	// 현재 플레이어가 상호작용 가능한 루팅 대상 액터
+	TWeakObjectPtr<AActor> CurrentLootTarget;
+	
+	bool bHasPendingLootPanelResult = false;
+	bool bPendingLootTransferSuccess = false;
+	EEDInventoryActionFailure PendingLootTransferFailure = EEDInventoryActionFailure::None;
+	
 #pragma endregion 김동주
 
 #pragma region Delegate

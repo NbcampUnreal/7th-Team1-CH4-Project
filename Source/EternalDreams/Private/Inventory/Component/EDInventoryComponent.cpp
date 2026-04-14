@@ -529,6 +529,12 @@ bool UEDInventoryComponent::RequestTransferItemAutoDetailed(UEDInventoryComponen
         return false;
     }
 
+    UE_LOG(LogTemp, Warning, TEXT("TransferDebug: Owner=%s HasAuthority=%s FromSlot=%d Quantity=%d"),
+    GetOwner() ? *GetOwner()->GetName() : TEXT("None"),
+    GetOwner() && GetOwner()->HasAuthority() ? TEXT("true") : TEXT("false"),
+    FromSlotIndex,
+    Quantity);
+
     if (!GetOwner()->HasAuthority())
     {
         ServerRequestTransferItemAuto(FromInventory, ToInventory, FromSlotIndex, Quantity);
@@ -1345,6 +1351,9 @@ void UEDInventoryComponent::ServerRequestInitializeRandomLoot_Implementation(int
 
 void UEDInventoryComponent::OnRep_InventorySlots()
 {
+    UE_LOG(LogTemp, Warning, TEXT("InventoryRep: Owner=%s Slots=%d"),
+        GetOwner() ? *GetOwner()->GetName() : TEXT("None"),
+        InventorySlots.Num());
     OnInventoryChanged.Broadcast();
 }
 

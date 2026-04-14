@@ -11,6 +11,7 @@
 #include "Inventory/Core/EDInventoryTypes.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "UI/Panel/EDInventorySlotWidget.h"
+#include "Characters/Player/EDPlayerController.h"
 
 void UEDInventoryPanelWidget::NativeConstruct()
 {
@@ -57,6 +58,19 @@ void UEDInventoryPanelWidget::SetDisplayedInventoryComponent(UEDInventoryCompone
 	DisplayedInventoryComponent = InInventoryComponent;
 	BindInventoryChanged();
 	RefreshInventorySlots();
+
+	// 외부 컨테이너 이름이 있으면 패널에 반영
+	if (ContainerNameText)
+	{
+		if (DisplayedInventoryComponent && DisplayedInventoryComponent->GetOwner())
+		{
+			ContainerNameText->SetText(FText::FromString(DisplayedInventoryComponent->GetOwner()->GetName()));
+		}
+		else
+		{
+			ContainerNameText->SetText(FText::FromString(TEXT("Container")));
+		}
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("EDInventoryPanelWidget: 표시 대상 인벤토리를 갱신했습니다. Owner=%s"),
 	       DisplayedInventoryComponent && DisplayedInventoryComponent->GetOwner()
@@ -105,12 +119,20 @@ void UEDInventoryPanelWidget::CreateInventorySlotWidgets()
 
 		// 슬롯 인덱스를 부여하고 더블 클릭 이동 이벤트 연결
 		SlotWidget->SetSlotIndex(SlotIndex);
+		SlotWidget->OnSlotClicked.AddUObject(this, &UEDInventoryPanelWidget::HandleLootSlotClicked);
 		SlotWidget->OnSlotDoubleClicked.AddUObject(this, &UEDInventoryPanelWidget::HandleLootSlotDoubleClicked);
 	}
 }
 
 void UEDInventoryPanelWidget::RefreshInventorySlots()
 {
+	UE_LOG(LogTemp, Warning, TEXT("LootPanel: Refresh Start Owner=%s Slots=%d WidgetCount=%d"),
+	       DisplayedInventoryComponent && DisplayedInventoryComponent->GetOwner()
+	       ? *DisplayedInventoryComponent->GetOwner()->GetName()
+	       : TEXT("None"),
+	       DisplayedInventoryComponent ? DisplayedInventoryComponent->InventorySlots.Num() : -1,
+	       InventorySlotWidgets.Num());
+
 	// 표시 대상이 없으면 패널을 빈 슬롯 상태로 유지
 	for (int32 Index = 0; Index < InventorySlotWidgets.Num(); ++Index)
 	{
@@ -124,8 +146,20 @@ void UEDInventoryPanelWidget::RefreshInventorySlots()
 		if (!TryGetSlotData(Index, SlotData) || SlotData.IsEmpty())
 		{
 			SlotWidget->SetEmptyState();
+			UE_LOG(LogTemp, Warning, TEXT("LootPanel: Slot %d read failed"), Index);
 			continue;
 		}
+
+		if (SlotData.IsEmpty())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("LootPanel: Slot %d empty"), Index);
+			continue;
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("LootPanel: Slot %d ItemId=%s Quantity=%d"),
+		       Index,
+		       *SlotData.Item.ItemId.ToString(),
+		       SlotData.Item.Quantity);
 
 		const FText ItemName = ResolveItemDisplayName(SlotData.Item.ItemId);
 		const EEDItemRarity ItemRarity = ResolveItemRarity(SlotData.Item.ItemId);
@@ -134,6 +168,7 @@ void UEDInventoryPanelWidget::RefreshInventorySlots()
 	}
 
 	RefreshCapacityText();
+	RefreshSelectedSlotState();
 }
 
 void UEDInventoryPanelWidget::RefreshCapacityText() const
@@ -206,11 +241,33 @@ void UEDInventoryPanelWidget::HandleInventoryChanged()
 {
 	// 외부 컨테이너 인벤토리 변경 시 슬롯 전체를 다시 그림
 	RefreshInventorySlots();
+	
+	AEDPlayerController* PlayerController = Cast<AEDPlayerController>(GetOwningPlayer());
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+	const bool bHasResult = PlayerController->ConsumePendingLootPanelResult(Failure);
+	if (!bHasResult)
+	{
+		return;
+	}
+
+	if (Failure == EEDInventoryActionFailure::None)
+	{
+		ClearInventoryActionMessage();
+		return;
+	}
+
+	ShowInventoryFailure(Failure);
 }
 
 void UEDInventoryPanelWidget::HandleLootSlotDoubleClicked(int32 InSlotIndex)
 {
 	// 더블 클릭 - 아이템을 플레이어 인벤토리로 옮김
+	UE_LOG(LogTemp, Warning, TEXT("LootPanel: DoubleClicked Slot=%d"), InSlotIndex);
 	TryTransferItemToPlayerInventory(InSlotIndex);
 }
 
@@ -218,40 +275,37 @@ void UEDInventoryPanelWidget::TryTransferItemToPlayerInventory(int32 InSlotIndex
 {
 	if (!DisplayedInventoryComponent)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDInventoryPanelWidget: DisplayedInventoryComponent가 없습니다."));
-		return;
-	}
-
-	if (!PlayerInventoryComponent)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("EDInventoryPanelWidget: PlayerInventoryComponent가 없습니다."));
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidInventory);
 		return;
 	}
 
 	FEDInventorySlotData SlotData;
 	if (!TryGetSlotData(InSlotIndex, SlotData))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDInventoryPanelWidget: 잘못된 슬롯 인덱스입니다. Index=%d"), InSlotIndex);
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
 		return;
 	}
 
 	if (SlotData.IsEmpty())
 	{
+		ShowInventoryFailure(EEDInventoryActionFailure::EmptySlot);
 		return;
 	}
 
-	// 외부 컨테이너 슬롯의 전체 수량을 플레이어 인벤토리로 자동 이동
-	const bool bSuccess = DisplayedInventoryComponent->RequestTransferItemAuto(
+	AEDPlayerController* PlayerController = Cast<AEDPlayerController>(GetOwningPlayer());
+	if (!PlayerController)
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidInventory);
+		return;
+	}
+
+	ClearInventoryActionMessage();
+
+	PlayerController->Server_RequestLootTransfer(
 		DisplayedInventoryComponent,
-		PlayerInventoryComponent,
 		InSlotIndex,
 		SlotData.Item.Quantity
 	);
-
-	if (!bSuccess)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("EDInventoryPanelWidget: 플레이어 인벤토리로 아이템 이동에 실패했습니다. Index=%d"), InSlotIndex);
-	}
 }
 
 FText UEDInventoryPanelWidget::ResolveItemDisplayName(const FPrimaryAssetId& ItemId) const
@@ -315,4 +369,43 @@ bool UEDInventoryPanelWidget::TryGetSlotData(int32 InSlotIndex, FEDInventorySlot
 
 	OutSlotData = DisplayedInventoryComponent->InventorySlots[InSlotIndex];
 	return true;
+}
+
+void UEDInventoryPanelWidget::HandleLootSlotClicked(int32 InSlotIndex)
+{
+	SelectedSlotIndex = InSlotIndex;
+	RefreshSelectedSlotState();
+}
+
+void UEDInventoryPanelWidget::RefreshSelectedSlotState()
+{
+	for (int32 Index = 0; Index < InventorySlotWidgets.Num(); ++Index)
+	{
+		if (InventorySlotWidgets[Index])
+		{
+			InventorySlotWidgets[Index]->SetSelectedState(Index == SelectedSlotIndex);
+		}
+	}
+}
+
+void UEDInventoryPanelWidget::ShowInventoryFailure(EEDInventoryActionFailure Failure) const
+{
+	if (!ActionResultText)
+	{
+		return;
+	}
+
+	ActionResultText->SetText(UEDInventoryBlueprintLibrary::GetInventoryActionFailureText(Failure));
+	ActionResultText->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UEDInventoryPanelWidget::ClearInventoryActionMessage() const
+{
+	if (!ActionResultText)
+	{
+		return;
+	}
+
+	ActionResultText->SetText(FText::GetEmpty());
+	ActionResultText->SetVisibility(ESlateVisibility::Collapsed);
 }
