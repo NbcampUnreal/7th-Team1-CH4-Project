@@ -15,6 +15,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Inventory/Component/EDInventoryComponent.h"
 
 
 // Sets default values
@@ -35,6 +36,7 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 	//--ksh 금지구역 감지 컴포넌트 부착
 	ZoneDetector = CreateDefaultSubobject<UZoneDetectorComponent>(TEXT("ZoneDetector"));
 
+	InventoryComponent = CreateDefaultSubobject<UEDInventoryComponent>(TEXT("InventoryComponent"));
 }
 
 // Called when the game starts or when spawned

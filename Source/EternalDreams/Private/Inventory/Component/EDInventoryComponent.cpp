@@ -277,6 +277,112 @@ void UEDInventoryComponent::BeginPlay()
     }
 
     RefreshCraftableRecipesCache();
+    
+    // ---
+    // 작성자 : 김동주
+    if (GetOwner() && GetOwner()->HasAuthority())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s bGiveDebugItemsOnBeginPlay=%s MaxSlots=%d"),
+            *GetOwner()->GetName(),
+            bGiveDebugItemsOnBeginPlay ? TEXT("true") : TEXT("false"),
+            MaxInventorySlots);
+    }
+
+    if (GetOwner() && GetOwner()->HasAuthority() && bGiveDebugItemsOnBeginPlay)
+    {
+        EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+
+        UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s ConsumableId=%s MaterialId=%s EquipId=%s"),
+            *GetOwner()->GetName(),
+            *DebugConsumableItemId.ToString(),
+            *DebugMaterialItemId.ToString(),
+            *DebugEquipItemId.ToString());
+
+        if (DebugConsumableItemId.IsValid())
+        {
+            const bool bSuccess = RequestAddItemAutoDetailed(DebugConsumableItemId, 5, Failure);
+            UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s AddConsumable success=%s failure=%d"),
+                *GetOwner()->GetName(),
+                bSuccess ? TEXT("true") : TEXT("false"),
+                static_cast<int32>(Failure));
+        }
+
+        Failure = EEDInventoryActionFailure::None;
+
+        if (DebugMaterialItemId.IsValid())
+        {
+            const bool bSuccess = RequestAddItemAutoDetailed(DebugMaterialItemId, 10, Failure);
+            UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s AddMaterial success=%s failure=%d"),
+                *GetOwner()->GetName(),
+                bSuccess ? TEXT("true") : TEXT("false"),
+                static_cast<int32>(Failure));
+        }
+
+        Failure = EEDInventoryActionFailure::None;
+
+        if (DebugEquipItemId.IsValid())
+        {
+            const bool bSuccess = RequestAddItemAutoDetailed(DebugEquipItemId, 1, Failure);
+            UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s AddEquip success=%s failure=%d"),
+                *GetOwner()->GetName(),
+                bSuccess ? TEXT("true") : TEXT("false"),
+                static_cast<int32>(Failure));
+        }
+    }
+    // ---
+}
+
+void UEDInventoryComponent::ServerRequestDropPartialFromSlot_Implementation(int32 FromSlotIndex, int32 Quantity)
+{
+    RequestDropPartialFromSlot(FromSlotIndex, Quantity);
+}
+
+bool UEDInventoryComponent::RequestDropPartialFromSlot(int32 FromSlotIndex, int32 Quantity)
+{
+    if (!GetOwner())
+    {
+        return false;
+    }
+
+    if (!GetOwner()->HasAuthority())
+    {
+        ServerRequestDropPartialFromSlot(FromSlotIndex, Quantity);
+        return true;
+    }
+
+    if (!InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        return false;
+    }
+
+    if (InventorySlots[FromSlotIndex].IsEmpty())
+    {
+        return false;
+    }
+
+    if (Quantity <= 0)
+    {
+        return false;
+    }
+
+    const int32 CurrentQuantity = InventorySlots[FromSlotIndex].Item.Quantity;
+    const int32 DropQuantity = FMath::Min(Quantity, CurrentQuantity);
+
+    FEDInventoryDropRequest DropRequest;
+    DropRequest.Item.ItemId = InventorySlots[FromSlotIndex].Item.ItemId;
+    DropRequest.Item.Quantity = DropQuantity;
+    DropRequest.SourceOwner = GetOwner();
+    DropRequest.Reason = EEDInventoryDropReason::UserRequested;
+
+    InventorySlots[FromSlotIndex].Item.Quantity -= DropQuantity;
+    if (InventorySlots[FromSlotIndex].Item.Quantity <= 0)
+    {
+        InventorySlots[FromSlotIndex].Item = FEDInventoryItemHandle();
+    }
+
+    OnInventoryDropRequested.Broadcast(DropRequest);
+    OnInventoryChanged.Broadcast();
+    return true;
 }
 
 void UEDInventoryComponent::RequestInitializeInventorySlots()
@@ -547,9 +653,73 @@ bool UEDInventoryComponent::RequestDropSingleFromSlot(int32 FromSlotIndex)
     return true;
 }
 
+bool UEDInventoryComponent::RequestDropCountFromSlot(int32 FromSlotIndex, int32 DropCount)
+{
+    if (!GetOwner())
+    {
+        return false;
+    }
+
+    if (DropCount <= 0)
+    {
+        return false;
+    }
+
+    if (!GetOwner()->HasAuthority())
+    {
+        ServerRequestDropCountFromSlot(FromSlotIndex, DropCount);
+        return true;
+    }
+
+    if (!InventorySlots.IsValidIndex(FromSlotIndex) || InventorySlots[FromSlotIndex].IsEmpty())
+    {
+        return false;
+    }
+
+    FEDInventoryItemHandle& SlotItem = InventorySlots[FromSlotIndex].Item;
+    const int32 ActualDropCount = FMath::Min(DropCount, SlotItem.Quantity);
+    if (ActualDropCount <= 0)
+    {
+        return false;
+    }
+
+    FEDInventoryDropRequest DropRequest;
+    DropRequest.Item.ItemId = SlotItem.ItemId;
+    DropRequest.Item.Quantity = ActualDropCount;
+    DropRequest.SourceOwner = GetOwner();
+    DropRequest.Reason = EEDInventoryDropReason::UserRequested;
+
+    SlotItem.Quantity -= ActualDropCount;
+    if (SlotItem.Quantity <= 0)
+    {
+        SlotItem = FEDInventoryItemHandle();
+    }
+
+    OnInventoryDropRequested.Broadcast(DropRequest);
+    OnInventoryChanged.Broadcast();
+    return true;
+}
+
 bool UEDInventoryComponent::RequestEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType)
 {
     if (!GetOwner())
+    {
+        return false;
+    }
+
+    if (!InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        return false;
+    }
+
+    const FEDInventorySlotData& SourceSlot = InventorySlots[FromSlotIndex];
+    if (SourceSlot.IsEmpty())
+    {
+        return false;
+    }
+
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Component(SourceSlot.Item.ItemId);
+    if (!FEDInventoryValidationService::CanEquipToSlot(ItemData, TargetSlotType))
     {
         return false;
     }
@@ -658,20 +828,44 @@ void UEDInventoryComponent::GetCraftableRecipes(TArray<FEDCraftableRecipeEntry>&
     FEDInventoryCraftService::GetCraftableRecipes(this, OutRecipes, SortOption, bDescending);
 }
 
+void UEDInventoryComponent::GetAllCraftingRecipeTables(TArray<UDataTable*>& OutTables) const
+{
+    OutTables.Reset();
+
+    for (UDataTable* RecipeTable : CraftingRecipeTables)
+    {
+        if (RecipeTable)
+        {
+            OutTables.AddUnique(RecipeTable);
+        }
+    }
+}
+
 bool UEDInventoryComponent::CanCraftRecipeByRowId(FName RecipeRowId) const
 {
-    if (!CraftingRecipeTable || RecipeRowId.IsNone())
+    if (RecipeRowId.IsNone())
     {
         return false;
     }
 
-    const FEDCraftingRecipeRow* RecipeRow = CraftingRecipeTable->FindRow<FEDCraftingRecipeRow>(RecipeRowId, TEXT("CanCraftRecipeByRowId"));
-    if (!RecipeRow)
+    TArray<UDataTable*> RecipeTables;
+    GetAllCraftingRecipeTables(RecipeTables);
+
+    for (UDataTable* RecipeTable : RecipeTables)
     {
-        return false;
+        if (!RecipeTable)
+        {
+            continue;
+        }
+
+        const FEDCraftingRecipeRow* RecipeRow = RecipeTable->FindRow<FEDCraftingRecipeRow>(RecipeRowId, TEXT("CanCraftRecipeByRowId"));
+        if (RecipeRow)
+        {
+            return FEDInventoryCraftService::CanCraftRecipe(this, *RecipeRow, nullptr);
+        }
     }
 
-    return FEDInventoryCraftService::CanCraftRecipe(this, *RecipeRow, nullptr);
+    return false;
 }
 
 void UEDInventoryComponent::RefreshCraftableRecipesCache()
@@ -1096,6 +1290,11 @@ void UEDInventoryComponent::ServerRequestDropAllFromSlot_Implementation(int32 Fr
 void UEDInventoryComponent::ServerRequestDropSingleFromSlot_Implementation(int32 FromSlotIndex)
 {
     RequestDropSingleFromSlot(FromSlotIndex);
+}
+
+void UEDInventoryComponent::ServerRequestDropCountFromSlot_Implementation(int32 FromSlotIndex, int32 DropCount)
+{
+    RequestDropCountFromSlot(FromSlotIndex, DropCount);
 }
 
 void UEDInventoryComponent::ServerRequestEquipItemFromSlot_Implementation(int32 FromSlotIndex, EEDEquippableType TargetSlotType)
