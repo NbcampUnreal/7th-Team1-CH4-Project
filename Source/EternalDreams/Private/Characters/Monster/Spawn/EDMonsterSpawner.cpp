@@ -55,6 +55,7 @@ void AEDMonsterSpawner::SpawnMonster()
 	
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+	SpawnParams.bDeferConstruction = true;
 	
 	AEDMonsterBase* Monster = GetWorld()->SpawnActor<AEDMonsterBase>(
 		SpawnClass,
@@ -70,6 +71,8 @@ void AEDMonsterSpawner::SpawnMonster()
 	
 	// DA 적용
 	Monster->InitializeFromDataAsset(MonsterDataAsset);
+	Monster->FinishSpawning(FTransform(GetActorRotation(), GetActorLocation()));
+		
 	SpawnedMonster = Monster;
 	// 서브시스템에 등록
 	UEDMonsterSpawnSubsystem* Subsystem = GetWorld()->GetSubsystem<UEDMonsterSpawnSubsystem>();

@@ -24,6 +24,7 @@ public:
 	// 스포너 등록
 	void RegisterSpawner(AEDMonsterSpawner* Spawner);
 	//  Grade별 스폰 트리거 - GameState/GameMode에서 호출(Elite/Boss용)
+	UFUNCTION(BlueprintCallable)
 	void TriggerSpawnByGrade(EMonsterGrade Grade);
 	// 몬스터 사망 처리 - Spawner에서 호출
 	void OnMonsterDeath(AEDMonsterBase* DeadMonster);

@@ -43,8 +43,8 @@ void AEDMonsterBase::BeginPlay()
 	
 	if (IsValid(DataAsset) == false)
 		return;
-	
-	InitializeFromDataAsset(DataAsset);
+	LoadVisuals(DataAsset);
+	//InitializeFromDataAsset(DataAsset);
 	
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetHealthAttribute())
 	.AddUObject(this, &AEDMonsterBase::OnHealthChanged);
@@ -96,6 +96,7 @@ void AEDMonsterBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>&
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AEDMonsterBase, MonsterState);
+	DOREPLIFETIME(AEDMonsterBase, DataAsset);
 }
 
 void AEDMonsterBase::OnRep_MonsterState()
@@ -107,6 +108,16 @@ void AEDMonsterBase::OnRep_MonsterState()
 		return;
 	
 	Anim->SetMonsterState(MonsterState);
+}
+
+void AEDMonsterBase::OnRep_DataAsset()
+{
+	if (IsValid(DataAsset) == false)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] OnRep_DataAsset: DataAsset null"), *GetName());
+		return;
+	}
+	LoadVisuals(DataAsset);
 }
 
 void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)

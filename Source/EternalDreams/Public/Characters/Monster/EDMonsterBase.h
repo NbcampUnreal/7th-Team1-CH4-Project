@@ -42,7 +42,10 @@ protected:
 	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION()
-	void OnRep_MonsterState();
+	void OnRep_MonsterState();	
+	
+	UFUNCTION()
+	void OnRep_DataAsset();
 	
 	UFUNCTION(BlueprintCallable, Category = "Monster")
 	void SetMonsterState(EMonsterState NewState) { if (HasAuthority()) MonsterState = NewState; }
@@ -50,7 +53,7 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_DataAsset, Category = "Monster|Data")
 	TObjectPtr<UEDMonsterDataAsset> DataAsset;
 private:
 	// 비동기 로드(임시)
