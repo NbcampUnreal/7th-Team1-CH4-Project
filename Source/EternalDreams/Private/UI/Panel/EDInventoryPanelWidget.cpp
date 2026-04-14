@@ -1,6 +1,7 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/Panel/EDInventoryPanelWidget.h"
 
+#include "Characters/Player/Component/EDLootInteractionComponent.h"
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
@@ -11,7 +12,6 @@
 #include "Inventory/Core/EDInventoryTypes.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "UI/Panel/EDInventorySlotWidget.h"
-#include "Characters/Player/EDPlayerController.h"
 
 void UEDInventoryPanelWidget::NativeConstruct()
 {
@@ -22,6 +22,12 @@ void UEDInventoryPanelWidget::NativeConstruct()
 	CreateInventorySlotWidgets();
 	InitializePlayerInventoryComponent();
 	RefreshInventorySlots();
+
+	if (UEDLootInteractionComponent* LootInteractionComponent = GetLootInteractionComponent())
+	{
+		LootInteractionComponent->OnLootTransferResult.AddUObject(
+			this, &UEDInventoryPanelWidget::HandleLootTransferResult);
+	}
 
 	if (TitleText)
 	{
@@ -39,6 +45,11 @@ void UEDInventoryPanelWidget::NativeConstruct()
 void UEDInventoryPanelWidget::NativeDestruct()
 {
 	UnbindInventoryChanged();
+
+	if (UEDLootInteractionComponent* LootInteractionComponent = GetLootInteractionComponent())
+	{
+		LootInteractionComponent->OnLootTransferResult.RemoveAll(this);
+	}
 
 	Super::NativeDestruct();
 
@@ -241,21 +252,11 @@ void UEDInventoryPanelWidget::HandleInventoryChanged()
 {
 	// 외부 컨테이너 인벤토리 변경 시 슬롯 전체를 다시 그림
 	RefreshInventorySlots();
-	
-	AEDPlayerController* PlayerController = Cast<AEDPlayerController>(GetOwningPlayer());
-	if (!PlayerController)
-	{
-		return;
-	}
+}
 
-	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-	const bool bHasResult = PlayerController->ConsumePendingLootPanelResult(Failure);
-	if (!bHasResult)
-	{
-		return;
-	}
-
-	if (Failure == EEDInventoryActionFailure::None)
+void UEDInventoryPanelWidget::HandleLootTransferResult(bool bSuccess, EEDInventoryActionFailure Failure)
+{
+	if (bSuccess || Failure == EEDInventoryActionFailure::None)
 	{
 		ClearInventoryActionMessage();
 		return;
@@ -292,8 +293,8 @@ void UEDInventoryPanelWidget::TryTransferItemToPlayerInventory(int32 InSlotIndex
 		return;
 	}
 
-	AEDPlayerController* PlayerController = Cast<AEDPlayerController>(GetOwningPlayer());
-	if (!PlayerController)
+	UEDLootInteractionComponent* LootInteractionComponent = GetLootInteractionComponent();
+	if (!LootInteractionComponent)
 	{
 		ShowInventoryFailure(EEDInventoryActionFailure::InvalidInventory);
 		return;
@@ -301,7 +302,7 @@ void UEDInventoryPanelWidget::TryTransferItemToPlayerInventory(int32 InSlotIndex
 
 	ClearInventoryActionMessage();
 
-	PlayerController->Server_RequestLootTransfer(
+	LootInteractionComponent->RequestLootTransfer(
 		DisplayedInventoryComponent,
 		InSlotIndex,
 		SlotData.Item.Quantity
@@ -369,6 +370,17 @@ bool UEDInventoryPanelWidget::TryGetSlotData(int32 InSlotIndex, FEDInventorySlot
 
 	OutSlotData = DisplayedInventoryComponent->InventorySlots[InSlotIndex];
 	return true;
+}
+
+UEDLootInteractionComponent* UEDInventoryPanelWidget::GetLootInteractionComponent() const
+{
+	APlayerController* OwningPlayer = GetOwningPlayer();
+	if (!OwningPlayer)
+	{
+		return nullptr;
+	}
+
+	return OwningPlayer->FindComponentByClass<UEDLootInteractionComponent>();
 }
 
 void UEDInventoryPanelWidget::HandleLootSlotClicked(int32 InSlotIndex)

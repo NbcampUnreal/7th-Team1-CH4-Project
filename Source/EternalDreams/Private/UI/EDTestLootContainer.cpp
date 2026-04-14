@@ -1,9 +1,10 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/EDTestLootContainer.h"
 
-#include "Characters/Player/EDPlayerController.h"
+#include "Characters/Player/Component/EDLootInteractionComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/Pawn.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 
@@ -73,14 +74,21 @@ void AEDTestLootContainer::HandleInteractionBeginOverlap(
 		return;
 	}
 
-	AEDPlayerController* PlayerController = Cast<AEDPlayerController>(OverlapPawn->GetController());
+	APlayerController* PlayerController = Cast<APlayerController>(OverlapPawn->GetController());
 	if (!PlayerController)
 	{
 		return;
 	}
 
+	UEDLootInteractionComponent* LootInteractionComponent =
+		PlayerController->FindComponentByClass<UEDLootInteractionComponent>();
+	if (!LootInteractionComponent)
+	{
+		return;
+	}
+
 	// 플레이어가 범위 안에 들어오면 현재 루팅 대상으로 등록
-	PlayerController->SetCurrentLootTarget(this);
+	LootInteractionComponent->SetCurrentLootTarget(this);
 }
 
 void AEDTestLootContainer::HandleInteractionEndOverlap(
@@ -96,12 +104,19 @@ void AEDTestLootContainer::HandleInteractionEndOverlap(
 		return;
 	}
 
-	AEDPlayerController* PlayerController = Cast<AEDPlayerController>(OverlapPawn->GetController());
+	APlayerController* PlayerController = Cast<APlayerController>(OverlapPawn->GetController());
 	if (!PlayerController)
 	{
 		return;
 	}
 
+	UEDLootInteractionComponent* LootInteractionComponent =
+		PlayerController->FindComponentByClass<UEDLootInteractionComponent>();
+	if (!LootInteractionComponent)
+	{
+		return;
+	}
+
 	// 이 컨테이너가 현재 루팅 대상일 때만 해제
-	PlayerController->ClearCurrentLootTarget(this);
+	LootInteractionComponent->ClearCurrentLootTarget(this);
 }

@@ -11,6 +11,7 @@ class UUniformGridPanel;
 class UTextBlock;
 class UEDInventoryComponent;
 class UEDInventorySlotWidget;
+class UEDLootInteractionComponent;
 
 UCLASS()
 class ETERNALDREAMS_API UEDInventoryPanelWidget : public UCommonActivatableWidget
@@ -89,6 +90,9 @@ private:
 	UFUNCTION()
 	void HandleInventoryChanged();
 
+	// 루팅 전송 결과를 받아 메시지를 갱신
+	void HandleLootTransferResult(bool bSuccess, EEDInventoryActionFailure Failure);
+
 	// 루팅 슬롯 좌클릭 더블 클릭 처리
 	void HandleLootSlotDoubleClicked(int32 InSlotIndex);
 
@@ -103,6 +107,9 @@ private:
 
 	// 슬롯 인덱스로부터 데이터 접근 가능 여부 확인
 	bool TryGetSlotData(int32 InSlotIndex, FEDInventorySlotData& OutSlotData) const;
+
+	// 소유 플레이어의 루팅 상호작용 컴포넌트 가져오기
+	UEDLootInteractionComponent* GetLootInteractionComponent() const;
 	
 	// 현재 선택된 루팅 슬롯 인덱스
 	int32 SelectedSlotIndex = INDEX_NONE;

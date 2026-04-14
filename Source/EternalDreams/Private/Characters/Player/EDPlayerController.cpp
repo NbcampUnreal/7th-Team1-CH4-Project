@@ -4,6 +4,7 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Characters/Player/Component/EDLootInteractionComponent.h"
 #include "Characters/Player/OtherActor/EDCameraActor.h"
 #include "Characters/Player/OtherActor/EDCursorActor.h"
 #include "Engine/LocalPlayer.h"
@@ -12,15 +13,12 @@
 #include "Misc/CoreDelegates.h"
 #include "Core/EDGameMode.h"
 #include "Core/EDPlayerState.h"
-#include "Kismet/GameplayStatics.h"
 #include "InputMappingContext.h"
-#include "Inventory/BP/EDInventoryBlueprintLibrary.h"
-#include "Inventory/Component/EDInventoryComponent.h"
-#include "UI/Panel/EDInventoryPanelWidget.h"
-#include "UI/Types/EDUIWidgetIds.h"
+#include "Kismet/GameplayStatics.h"
 
 AEDPlayerController::AEDPlayerController()
 {
+	LootInteractionComponent = CreateDefaultSubobject<UEDLootInteractionComponent>(TEXT("LootInteractionComponent"));
 }
 
 
@@ -163,147 +161,17 @@ void AEDPlayerController::SetupInputComponent()
 	);
 }
 
-void AEDPlayerController::SetCurrentLootTarget(AActor* InLootTarget)
-{
-	// 유효하지 않은 대상이면 현재 루팅 대상 해제
-	if (!IsValid(InLootTarget))
-	{
-		CurrentLootTarget.Reset();
-		return;
-	}
-
-	// 인벤토리 컴포넌트를 제공하지 않는 대상은 루팅 대상으로 취급하지 않음
-	UEDInventoryComponent* InventoryComponent = UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(
-		InLootTarget);
-	if (!InventoryComponent)
-	{
-		CurrentLootTarget.Reset();
-		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: 루팅 대상에 InventoryComponent가 없습니다. Actor=%s"),
-		       *InLootTarget->GetName());
-		return;
-	}
-
-	CurrentLootTarget = InLootTarget;
-
-	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 현재 루팅 대상을 설정했습니다. Actor=%s"),
-	       *InLootTarget->GetName());
-}
-
-void AEDPlayerController::ClearCurrentLootTarget(AActor* InLootTarget)
-{
-	// 특정 대상만 해제하고 싶을 때, 현재 대상과 일치하는 경우에만 비움
-	if (InLootTarget && CurrentLootTarget.IsValid() && CurrentLootTarget.Get() != InLootTarget)
-	{
-		return;
-	}
-
-	const bool bHadLootTarget = CurrentLootTarget.IsValid();
-
-	CurrentLootTarget.Reset();
-
-	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 현재 루팅 대상을 해제했습니다."));
-
-	// 루팅 대상이 사라졌으면 열려 있는 루팅 패널도 함께 닫음.
-	if (bHadLootTarget)
-	{
-		CloseLootPanelIfOpen();
-	}
-}
-
-AActor* AEDPlayerController::GetCurrentLootTarget() const
-{
-	return CurrentLootTarget.Get();
-}
-
-void AEDPlayerController::SetPendingLootPanelResult(bool bInSuccess, EEDInventoryActionFailure InFailure)
-{
-	bHasPendingLootPanelResult = true;
-	bPendingLootTransferSuccess = bInSuccess;
-	PendingLootTransferFailure = InFailure;
-}
-
-bool AEDPlayerController::ConsumePendingLootPanelResult(EEDInventoryActionFailure& OutFailure)
-{
-	if (!bHasPendingLootPanelResult)
-	{
-		return false;
-	}
-
-	bHasPendingLootPanelResult = false;
-	OutFailure = PendingLootTransferFailure;
-	return bPendingLootTransferSuccess;
-}
-
-void AEDPlayerController::Client_NotifyLootTransferResult_Implementation(bool bSuccess,
-                                                                         EEDInventoryActionFailure Failure)
-{
-	SetPendingLootPanelResult(bSuccess, Failure);
-}
-
-void AEDPlayerController::Server_RequestLootTransfer_Implementation(
-	UEDInventoryComponent* FromInventory,
-	int32 FromSlotIndex,
-	int32 Quantity)
-{
-	APawn* ControlledPawn = GetPawn();
-	if (!ControlledPawn)
-	{
-		Client_NotifyLootTransferResult(false, EEDInventoryActionFailure::InvalidInventory);
-		return;
-	}
-
-	UEDInventoryComponent* PlayerInventoryComponent =
-		UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(ControlledPawn);
-
-	if (!PlayerInventoryComponent || !FromInventory)
-	{
-		Client_NotifyLootTransferResult(false, EEDInventoryActionFailure::InvalidInventory);
-		return;
-	}
-
-	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-	const bool bSuccess = PlayerInventoryComponent->RequestTransferItemAutoDetailed(
-		FromInventory,
-		PlayerInventoryComponent,
-		FromSlotIndex,
-		Quantity,
-		Failure
-	);
-
-	Client_NotifyLootTransferResult(bSuccess, Failure);
-}
-
 void AEDPlayerController::HandleToggleInventory()
 {
-	ULocalPlayer* LocalPlayer = GetLocalPlayer();
-	if (!LocalPlayer)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: LocalPlayer가 없어 인벤토리 입력을 처리할 수 없습니다."));
-		return;
-	}
-
-	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
-	if (!UIManageSubsystem)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIManageSubsystem이 없어 인벤토리 입력을 처리할 수 없습니다."));
-		return;
-	}
-
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 인벤토리 토글 입력을 처리합니다."));
 
-	if (UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_Inventory))
+	if (!LootInteractionComponent)
 	{
-		UIManageSubsystem->ClosePanel(EDUIWidgetIds::Panel_Inventory);
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: LootInteractionComponent가 없어 인벤토리 입력을 처리할 수 없습니다."));
 		return;
 	}
 
-	if (!CanOpenLootPanel())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: 현재 루팅 가능한 대상이 없습니다."));
-		return;
-	}
-
-	OpenLootPanelForCurrentTarget();
+	LootInteractionComponent->HandleToggleLootPanel();
 }
 
 void AEDPlayerController::HandleUIBack()
@@ -374,74 +242,6 @@ void AEDPlayerController::HandleApplicationReactivated()
 	}
 }
 
-bool AEDPlayerController::CanOpenLootPanel() const
-{
-	return ResolveCurrentLootInventoryComponent() != nullptr;
-}
-
-UEDInventoryComponent* AEDPlayerController::ResolveCurrentLootInventoryComponent() const
-{
-	if (!CurrentLootTarget.IsValid())
-	{
-		return nullptr;
-	}
-
-	return UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(CurrentLootTarget.Get());
-}
-
-void AEDPlayerController::OpenLootPanelForCurrentTarget()
-{
-	ULocalPlayer* LocalPlayer = GetLocalPlayer();
-	if (!LocalPlayer)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: LocalPlayer가 없어 루팅 패널을 열 수 없습니다."));
-		return;
-	}
-
-	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
-	if (!UIManageSubsystem)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIManageSubsystem이 없어 루팅 패널을 열 수 없습니다."));
-		return;
-	}
-
-	UEDInventoryComponent* LootInventoryComponent = ResolveCurrentLootInventoryComponent();
-	if (!LootInventoryComponent)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: 현재 루팅 대상의 InventoryComponent를 찾지 못했습니다."));
-		return;
-	}
-
-	UCommonActivatableWidget* OpenedPanel = UIManageSubsystem->OpenPanel(EDUIWidgetIds::Panel_Inventory);
-	UEDInventoryPanelWidget* InventoryPanel = Cast<UEDInventoryPanelWidget>(OpenedPanel);
-	if (!InventoryPanel)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: InventoryPanel 캐스팅에 실패했습니다."));
-		return;
-	}
-
-	InventoryPanel->SetDisplayedInventoryComponent(LootInventoryComponent);
-}
-
-void AEDPlayerController::CloseLootPanelIfOpen()
-{
-	ULocalPlayer* LocalPlayer = GetLocalPlayer();
-	if (!LocalPlayer)
-	{
-		return;
-	}
-
-	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
-	if (!UIManageSubsystem)
-	{
-		return;
-	}
-
-	if (UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_Inventory))
-	{
-		UIManageSubsystem->ClosePanel(EDUIWidgetIds::Panel_Inventory);
-	}
-}
 
 void AEDPlayerController::CameraZoom(const FInputActionValue& value)
 {
