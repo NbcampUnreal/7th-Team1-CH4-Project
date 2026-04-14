@@ -277,6 +277,112 @@ void UEDInventoryComponent::BeginPlay()
     }
 
     RefreshCraftableRecipesCache();
+    
+    // ---
+    // 작성자 : 김동주
+    if (GetOwner() && GetOwner()->HasAuthority())
+    {
+        UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s bGiveDebugItemsOnBeginPlay=%s MaxSlots=%d"),
+            *GetOwner()->GetName(),
+            bGiveDebugItemsOnBeginPlay ? TEXT("true") : TEXT("false"),
+            MaxInventorySlots);
+    }
+
+    if (GetOwner() && GetOwner()->HasAuthority() && bGiveDebugItemsOnBeginPlay)
+    {
+        EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+
+        UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s ConsumableId=%s MaterialId=%s EquipId=%s"),
+            *GetOwner()->GetName(),
+            *DebugConsumableItemId.ToString(),
+            *DebugMaterialItemId.ToString(),
+            *DebugEquipItemId.ToString());
+
+        if (DebugConsumableItemId.IsValid())
+        {
+            const bool bSuccess = RequestAddItemAutoDetailed(DebugConsumableItemId, 5, Failure);
+            UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s AddConsumable success=%s failure=%d"),
+                *GetOwner()->GetName(),
+                bSuccess ? TEXT("true") : TEXT("false"),
+                static_cast<int32>(Failure));
+        }
+
+        Failure = EEDInventoryActionFailure::None;
+
+        if (DebugMaterialItemId.IsValid())
+        {
+            const bool bSuccess = RequestAddItemAutoDetailed(DebugMaterialItemId, 10, Failure);
+            UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s AddMaterial success=%s failure=%d"),
+                *GetOwner()->GetName(),
+                bSuccess ? TEXT("true") : TEXT("false"),
+                static_cast<int32>(Failure));
+        }
+
+        Failure = EEDInventoryActionFailure::None;
+
+        if (DebugEquipItemId.IsValid())
+        {
+            const bool bSuccess = RequestAddItemAutoDetailed(DebugEquipItemId, 1, Failure);
+            UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s AddEquip success=%s failure=%d"),
+                *GetOwner()->GetName(),
+                bSuccess ? TEXT("true") : TEXT("false"),
+                static_cast<int32>(Failure));
+        }
+    }
+    // ---
+}
+
+void UEDInventoryComponent::ServerRequestDropPartialFromSlot_Implementation(int32 FromSlotIndex, int32 Quantity)
+{
+    RequestDropPartialFromSlot(FromSlotIndex, Quantity);
+}
+
+bool UEDInventoryComponent::RequestDropPartialFromSlot(int32 FromSlotIndex, int32 Quantity)
+{
+    if (!GetOwner())
+    {
+        return false;
+    }
+
+    if (!GetOwner()->HasAuthority())
+    {
+        ServerRequestDropPartialFromSlot(FromSlotIndex, Quantity);
+        return true;
+    }
+
+    if (!InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        return false;
+    }
+
+    if (InventorySlots[FromSlotIndex].IsEmpty())
+    {
+        return false;
+    }
+
+    if (Quantity <= 0)
+    {
+        return false;
+    }
+
+    const int32 CurrentQuantity = InventorySlots[FromSlotIndex].Item.Quantity;
+    const int32 DropQuantity = FMath::Min(Quantity, CurrentQuantity);
+
+    FEDInventoryDropRequest DropRequest;
+    DropRequest.Item.ItemId = InventorySlots[FromSlotIndex].Item.ItemId;
+    DropRequest.Item.Quantity = DropQuantity;
+    DropRequest.SourceOwner = GetOwner();
+    DropRequest.Reason = EEDInventoryDropReason::UserRequested;
+
+    InventorySlots[FromSlotIndex].Item.Quantity -= DropQuantity;
+    if (InventorySlots[FromSlotIndex].Item.Quantity <= 0)
+    {
+        InventorySlots[FromSlotIndex].Item = FEDInventoryItemHandle();
+    }
+
+    OnInventoryDropRequested.Broadcast(DropRequest);
+    OnInventoryChanged.Broadcast();
+    return true;
 }
 
 void UEDInventoryComponent::RequestInitializeInventorySlots()
