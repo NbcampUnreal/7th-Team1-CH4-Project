@@ -114,7 +114,7 @@ private:
 	void TryMoveQuickSlotItem(int32 FromSlotIndex, int32 ToSlotIndex);
 
 	// 슬롯 일부 버리기 시도
-	void TryDropQuickSlotItemPartial(int32 FromSlotIndex, int32 DropQuantity);
+	void TryDropQuickSlotItemCount(int32 FromSlotIndex, int32 DropCount);
 
 	// 일부 버리기 팝업 열기
 	void OpenDropQuantityPopup(int32 FromSlotIndex, int32 MaxQuantity);

@@ -354,7 +354,7 @@ void UEDInventoryQuickBarWidget::HandleQuickSlotDroppedOutside(int32 FromSlotInd
 	// 수량이 1이면 바로 버린다.
 	if (SlotData.Item.Quantity <= 1)
 	{
-		TryDropQuickSlotItemPartial(FromSlotIndex, 1);
+		TryDropQuickSlotItemCount(FromSlotIndex, 1);
 		return;
 	}
 
@@ -386,7 +386,7 @@ void UEDInventoryQuickBarWidget::TryMoveQuickSlotItem(int32 FromSlotIndex, int32
 	ClearInventoryActionMessage();
 }
 
-void UEDInventoryQuickBarWidget::TryDropQuickSlotItemPartial(int32 FromSlotIndex, int32 DropQuantity)
+void UEDInventoryQuickBarWidget::TryDropQuickSlotItemCount(int32 FromSlotIndex, int32 DropCount)
 {
 	if (!InventoryComponent)
 	{
@@ -394,13 +394,13 @@ void UEDInventoryQuickBarWidget::TryDropQuickSlotItemPartial(int32 FromSlotIndex
 		return;
 	}
 
-	if (DropQuantity <= 0)
+	if (DropCount <= 0)
 	{
 		ShowInventoryFailure(EEDInventoryActionFailure::InvalidQuantity);
 		return;
 	}
 
-	const bool bSuccess = InventoryComponent->RequestDropPartialFromSlot(FromSlotIndex, DropQuantity);
+	const bool bSuccess = InventoryComponent->RequestDropCountFromSlot(FromSlotIndex, DropCount);
 	if (!bSuccess)
 	{
 		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
@@ -443,7 +443,7 @@ void UEDInventoryQuickBarWidget::HandleQuantityPopupConfirmed(int32 SelectedQuan
 		return;
 	}
 
-	TryDropQuickSlotItemPartial(PendingDropSlotIndex, SelectedQuantity);
+	TryDropQuickSlotItemCount(PendingDropSlotIndex, SelectedQuantity);
 	CloseDropQuantityPopup();
 }
 

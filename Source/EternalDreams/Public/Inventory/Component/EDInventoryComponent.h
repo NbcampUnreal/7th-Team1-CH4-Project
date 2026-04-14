@@ -121,12 +121,6 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RequestDropCountFromSlot(int32 FromSlotIndex, int32 DropCount);
     
-    // ---
-    // 작성자: 김동주
-    UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool RequestDropPartialFromSlot(int32 FromSlotIndex, int32 Quantity);
-    // ---
-    
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
     bool RequestEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType);
 
@@ -228,12 +222,6 @@ protected:
 
     UFUNCTION(Server, Reliable)
     void ServerRequestDropSingleFromSlot(int32 FromSlotIndex);
-    
-    // ---
-    // 작성자: 김동주
-    UFUNCTION(Server, Reliable)
-    void ServerRequestDropPartialFromSlot(int32 FromSlotIndex, int32 Quantity);
-    // ---
 
     UFUNCTION(Server, Reliable)
     void ServerRequestDropCountFromSlot(int32 FromSlotIndex, int32 DropCount);
