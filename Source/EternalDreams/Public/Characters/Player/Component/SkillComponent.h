@@ -16,8 +16,6 @@ class ETERNALDREAMS_API USkillComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this component's properties
-	USkillComponent();
 	
 	virtual void BeginPlay() override;
 
@@ -72,5 +70,8 @@ public:
 	UFUNCTION()
 	void ActivateSpaceSkill();
 	
-
+//Activate Skill By Tag
+protected:
+	void ActivateTag(FGameplayTag& Tag);
+	
 };

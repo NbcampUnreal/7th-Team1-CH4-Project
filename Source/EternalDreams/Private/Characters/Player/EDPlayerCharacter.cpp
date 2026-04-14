@@ -86,6 +86,30 @@ void AEDPlayerCharacter::BeginPlay()
 	
 }
 
+void AEDPlayerCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	
+	if (!bIsAnimMoving)
+	{
+		return;
+	}
+	
+	if (bIsForward)
+	{
+		MoveVector=GetActorForwardVector();
+	}
+	else if (bIsZ)
+	{
+		MoveVector=FVector(0,0,1.f);
+	}
+	else
+	{
+		MoveVector=FVector::ZeroVector;
+	}
+	MoveVector*=DashSpeed*DeltaSeconds;
+	AddActorWorldOffset(MoveVector, true, &Hit,ETeleportType::None);
+}
 
 
 // Called to bind functionality to input
@@ -138,6 +162,19 @@ void AEDPlayerCharacter::GiveDefaultAbilities()
 			AbilitySystemComponent->GiveAbility(AbilitySpec);
 		}
 	}
+}
+
+void AEDPlayerCharacter::StartAnimMove(float InDashSpeed, bool InbIsForward, bool InbIsZ)
+{
+	DashSpeed=InDashSpeed;
+	bIsForward=InbIsForward;
+	bIsZ=InbIsZ;
+	bIsAnimMoving=true;
+}
+
+void AEDPlayerCharacter::StopAnimMove()
+{
+	bIsAnimMoving=false;
 }
 
 float AEDPlayerCharacter::GetHealth() const

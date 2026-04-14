@@ -16,6 +16,13 @@ class ETERNALDREAMS_API UGA_Base : public UGameplayAbility
 	
 public:
 	UGA_Base();
+	virtual bool CanActivateAbility(
+		const FGameplayAbilitySpecHandle Handle, 
+		const FGameplayAbilityActorInfo* ActorInfo, 
+		const FGameplayTagContainer* SourceTags = nullptr, 
+		const FGameplayTagContainer* TargetTags = nullptr, 
+		OUT FGameplayTagContainer* OptionalRelevantTags = nullptr
+	) const override;
 	
 	virtual void ActivateAbility(
 	   const FGameplayAbilitySpecHandle Handle,

@@ -33,6 +33,7 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void Tick( float DeltaSeconds ) override;
 
 public:
 
@@ -105,5 +106,26 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
 	TObjectPtr<UEDInventoryComponent> InventoryComponent;
+	
+	//Get Animation Movement Input
+public:
+	UFUNCTION()
+	void StartAnimMove(float InDashSpeed, bool InbIsForward, bool InbIsZ );
+	UFUNCTION()
+	void StopAnimMove();
+	
+protected:
+	UPROPERTY()
+	bool bIsAnimMoving=false;
+	UPROPERTY()
+	float DashSpeed=0.f;
+	UPROPERTY()
+	bool bIsForward=false;
+	UPROPERTY()
+	bool bIsZ=false;
+	UPROPERTY()
+	FVector MoveVector=FVector::ZeroVector;
+	UPROPERTY()
+	FHitResult Hit;
 	
 };
