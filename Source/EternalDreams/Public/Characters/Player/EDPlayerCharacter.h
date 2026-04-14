@@ -65,7 +65,7 @@ protected:
 	TObjectPtr<UZoneDetectorComponent> ZoneDetector;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
-	TObjectPtr<USkillComponent> SkillComponent;
+	TObjectPtr<USkillComponent> PlayerSkillComponent;
 	
 	UPROPERTY()
 	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComp;

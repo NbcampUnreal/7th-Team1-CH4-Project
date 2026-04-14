@@ -32,7 +32,7 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 	PlayerAttributeSet = CreateDefaultSubobject<UEDPlayerAttributeSet>(TEXT("EDAttributeSet"));
 	
 	//Skill 컴포넌트 생성
-	SkillComponent=CreateDefaultSubobject<USkillComponent>(TEXT("SkillComponent"));
+	PlayerSkillComponent=CreateDefaultSubobject<USkillComponent>(TEXT("PlayerSkillComponent"));
 	
 	//IMC 컴포넌트 생성
 	IMCComponent=CreateDefaultSubobject<UIMCComponent>(TEXT("IMCComponent"));
@@ -126,14 +126,14 @@ void AEDPlayerCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 	
-	if (!IsValid(IMCComponent)||!IsValid(SkillComponent))
+	if (!IsValid(IMCComponent)||!IsValid(PlayerSkillComponent))
 	{
 		return;
 	}
-	IMCComponent->OnBasicAttackInput.BindUObject(SkillComponent,&USkillComponent::ActivateBasicAttack);
-	IMCComponent->OnQSkillInput.BindUObject(SkillComponent,&USkillComponent::ActivateQSkill);
-	IMCComponent->OnESkillInput.BindUObject(SkillComponent,&USkillComponent::ActivateESkill);
-	IMCComponent->OnSpaceSkillInput.BindUObject(SkillComponent,&USkillComponent::ActivateSpaceSkill);
+	IMCComponent->OnBasicAttackInput.BindUObject(PlayerSkillComponent,&USkillComponent::ActivateBasicAttack);
+	IMCComponent->OnQSkillInput.BindUObject(PlayerSkillComponent,&USkillComponent::ActivateQSkill);
+	IMCComponent->OnESkillInput.BindUObject(PlayerSkillComponent,&USkillComponent::ActivateESkill);
+	IMCComponent->OnSpaceSkillInput.BindUObject(PlayerSkillComponent,&USkillComponent::ActivateSpaceSkill);
 }
 
 
