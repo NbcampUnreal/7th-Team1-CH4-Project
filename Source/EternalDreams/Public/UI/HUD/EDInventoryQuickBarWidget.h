@@ -130,4 +130,10 @@ private:
 
 	// 수량 팝업으로 넘길 대기 중 슬롯
 	int32 PendingDropSlotIndex = INDEX_NONE;
+	
+	// 장비 슬롯 더블 클릭 처리
+	void HandleEquipmentSlotDoubleClicked(EEDEquippableType SlotType);
+
+	// 상의/하의 장비 해제 
+	void TryUnequipEquipmentSlot(EEDEquippableType SlotType);
 };

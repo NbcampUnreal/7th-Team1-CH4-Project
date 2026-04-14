@@ -3,6 +3,7 @@
 
 #include "Components/Border.h"
 #include "Components/TextBlock.h"
+#include "InputCoreTypes.h"
 
 void UEDEquipmentSlotWidget::SetEmptyState(const FText& InSlotTypeName)
 {
@@ -62,6 +63,30 @@ void UEDEquipmentSlotWidget::SetItemState(const FText& InSlotTypeName, const FTe
 		RarityAccent->SetVisibility(ESlateVisibility::Visible);
 		RarityAccent->SetBrushColor(GetRarityColor(InRarity));
 	}
+}
+
+void UEDEquipmentSlotWidget::SetSlotType(EEDEquippableType InSlotType)
+{
+	SlotType = InSlotType;
+}
+
+FReply UEDEquipmentSlotWidget::NativeOnMouseButtonDoubleClick(
+	const FGeometry& InGeometry,
+	const FPointerEvent& InMouseEvent)
+{
+	if (SlotType == EEDEquippableType::None)
+	{
+		return Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
+	}
+
+	// 좌클릭 더블 클릭 시 장비 슬롯 타입을 상위 위젯으로 전달
+	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
+	{
+		OnEquipmentSlotDoubleClicked.Broadcast(SlotType);
+		return FReply::Handled();
+	}
+
+	return Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
 }
 
 FLinearColor UEDEquipmentSlotWidget::GetRarityColor(EEDItemRarity InRarity) const

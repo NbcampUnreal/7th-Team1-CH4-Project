@@ -23,6 +23,27 @@ void UEDInventoryQuickBarWidget::NativeConstruct()
 	RefreshQuickSlots();
 	RefreshEquipmentSlots();
 	BindInventoryChanged();
+	
+	if (WeaponSlotWidget)
+	{
+		WeaponSlotWidget->SetSlotType(EEDEquippableType::Weapon);
+		WeaponSlotWidget->OnEquipmentSlotDoubleClicked.AddUObject(
+			this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked);
+	}
+
+	if (TopArmorSlotWidget)
+	{
+		TopArmorSlotWidget->SetSlotType(EEDEquippableType::TopArmor);
+		TopArmorSlotWidget->OnEquipmentSlotDoubleClicked.AddUObject(
+			this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked);
+	}
+
+	if (BottomArmorSlotWidget)
+	{
+		BottomArmorSlotWidget->SetSlotType(EEDEquippableType::BottomArmor);
+		BottomArmorSlotWidget->OnEquipmentSlotDoubleClicked.AddUObject(
+			this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked);
+	}
 
 	if (QuantityPopupWidget)
 	{
@@ -450,6 +471,58 @@ void UEDInventoryQuickBarWidget::HandleQuantityPopupConfirmed(int32 SelectedQuan
 void UEDInventoryQuickBarWidget::HandleQuantityPopupCanceled()
 {
 	CloseDropQuantityPopup();
+}
+
+void UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked(EEDEquippableType SlotType)
+{
+	TryUnequipEquipmentSlot(SlotType);
+}
+
+void UEDInventoryQuickBarWidget::TryUnequipEquipmentSlot(EEDEquippableType SlotType)
+{
+	if (!InventoryComponent)
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidInventory);
+		return;
+	}
+
+	switch (SlotType)
+	{
+	case EEDEquippableType::Weapon:
+		// 무기는 항상 장착된 상태여야 하므로 해제를 허용하지 않음
+		ShowInventoryFailure(EEDInventoryActionFailure::SlotConflict);
+		return;
+
+	case EEDEquippableType::TopArmor:
+		{
+			const bool bSuccess = InventoryComponent->RequestUnequipTopArmor();
+			if (!bSuccess)
+			{
+				// 인벤토리 공간이 없거나 해제할 장비가 없는 경우를 실패로 처리
+				ShowInventoryFailure(EEDInventoryActionFailure::NoSpace);
+				return;
+			}
+
+			ClearInventoryActionMessage();
+			return;
+		}
+
+	case EEDEquippableType::BottomArmor:
+		{
+			const bool bSuccess = InventoryComponent->RequestUnequipBottomArmor();
+			if (!bSuccess)
+			{
+				ShowInventoryFailure(EEDInventoryActionFailure::NoSpace);
+				return;
+			}
+
+			ClearInventoryActionMessage();
+			return;
+		}
+
+	default:
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
+	}
 }
 
 void UEDInventoryQuickBarWidget::HandleQuickSlotClicked(int32 InSlotIndex)
