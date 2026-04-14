@@ -28,6 +28,12 @@ void LoginHandler::Register(PacketHandler& handler)
         {
             HandleLogin(session, body);
         });
+
+    handler.Register(Protocol::C2S_REGISTER_REQ,
+        [this](std::shared_ptr<Session> session, const std::string& body)
+        {
+            HandleRegister(session, body);
+        });
 }
 
 void LoginHandler::HandleLogin(std::shared_ptr<Session> session, const std::string& jsonBody)
@@ -112,6 +118,78 @@ void LoginHandler::HandleLogin(std::shared_ptr<Session> session, const std::stri
         {"nickname", dbNickname}
     };
     session->Send(Packet::Build(Protocol::S2C_LOGIN_RES, res.dump()));
+}
+
+void LoginHandler::HandleRegister(std::shared_ptr<Session> session, const std::string& jsonBody)
+{
+    LOG_INFO("Session[%llu] REGISTER_REQ: %s", session->GetId(), jsonBody.c_str());
+
+    json req;
+    try
+    {
+        req = json::parse(jsonBody);
+    }
+    catch (...)
+    {
+        LOG_ERROR("Session[%llu] Invalid JSON in REGISTER_REQ", session->GetId());
+        json res = { {"result", "fail"}, {"reason", "invalid_json"} };
+        session->Send(Packet::Build(Protocol::S2C_REGISTER_RES, res.dump()));
+        return;
+    }
+
+    std::string loginId  = req.value("id", "");
+    std::string password = req.value("pw", "");
+    std::string nickname = req.value("nickname", "");
+
+    if (loginId.empty() || password.empty() || nickname.empty())
+    {
+        json res = { {"result", "fail"}, {"reason", "empty_field"} };
+        session->Send(Packet::Build(Protocol::S2C_REGISTER_RES, res.dump()));
+        return;
+    }
+
+    // ID 중복 체크
+    std::string escapedId = m_MySQL.Escape(loginId);
+    std::string checkSql = "SELECT id FROM accounts WHERE login_id = '" + escapedId + "'";
+    auto existing = m_MySQL.Query(checkSql);
+
+    if (!existing.empty())
+    {
+        LOG_WARN("Session[%llu] Register failed: duplicate id [%s]", session->GetId(), loginId.c_str());
+        json res = { {"result", "fail"}, {"reason", "duplicate_id"} };
+        session->Send(Packet::Build(Protocol::S2C_REGISTER_RES, res.dump()));
+        return;
+    }
+
+    // 닉네임 중복 체크
+    std::string escapedNick = m_MySQL.Escape(nickname);
+    std::string checkNickSql = "SELECT id FROM accounts WHERE nickname = '" + escapedNick + "'";
+    auto existingNick = m_MySQL.Query(checkNickSql);
+
+    if (!existingNick.empty())
+    {
+        LOG_WARN("Session[%llu] Register failed: duplicate nickname [%s]", session->GetId(), nickname.c_str());
+        json res = { {"result", "fail"}, {"reason", "duplicate_nickname"} };
+        session->Send(Packet::Build(Protocol::S2C_REGISTER_RES, res.dump()));
+        return;
+    }
+
+    // 계정 생성
+    std::string pwHash = SHA256Hash(password);
+    std::string insertSql = "INSERT INTO accounts (login_id, nickname, pw_hash) VALUES ('"
+        + escapedId + "', '" + escapedNick + "', '" + pwHash + "')";
+
+    if (!m_MySQL.Execute(insertSql))
+    {
+        LOG_ERROR("Session[%llu] Register failed: DB insert error", session->GetId());
+        json res = { {"result", "fail"}, {"reason", "db_error"} };
+        session->Send(Packet::Build(Protocol::S2C_REGISTER_RES, res.dump()));
+        return;
+    }
+
+    LOG_INFO("Session[%llu] Register OK: %s (%s)", session->GetId(), loginId.c_str(), nickname.c_str());
+    json res = { {"result", "ok"} };
+    session->Send(Packet::Build(Protocol::S2C_REGISTER_RES, res.dump()));
 }
 
 std::string LoginHandler::SHA256Hash(const std::string& input)

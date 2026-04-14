@@ -25,6 +25,7 @@ public:
 
 private:
     void HandleLogin(std::shared_ptr<Session> session, const std::string& jsonBody);
+    void HandleRegister(std::shared_ptr<Session> session, const std::string& jsonBody);
 
     // SHA256 hash (same as init.sql test data)
     static std::string SHA256Hash(const std::string& input);

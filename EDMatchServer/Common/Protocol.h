@@ -14,6 +14,8 @@ namespace Protocol
     // --- 클라이언트 <-> 서버 ---
     constexpr uint16_t C2S_LOGIN_REQ        = 0x0001;
     constexpr uint16_t S2C_LOGIN_RES        = 0x0002;
+    constexpr uint16_t C2S_REGISTER_REQ     = 0x0003;
+    constexpr uint16_t S2C_REGISTER_RES     = 0x0004;
 
     constexpr uint16_t C2S_MATCH_QUEUE_REQ  = 0x0010;
     constexpr uint16_t S2C_MATCH_QUEUE_RES  = 0x0011;

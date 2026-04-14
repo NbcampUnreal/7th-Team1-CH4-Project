@@ -93,10 +93,10 @@
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Header Files">
-      <UniqueIdentifier>{7EC04624-B076-32CA-8812-D4671331EC90}</UniqueIdentifier>
+      <UniqueIdentifier>{3B138948-0068-38E6-8EC9-9B6C7571353F}</UniqueIdentifier>
     </Filter>
     <Filter Include="Source Files">
-      <UniqueIdentifier>{A744D10E-A5A5-38BF-AC9B-B9E3A3974252}</UniqueIdentifier>
+      <UniqueIdentifier>{31DD4167-B2E6-3327-A16C-EAFFAB4D4CEE}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>
