@@ -23,6 +23,27 @@ void UEDInventoryQuickBarWidget::NativeConstruct()
 	RefreshQuickSlots();
 	RefreshEquipmentSlots();
 	BindInventoryChanged();
+	
+	if (WeaponSlotWidget)
+	{
+		WeaponSlotWidget->SetSlotType(EEDEquippableType::Weapon);
+		WeaponSlotWidget->OnEquipmentSlotClicked.AddUObject(this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotClicked);
+		WeaponSlotWidget->OnEquipmentSlotDoubleClicked.AddUObject(this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked);
+	}
+
+	if (TopArmorSlotWidget)
+	{
+		TopArmorSlotWidget->SetSlotType(EEDEquippableType::TopArmor);
+		TopArmorSlotWidget->OnEquipmentSlotClicked.AddUObject(this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotClicked);
+		TopArmorSlotWidget->OnEquipmentSlotDoubleClicked.AddUObject(this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked);
+	}
+
+	if (BottomArmorSlotWidget)
+	{
+		BottomArmorSlotWidget->SetSlotType(EEDEquippableType::BottomArmor);
+		BottomArmorSlotWidget->OnEquipmentSlotClicked.AddUObject(this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotClicked);
+		BottomArmorSlotWidget->OnEquipmentSlotDoubleClicked.AddUObject(this, &UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked);
+	}
 
 	if (QuantityPopupWidget)
 	{
@@ -214,6 +235,26 @@ void UEDInventoryQuickBarWidget::RefreshEquipmentSlots()
 
 void UEDInventoryQuickBarWidget::HandleInventoryChanged()
 {
+	UE_LOG(LogTemp, Warning, TEXT("QuickBar: HandleInventoryChanged Owner=%s"),
+	InventoryComponent && InventoryComponent->GetOwner()
+		? *InventoryComponent->GetOwner()->GetName()
+		: TEXT("None"));
+	
+	if (InventoryComponent)
+	{
+		for (int32 Index = 0; Index < InventoryComponent->InventorySlots.Num(); ++Index)
+		{
+			const FEDInventorySlotData& SlotData = InventoryComponent->InventorySlots[Index];
+			if (!SlotData.IsEmpty())
+			{
+				UE_LOG(LogTemp, Warning, TEXT("QuickBar: Player Slot=%d ItemId=%s Quantity=%d"),
+					Index,
+					*SlotData.Item.ItemId.ToString(),
+					SlotData.Item.Quantity);
+			}
+		}
+	}
+	
 	RefreshQuickSlots();
 	RefreshEquipmentSlots();
 }
@@ -334,7 +375,7 @@ void UEDInventoryQuickBarWidget::HandleQuickSlotDroppedOutside(int32 FromSlotInd
 	// 수량이 1이면 바로 버린다.
 	if (SlotData.Item.Quantity <= 1)
 	{
-		TryDropQuickSlotItemPartial(FromSlotIndex, 1);
+		TryDropQuickSlotItemCount(FromSlotIndex, 1);
 		return;
 	}
 
@@ -366,7 +407,7 @@ void UEDInventoryQuickBarWidget::TryMoveQuickSlotItem(int32 FromSlotIndex, int32
 	ClearInventoryActionMessage();
 }
 
-void UEDInventoryQuickBarWidget::TryDropQuickSlotItemPartial(int32 FromSlotIndex, int32 DropQuantity)
+void UEDInventoryQuickBarWidget::TryDropQuickSlotItemCount(int32 FromSlotIndex, int32 DropCount)
 {
 	if (!InventoryComponent)
 	{
@@ -374,13 +415,13 @@ void UEDInventoryQuickBarWidget::TryDropQuickSlotItemPartial(int32 FromSlotIndex
 		return;
 	}
 
-	if (DropQuantity <= 0)
+	if (DropCount <= 0)
 	{
 		ShowInventoryFailure(EEDInventoryActionFailure::InvalidQuantity);
 		return;
 	}
 
-	const bool bSuccess = InventoryComponent->RequestDropPartialFromSlot(FromSlotIndex, DropQuantity);
+	const bool bSuccess = InventoryComponent->RequestDropCountFromSlot(FromSlotIndex, DropCount);
 	if (!bSuccess)
 	{
 		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
@@ -423,7 +464,7 @@ void UEDInventoryQuickBarWidget::HandleQuantityPopupConfirmed(int32 SelectedQuan
 		return;
 	}
 
-	TryDropQuickSlotItemPartial(PendingDropSlotIndex, SelectedQuantity);
+	TryDropQuickSlotItemCount(PendingDropSlotIndex, SelectedQuantity);
 	CloseDropQuantityPopup();
 }
 
@@ -432,11 +473,91 @@ void UEDInventoryQuickBarWidget::HandleQuantityPopupCanceled()
 	CloseDropQuantityPopup();
 }
 
+void UEDInventoryQuickBarWidget::HandleEquipmentSlotDoubleClicked(EEDEquippableType SlotType)
+{
+	TryUnequipEquipmentSlot(SlotType);
+}
+
+void UEDInventoryQuickBarWidget::TryUnequipEquipmentSlot(EEDEquippableType SlotType)
+{
+	if (!InventoryComponent)
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidInventory);
+		return;
+	}
+
+	switch (SlotType)
+	{
+	case EEDEquippableType::Weapon:
+		// 무기는 항상 장착된 상태여야 하므로 해제를 허용하지 않음
+		ShowInventoryFailure(EEDInventoryActionFailure::SlotConflict);
+		return;
+
+	case EEDEquippableType::TopArmor:
+		{
+			const bool bSuccess = InventoryComponent->RequestUnequipTopArmor();
+			if (!bSuccess)
+			{
+				// 인벤토리 공간이 없거나 해제할 장비가 없는 경우를 실패로 처리
+				ShowInventoryFailure(EEDInventoryActionFailure::NoSpace);
+				return;
+			}
+
+			ClearInventoryActionMessage();
+			return;
+		}
+
+	case EEDEquippableType::BottomArmor:
+		{
+			const bool bSuccess = InventoryComponent->RequestUnequipBottomArmor();
+			if (!bSuccess)
+			{
+				ShowInventoryFailure(EEDInventoryActionFailure::NoSpace);
+				return;
+			}
+
+			ClearInventoryActionMessage();
+			return;
+		}
+
+	default:
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
+	}
+}
+
+void UEDInventoryQuickBarWidget::HandleEquipmentSlotClicked(EEDEquippableType SlotType)
+{
+	SelectedEquipmentSlotType = SlotType;
+	SelectedSlotIndex = INDEX_NONE;
+	RefreshSelectedSlotState();
+	RefreshEquipmentSelectedState();
+}
+
+void UEDInventoryQuickBarWidget::RefreshEquipmentSelectedState()
+{
+	if (WeaponSlotWidget)
+	{
+		WeaponSlotWidget->SetSelectedState(SelectedEquipmentSlotType == EEDEquippableType::Weapon);
+	}
+
+	if (TopArmorSlotWidget)
+	{
+		TopArmorSlotWidget->SetSelectedState(SelectedEquipmentSlotType == EEDEquippableType::TopArmor);
+	}
+
+	if (BottomArmorSlotWidget)
+	{
+		BottomArmorSlotWidget->SetSelectedState(SelectedEquipmentSlotType == EEDEquippableType::BottomArmor);
+	}
+}
+
 void UEDInventoryQuickBarWidget::HandleQuickSlotClicked(int32 InSlotIndex)
 {
 	// 좌클릭 - 슬롯 선택 처리
 	SelectedSlotIndex = InSlotIndex;
+	SelectedEquipmentSlotType = EEDEquippableType::None;
 	RefreshSelectedSlotState();
+	RefreshEquipmentSelectedState();
 }
 
 void UEDInventoryQuickBarWidget::HandleQuickSlotDoubleClicked(int32 InSlotIndex)

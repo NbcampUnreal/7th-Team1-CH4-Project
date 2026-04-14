@@ -1,10 +1,12 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/Panel/EDInventoryPanelWidget.h"
 
+#include "Characters/Player/Component/EDLootInteractionComponent.h"
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
 #include "Engine/AssetManager.h"
+#include "GameFramework/Pawn.h"
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Inventory/Core/EDInventoryTypes.h"
@@ -15,10 +17,17 @@ void UEDInventoryPanelWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	// 패널 생성 시 슬롯 위젯만 먼저 준비
-	// 실제 표시 대상 인벤토리는 SetDisplayedInventoryComponent로 외부에서 주입
+	// 루팅 패널 생성 시 슬롯 위젯을 먼저 준비
+	// 실제 표시 대상 인벤토리는 외부에서 SetDisplayedInventoryComponent로 주입
 	CreateInventorySlotWidgets();
+	InitializePlayerInventoryComponent();
 	RefreshInventorySlots();
+
+	if (UEDLootInteractionComponent* LootInteractionComponent = GetLootInteractionComponent())
+	{
+		LootInteractionComponent->OnLootTransferResult.AddUObject(
+			this, &UEDInventoryPanelWidget::HandleLootTransferResult);
+	}
 
 	if (TitleText)
 	{
@@ -31,13 +40,16 @@ void UEDInventoryPanelWidget::NativeConstruct()
 	}
 
 	UE_LOG(LogTemp, Log, TEXT("EDInventoryPanelWidget: 루팅 패널이 생성되었습니다."));
-	
-	InitializePlayerInventoryComponent();
 }
 
 void UEDInventoryPanelWidget::NativeDestruct()
 {
 	UnbindInventoryChanged();
+
+	if (UEDLootInteractionComponent* LootInteractionComponent = GetLootInteractionComponent())
+	{
+		LootInteractionComponent->OnLootTransferResult.RemoveAll(this);
+	}
 
 	Super::NativeDestruct();
 
@@ -46,7 +58,7 @@ void UEDInventoryPanelWidget::NativeDestruct()
 
 void UEDInventoryPanelWidget::SetDisplayedInventoryComponent(UEDInventoryComponent* InInventoryComponent)
 {
-	// 표시 대상이 같으면 다시 바인딩하지 않음
+	// 표시 대상이 같으면 다시 바인딩하지 않고 화면만 갱신
 	if (DisplayedInventoryComponent == InInventoryComponent)
 	{
 		RefreshInventorySlots();
@@ -58,7 +70,23 @@ void UEDInventoryPanelWidget::SetDisplayedInventoryComponent(UEDInventoryCompone
 	BindInventoryChanged();
 	RefreshInventorySlots();
 
-	UE_LOG(LogTemp, Log, TEXT("EDInventoryPanelWidget: 표시 대상 인벤토리를 갱신했습니다."));
+	// 외부 컨테이너 이름이 있으면 패널에 반영
+	if (ContainerNameText)
+	{
+		if (DisplayedInventoryComponent && DisplayedInventoryComponent->GetOwner())
+		{
+			ContainerNameText->SetText(FText::FromString(DisplayedInventoryComponent->GetOwner()->GetName()));
+		}
+		else
+		{
+			ContainerNameText->SetText(FText::FromString(TEXT("Container")));
+		}
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("EDInventoryPanelWidget: 표시 대상 인벤토리를 갱신했습니다. Owner=%s"),
+	       DisplayedInventoryComponent && DisplayedInventoryComponent->GetOwner()
+	       ? *DisplayedInventoryComponent->GetOwner()->GetName()
+	       : TEXT("None"));
 }
 
 void UEDInventoryPanelWidget::CreateInventorySlotWidgets()
@@ -99,13 +127,23 @@ void UEDInventoryPanelWidget::CreateInventorySlotWidgets()
 			GridSlot->SetHorizontalAlignment(HAlign_Fill);
 			GridSlot->SetVerticalAlignment(VAlign_Fill);
 		}
+
+		// 슬롯 인덱스를 부여하고 더블 클릭 이동 이벤트 연결
+		SlotWidget->SetSlotIndex(SlotIndex);
+		SlotWidget->OnSlotClicked.AddUObject(this, &UEDInventoryPanelWidget::HandleLootSlotClicked);
+		SlotWidget->OnSlotDoubleClicked.AddUObject(this, &UEDInventoryPanelWidget::HandleLootSlotDoubleClicked);
 	}
-	
-	UE_LOG(LogTemp, Warning, TEXT("LootPanel: Created SlotWidgets=%d"), InventorySlotWidgets.Num());
 }
 
 void UEDInventoryPanelWidget::RefreshInventorySlots()
 {
+	UE_LOG(LogTemp, Warning, TEXT("LootPanel: Refresh Start Owner=%s Slots=%d WidgetCount=%d"),
+	       DisplayedInventoryComponent && DisplayedInventoryComponent->GetOwner()
+	       ? *DisplayedInventoryComponent->GetOwner()->GetName()
+	       : TEXT("None"),
+	       DisplayedInventoryComponent ? DisplayedInventoryComponent->InventorySlots.Num() : -1,
+	       InventorySlotWidgets.Num());
+
 	// 표시 대상이 없으면 패널을 빈 슬롯 상태로 유지
 	for (int32 Index = 0; Index < InventorySlotWidgets.Num(); ++Index)
 	{
@@ -119,8 +157,20 @@ void UEDInventoryPanelWidget::RefreshInventorySlots()
 		if (!TryGetSlotData(Index, SlotData) || SlotData.IsEmpty())
 		{
 			SlotWidget->SetEmptyState();
+			UE_LOG(LogTemp, Warning, TEXT("LootPanel: Slot %d read failed"), Index);
 			continue;
 		}
+
+		if (SlotData.IsEmpty())
+		{
+			UE_LOG(LogTemp, Warning, TEXT("LootPanel: Slot %d empty"), Index);
+			continue;
+		}
+
+		UE_LOG(LogTemp, Warning, TEXT("LootPanel: Slot %d ItemId=%s Quantity=%d"),
+		       Index,
+		       *SlotData.Item.ItemId.ToString(),
+		       SlotData.Item.Quantity);
 
 		const FText ItemName = ResolveItemDisplayName(SlotData.Item.ItemId);
 		const EEDItemRarity ItemRarity = ResolveItemRarity(SlotData.Item.ItemId);
@@ -129,6 +179,7 @@ void UEDInventoryPanelWidget::RefreshInventorySlots()
 	}
 
 	RefreshCapacityText();
+	RefreshSelectedSlotState();
 }
 
 void UEDInventoryPanelWidget::RefreshCapacityText() const
@@ -154,7 +205,8 @@ void UEDInventoryPanelWidget::RefreshCapacityText() const
 	}
 
 	CapacityText->SetText(
-		FText::FromString(FString::Printf(TEXT("%d / %d"), UsedSlotCount, DisplayedInventoryComponent->MaxInventorySlots))
+		FText::FromString(FString::Printf(TEXT("%d / %d"), UsedSlotCount,
+		                                  DisplayedInventoryComponent->MaxInventorySlots))
 	);
 }
 
@@ -165,7 +217,8 @@ void UEDInventoryPanelWidget::BindInventoryChanged()
 		return;
 	}
 
-	DisplayedInventoryComponent->OnInventoryChanged.AddUniqueDynamic(this, &UEDInventoryPanelWidget::HandleInventoryChanged);
+	DisplayedInventoryComponent->OnInventoryChanged.AddUniqueDynamic(
+		this, &UEDInventoryPanelWidget::HandleInventoryChanged);
 }
 
 void UEDInventoryPanelWidget::UnbindInventoryChanged()
@@ -175,13 +228,85 @@ void UEDInventoryPanelWidget::UnbindInventoryChanged()
 		return;
 	}
 
-	DisplayedInventoryComponent->OnInventoryChanged.RemoveDynamic(this, &UEDInventoryPanelWidget::HandleInventoryChanged);
+	DisplayedInventoryComponent->OnInventoryChanged.RemoveDynamic(
+		this, &UEDInventoryPanelWidget::HandleInventoryChanged);
+}
+
+void UEDInventoryPanelWidget::InitializePlayerInventoryComponent()
+{
+	APawn* OwningPawn = GetOwningPlayerPawn();
+	if (!OwningPawn)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDInventoryPanelWidget: OwningPlayerPawn을 찾을 수 없습니다."));
+		return;
+	}
+
+	PlayerInventoryComponent = UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(OwningPawn);
+	if (!PlayerInventoryComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDInventoryPanelWidget: PlayerInventoryComponent를 찾을 수 없습니다."));
+	}
 }
 
 void UEDInventoryPanelWidget::HandleInventoryChanged()
 {
-	// 표시 중인 외부 인벤토리가 바뀌면 슬롯 전체를 다시 그림
+	// 외부 컨테이너 인벤토리 변경 시 슬롯 전체를 다시 그림
 	RefreshInventorySlots();
+}
+
+void UEDInventoryPanelWidget::HandleLootTransferResult(bool bSuccess, EEDInventoryActionFailure Failure)
+{
+	if (bSuccess || Failure == EEDInventoryActionFailure::None)
+	{
+		ClearInventoryActionMessage();
+		return;
+	}
+
+	ShowInventoryFailure(Failure);
+}
+
+void UEDInventoryPanelWidget::HandleLootSlotDoubleClicked(int32 InSlotIndex)
+{
+	// 더블 클릭 - 아이템을 플레이어 인벤토리로 옮김
+	UE_LOG(LogTemp, Warning, TEXT("LootPanel: DoubleClicked Slot=%d"), InSlotIndex);
+	TryTransferItemToPlayerInventory(InSlotIndex);
+}
+
+void UEDInventoryPanelWidget::TryTransferItemToPlayerInventory(int32 InSlotIndex)
+{
+	if (!DisplayedInventoryComponent)
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidInventory);
+		return;
+	}
+
+	FEDInventorySlotData SlotData;
+	if (!TryGetSlotData(InSlotIndex, SlotData))
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
+		return;
+	}
+
+	if (SlotData.IsEmpty())
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::EmptySlot);
+		return;
+	}
+
+	UEDLootInteractionComponent* LootInteractionComponent = GetLootInteractionComponent();
+	if (!LootInteractionComponent)
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidInventory);
+		return;
+	}
+
+	ClearInventoryActionMessage();
+
+	LootInteractionComponent->RequestLootTransfer(
+		DisplayedInventoryComponent,
+		InSlotIndex,
+		SlotData.Item.Quantity
+	);
 }
 
 FText UEDInventoryPanelWidget::ResolveItemDisplayName(const FPrimaryAssetId& ItemId) const
@@ -247,26 +372,52 @@ bool UEDInventoryPanelWidget::TryGetSlotData(int32 InSlotIndex, FEDInventorySlot
 	return true;
 }
 
-void UEDInventoryPanelWidget::InitializePlayerInventoryComponent()
+UEDLootInteractionComponent* UEDInventoryPanelWidget::GetLootInteractionComponent() const
 {
-	APawn* OwningPawn = GetOwningPlayerPawn();
-	if (!OwningPawn)
+	APlayerController* OwningPlayer = GetOwningPlayer();
+	if (!OwningPlayer)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDInventoryPanelWidget: OwningPlayerPawn을 찾을 수 없습니다."));
+		return nullptr;
+	}
+
+	return OwningPlayer->FindComponentByClass<UEDLootInteractionComponent>();
+}
+
+void UEDInventoryPanelWidget::HandleLootSlotClicked(int32 InSlotIndex)
+{
+	SelectedSlotIndex = InSlotIndex;
+	RefreshSelectedSlotState();
+}
+
+void UEDInventoryPanelWidget::RefreshSelectedSlotState()
+{
+	for (int32 Index = 0; Index < InventorySlotWidgets.Num(); ++Index)
+	{
+		if (InventorySlotWidgets[Index])
+		{
+			InventorySlotWidgets[Index]->SetSelectedState(Index == SelectedSlotIndex);
+		}
+	}
+}
+
+void UEDInventoryPanelWidget::ShowInventoryFailure(EEDInventoryActionFailure Failure) const
+{
+	if (!ActionResultText)
+	{
 		return;
 	}
 
-	PlayerInventoryComponent = UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(OwningPawn);
-	if (!PlayerInventoryComponent)
+	ActionResultText->SetText(UEDInventoryBlueprintLibrary::GetInventoryActionFailureText(Failure));
+	ActionResultText->SetVisibility(ESlateVisibility::Visible);
+}
+
+void UEDInventoryPanelWidget::ClearInventoryActionMessage() const
+{
+	if (!ActionResultText)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDInventoryPanelWidget: PlayerInventoryComponent를 찾을 수 없습니다."));
+		return;
 	}
-}
 
-void UEDInventoryPanelWidget::HandleLootSlotDoubleClicked(int32 InSlotIndex)
-{
-}
-
-void UEDInventoryPanelWidget::TryTransferItemToPlayerInventory(int32 InSlotIndex)
-{
+	ActionResultText->SetText(FText::GetEmpty());
+	ActionResultText->SetVisibility(ESlateVisibility::Collapsed);
 }

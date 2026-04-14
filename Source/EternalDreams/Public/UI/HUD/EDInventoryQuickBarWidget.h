@@ -114,7 +114,7 @@ private:
 	void TryMoveQuickSlotItem(int32 FromSlotIndex, int32 ToSlotIndex);
 
 	// 슬롯 일부 버리기 시도
-	void TryDropQuickSlotItemPartial(int32 FromSlotIndex, int32 DropQuantity);
+	void TryDropQuickSlotItemCount(int32 FromSlotIndex, int32 DropCount);
 
 	// 일부 버리기 팝업 열기
 	void OpenDropQuantityPopup(int32 FromSlotIndex, int32 MaxQuantity);
@@ -130,4 +130,19 @@ private:
 
 	// 수량 팝업으로 넘길 대기 중 슬롯
 	int32 PendingDropSlotIndex = INDEX_NONE;
+	
+	// 장비 슬롯 더블 클릭 처리
+	void HandleEquipmentSlotDoubleClicked(EEDEquippableType SlotType);
+
+	// 상의/하의 장비 해제 
+	void TryUnequipEquipmentSlot(EEDEquippableType SlotType);
+	
+	// 현재 선택된 장비 슬롯 타입
+	EEDEquippableType SelectedEquipmentSlotType = EEDEquippableType::None;
+
+	// 장비 슬롯 좌클릭 처리
+	void HandleEquipmentSlotClicked(EEDEquippableType SlotType);
+
+	// 장비 슬롯 선택 상태 갱신
+	void RefreshEquipmentSelectedState();
 };

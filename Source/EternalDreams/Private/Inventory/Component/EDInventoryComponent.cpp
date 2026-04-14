@@ -332,59 +332,6 @@ void UEDInventoryComponent::BeginPlay()
     // ---
 }
 
-void UEDInventoryComponent::ServerRequestDropPartialFromSlot_Implementation(int32 FromSlotIndex, int32 Quantity)
-{
-    RequestDropPartialFromSlot(FromSlotIndex, Quantity);
-}
-
-bool UEDInventoryComponent::RequestDropPartialFromSlot(int32 FromSlotIndex, int32 Quantity)
-{
-    if (!GetOwner())
-    {
-        return false;
-    }
-
-    if (!GetOwner()->HasAuthority())
-    {
-        ServerRequestDropPartialFromSlot(FromSlotIndex, Quantity);
-        return true;
-    }
-
-    if (!InventorySlots.IsValidIndex(FromSlotIndex))
-    {
-        return false;
-    }
-
-    if (InventorySlots[FromSlotIndex].IsEmpty())
-    {
-        return false;
-    }
-
-    if (Quantity <= 0)
-    {
-        return false;
-    }
-
-    const int32 CurrentQuantity = InventorySlots[FromSlotIndex].Item.Quantity;
-    const int32 DropQuantity = FMath::Min(Quantity, CurrentQuantity);
-
-    FEDInventoryDropRequest DropRequest;
-    DropRequest.Item.ItemId = InventorySlots[FromSlotIndex].Item.ItemId;
-    DropRequest.Item.Quantity = DropQuantity;
-    DropRequest.SourceOwner = GetOwner();
-    DropRequest.Reason = EEDInventoryDropReason::UserRequested;
-
-    InventorySlots[FromSlotIndex].Item.Quantity -= DropQuantity;
-    if (InventorySlots[FromSlotIndex].Item.Quantity <= 0)
-    {
-        InventorySlots[FromSlotIndex].Item = FEDInventoryItemHandle();
-    }
-
-    OnInventoryDropRequested.Broadcast(DropRequest);
-    OnInventoryChanged.Broadcast();
-    return true;
-}
-
 void UEDInventoryComponent::RequestInitializeInventorySlots()
 {
     if (!GetOwner())
@@ -528,6 +475,12 @@ bool UEDInventoryComponent::RequestTransferItemAutoDetailed(UEDInventoryComponen
         OutFailure = EEDInventoryActionFailure::InvalidInventory;
         return false;
     }
+
+    UE_LOG(LogTemp, Warning, TEXT("TransferDebug: Owner=%s HasAuthority=%s FromSlot=%d Quantity=%d"),
+    GetOwner() ? *GetOwner()->GetName() : TEXT("None"),
+    GetOwner() && GetOwner()->HasAuthority() ? TEXT("true") : TEXT("false"),
+    FromSlotIndex,
+    Quantity);
 
     if (!GetOwner()->HasAuthority())
     {
@@ -1345,6 +1298,9 @@ void UEDInventoryComponent::ServerRequestInitializeRandomLoot_Implementation(int
 
 void UEDInventoryComponent::OnRep_InventorySlots()
 {
+    UE_LOG(LogTemp, Warning, TEXT("InventoryRep: Owner=%s Slots=%d"),
+        GetOwner() ? *GetOwner()->GetName() : TEXT("None"),
+        InventorySlots.Num());
     OnInventoryChanged.Broadcast();
 }
 
