@@ -72,5 +72,4 @@ private:
 	TObjectPtr<UEDBaseAttributeSet> BaseAttributeSet;
 	
 	FVector OriginLocation;
-	TSharedPtr<FStreamableHandle> VisualLoadHandle;
 };
