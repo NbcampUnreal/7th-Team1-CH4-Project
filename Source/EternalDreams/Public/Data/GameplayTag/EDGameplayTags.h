@@ -65,6 +65,19 @@ public:
 	//Data
 	FGameplayTag Data_Damage;
 	FGameplayTag Data_StaminaCost;
+	
+	//Inventory-Item
+	FGameplayTag Item_Weapon_Sword;
+	FGameplayTag Item_Weapon_Hammer;
+	FGameplayTag Item_Weapon_Bow;
+	FGameplayTag Item_Weapon_Staff;
+	
+	FGameplayTag Item_Armor_TopArmor;
+	FGameplayTag Item_Armor_BottomArmor;
+	
+	FGameplayTag Item_Consumable;
+	FGameplayTag Item_Ingredient_Base;
+	FGameplayTag Item_Ingredient_Special;
 
 private:
 	// Singleton 인스턴스

@@ -3,12 +3,14 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Engine/AssetManager.h"
+#include "EngineUtils.h"
 #include "GameFramework/Actor.h"
 #include "Inventory/GAS/EDInventoryGASBridge.h"
 #include "Inventory/System/EDInventoryCraftService.h"
 #include "Inventory/System/EDInventoryEquipmentService.h"
 #include "Inventory/System/EDInventoryTransferService.h"
 #include "Inventory/System/EDInventoryValidationService.h"
+#include "Inventory/World/EDDroppedItemActor.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "Item/Data/EDItemDataRows.h"
 #include "Net/UnrealNetwork.h"
@@ -278,6 +280,8 @@ UEDInventoryComponent::UEDInventoryComponent()
     PrimaryComponentTick.bCanEverTick = false;
     SetIsReplicatedByDefault(true);
 
+    DroppedItemActorClass = AEDDroppedItemActor::StaticClass();
+
     WeaponSlot.SlotType = EEDEquippableType::Weapon;
     TopArmorSlot.SlotType = EEDEquippableType::TopArmor;
     BottomArmorSlot.SlotType = EEDEquippableType::BottomArmor;
@@ -288,6 +292,7 @@ void UEDInventoryComponent::BeginPlay()
     Super::BeginPlay();
 
     OnInventoryChanged.AddUniqueDynamic(this, &UEDInventoryComponent::HandleInventoryChangedInternal);
+    OnInventoryDropRequested.AddUniqueDynamic(this, &UEDInventoryComponent::HandleDropRequestSpawnWorldItem);
 
     if (GetOwner() && GetOwner()->HasAuthority() && InventorySlots.Num() != MaxInventorySlots)
     {
@@ -1420,6 +1425,72 @@ void UEDInventoryComponent::HandleInventoryChangedInternal()
     {
         RefreshCraftableRecipesCache();
     }
+}
+
+void UEDInventoryComponent::HandleDropRequestSpawnWorldItem(const FEDInventoryDropRequest& DropRequest)
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority() || !bSpawnDroppedItemActor)
+    {
+        return;
+    }
+
+    if (!DropRequest.Item.IsValid())
+    {
+        return;
+    }
+
+    const FVector SpawnOrigin = GetOwner()->GetActorLocation() + DroppedItemSpawnOffset;
+    TrySpawnOrMergeDroppedItem(DropRequest.Item, SpawnOrigin);
+}
+
+bool UEDInventoryComponent::TrySpawnOrMergeDroppedItem(const FEDInventoryItemHandle& ItemHandle, const FVector& SpawnOrigin)
+{
+    if (!GetWorld() || !ItemHandle.IsValid())
+    {
+        return false;
+    }
+
+    if (DroppedItemMergeRadius > 0.0f)
+    {
+        const float MergeDistanceSq = FMath::Square(DroppedItemMergeRadius);
+        for (TActorIterator<AEDDroppedItemActor> It(GetWorld()); It; ++It)
+        {
+            AEDDroppedItemActor* ExistingDrop = *It;
+            if (!ExistingDrop)
+            {
+                continue;
+            }
+
+            if (FVector::DistSquared(ExistingDrop->GetActorLocation(), SpawnOrigin) > MergeDistanceSq)
+            {
+                continue;
+            }
+
+            if (ExistingDrop->TryMergeDroppedItem(ItemHandle.ItemId, ItemHandle.Quantity))
+            {
+                return true;
+            }
+        }
+    }
+
+    UClass* SpawnClass = DroppedItemActorClass ? DroppedItemActorClass.Get() : AEDDroppedItemActor::StaticClass();
+    if (!SpawnClass)
+    {
+        return false;
+    }
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Owner = GetOwner();
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+    AEDDroppedItemActor* NewDropActor = GetWorld()->SpawnActor<AEDDroppedItemActor>(SpawnClass, SpawnOrigin, FRotator::ZeroRotator, SpawnParams);
+    if (!NewDropActor)
+    {
+        return false;
+    }
+
+    NewDropActor->InitializeDroppedItem(ItemHandle.ItemId, ItemHandle.Quantity);
+    return true;
 }
 
 void UEDInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

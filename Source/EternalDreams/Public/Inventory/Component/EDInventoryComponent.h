@@ -7,6 +7,7 @@
 #include "EDInventoryComponent.generated.h"
 
 class UDataTable;
+class AEDDroppedItemActor;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEDInventoryChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEDInventoryDropRequested, const FEDInventoryDropRequest&, DropRequest);
@@ -93,6 +94,18 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "Inventory")
     FOnEDInventoryDropRequested OnInventoryDropRequested;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Drop")
+    bool bSpawnDroppedItemActor = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Drop")
+    TSubclassOf<AEDDroppedItemActor> DroppedItemActorClass;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Drop")
+    FVector DroppedItemSpawnOffset = FVector(100.0f, 0.0f, 30.0f);
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Drop", meta = (ClampMin = "0.0"))
+    float DroppedItemMergeRadius = 150.0f;
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     void RequestInitializeInventorySlots();
@@ -267,6 +280,11 @@ protected:
 
     UFUNCTION()
     void HandleInventoryChangedInternal();
+
+    UFUNCTION()
+    void HandleDropRequestSpawnWorldItem(const FEDInventoryDropRequest& DropRequest);
+
+    bool TrySpawnOrMergeDroppedItem(const FEDInventoryItemHandle& ItemHandle, const FVector& SpawnOrigin);
 
     FEDEquipmentSlotData* GetEquipmentSlotData(EEDEquippableType SlotType);
     FActiveGameplayEffectHandle* GetEquipmentEffectHandle(EEDEquippableType SlotType);
