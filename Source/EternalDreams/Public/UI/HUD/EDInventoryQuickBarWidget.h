@@ -81,9 +81,6 @@ private:
 
 	UFUNCTION()
 	void HandleInventoryChanged();
-
-	FText ResolveItemDisplayName(const FPrimaryAssetId& ItemId) const;
-	EEDItemRarity ResolveItemRarity(const FPrimaryAssetId& ItemId) const;
 	
 	// 현재 선택된 퀵바 슬롯 인덱스
 	int32 SelectedSlotIndex = INDEX_NONE;

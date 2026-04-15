@@ -284,53 +284,6 @@ void UEDInventoryQuickBarWidget::HandleInventoryChanged()
 	);
 }
 
-FText UEDInventoryQuickBarWidget::ResolveItemDisplayName(const FPrimaryAssetId& ItemId) const
-{
-	if (!ItemId.IsValid())
-	{
-		return FText::GetEmpty();
-	}
-
-	UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(ItemId);
-	if (!ItemObject)
-	{
-		const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(ItemId);
-		if (AssetPath.IsValid())
-		{
-			ItemObject = AssetPath.TryLoad();
-		}
-	}
-
-	const UEDInventoryItemDataAsset* ItemData = Cast<UEDInventoryItemDataAsset>(ItemObject);
-	if (ItemData && !ItemData->DisplayName.IsEmpty())
-	{
-		return ItemData->DisplayName;
-	}
-
-	return FText::FromName(ItemId.PrimaryAssetName);
-}
-
-EEDItemRarity UEDInventoryQuickBarWidget::ResolveItemRarity(const FPrimaryAssetId& ItemId) const
-{
-	if (!ItemId.IsValid())
-	{
-		return EEDItemRarity::Normal;
-	}
-
-	UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(ItemId);
-	if (!ItemObject)
-	{
-		const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(ItemId);
-		if (AssetPath.IsValid())
-		{
-			ItemObject = AssetPath.TryLoad();
-		}
-	}
-
-	const UEDInventoryItemDataAsset* ItemData = Cast<UEDInventoryItemDataAsset>(ItemObject);
-	return ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
-}
-
 bool UEDInventoryQuickBarWidget::TryGetQuickSlotData(int32 QuickIndex, FEDInventorySlotData& OutSlotData) const
 {
 	if (!InventoryComponent)
