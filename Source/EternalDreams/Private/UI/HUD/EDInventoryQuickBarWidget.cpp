@@ -73,6 +73,9 @@ void UEDInventoryQuickBarWidget::NativeConstruct()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("QuickBar: QuantityPopupWidget이 설정되지 않았습니다."));
 	}
+
+	// 위젯 생성 전에 인벤토리 복제가 끝난 경우를 위해 초기 1회 강제 갱신을 요청
+	HandleInventoryChanged();
 }
 
 void UEDInventoryQuickBarWidget::NativeDestruct()
@@ -196,6 +199,7 @@ void UEDInventoryQuickBarWidget::RefreshQuickSlots()
 		FEDInventorySlotData SlotData;
 		if (!TryGetQuickSlotData(Index, SlotData) || SlotData.IsEmpty())
 		{
+			SlotWidget->SetEmptyState();
 			continue;
 		}
 		// 기존 두번 호출하던 함수를 하나로 통합하고 비동기로 변경
