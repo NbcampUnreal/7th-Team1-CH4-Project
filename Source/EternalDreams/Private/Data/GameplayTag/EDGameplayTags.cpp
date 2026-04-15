@@ -138,5 +138,45 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("Data.StaminaCost"),
 		FString("SetByCaller용 스태미너 코스트 Tag")
 	);
+	
+	//Inventory-Item
+	Tags.Item_Weapon_Sword = Manager.AddNativeGameplayTag(
+		FName("Item.Weapon.Sword"),
+		FString("무기 - 검")
+	);
+	Tags.Item_Weapon_Hammer = Manager.AddNativeGameplayTag(
+		FName("Item.Weapon.Hammer"),
+		FString("무기 - 망치")
+	);
+	Tags.Item_Weapon_Bow = Manager.AddNativeGameplayTag(
+		FName("Item.Weapon.Bow"),
+		FString("무기 - 활")
+	);
+	Tags.Item_Weapon_Staff = Manager.AddNativeGameplayTag(
+		FName("Item.Weapon.Staff"),
+		FString("무기 - 지팡이")
+	);
+	
+	Tags.Item_Armor_TopArmor = Manager.AddNativeGameplayTag(
+		FName("Item.Armor.TopArmor"),
+		FString("방어구 - 상의")
+	);
+	Tags.Item_Armor_BottomArmor = Manager.AddNativeGameplayTag(
+		FName("Item.Armor.BottomArmor"),
+		FString("방어구 - 하의")
+	);
+	
+	Tags.Item_Consumable = Manager.AddNativeGameplayTag(
+		FName("Item.Consumable"),
+		FString("소비 아이템")
+	);
+	Tags.Item_Ingredient_Base = Manager.AddNativeGameplayTag(
+		FName("Item.Ingredient.Base"),
+		FString("재료 아이템 - 기본")
+	);
+	Tags.Item_Ingredient_Special = Manager.AddNativeGameplayTag(
+		FName("Item.Ingredient.Special"),
+		FString("재료 아이템 - 특수")
+	);
 }
 

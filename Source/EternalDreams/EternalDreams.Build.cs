@@ -17,13 +17,17 @@ public class EternalDreams : ModuleRules
 			"GameplayAbilities", 
 		});
 
-		PrivateDependencyModuleNames.AddRange(new string[] 
+		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"GameplayTags", "GameplayTasks", "Slate", "SlateCore",
+			"GameplayTags", "GameplayTasks", "Slate", "SlateCore", 
+      "MoviePlayer",
 		});
 		
 		PublicIncludePaths.AddRange(new string[] { "EternalDreams" });
 
+		// Slate UI — 로딩 화면 위젯에서 사용
+		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+		
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
 
