@@ -9,6 +9,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/AssetManager.h"
+#include "AIController.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
 
 // Sets default values
 AEDMonsterBase::AEDMonsterBase()
@@ -41,8 +43,11 @@ void AEDMonsterBase::BeginPlay()
 	
 	if (IsValid(DataAsset) == false)
 		return;
+	LoadVisuals(DataAsset);
+	//InitializeFromDataAsset(DataAsset);
 	
-	InitializeFromDataAsset(DataAsset);
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetHealthAttribute())
+	.AddUObject(this, &AEDMonsterBase::OnHealthChanged);
 	
 	if (HasAuthority() == false)
 		return;
@@ -91,6 +96,7 @@ void AEDMonsterBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>&
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AEDMonsterBase, MonsterState);
+	DOREPLIFETIME(AEDMonsterBase, DataAsset);
 }
 
 void AEDMonsterBase::OnRep_MonsterState()
@@ -102,6 +108,16 @@ void AEDMonsterBase::OnRep_MonsterState()
 		return;
 	
 	Anim->SetMonsterState(MonsterState);
+}
+
+void AEDMonsterBase::OnRep_DataAsset()
+{
+	if (IsValid(DataAsset) == false)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] OnRep_DataAsset: DataAsset null"), *GetName());
+		return;
+	}
+	LoadVisuals(DataAsset);
 }
 
 void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)
@@ -146,6 +162,40 @@ void AEDMonsterBase::OnVisualsLoaded()
 	GetMesh()->SetAnimInstanceClass(AnimInstance);
 	
 	UE_LOG(LogTemp, Warning, TEXT("[%s] Visuals 로드 완료"), *GetName());
+}
+
+void AEDMonsterBase::HandleDeath()
+{
+	// Dead 상태로 전환 (OnRep_MonsterState로 클라이언트에 복제)
+	MonsterState = EMonsterState::Dead;
+	// AIController BT 중단 및 Focus 해제
+	AAIController* AIController = Cast<AAIController>(GetController());
+	if (IsValid(AIController) == false)
+		return;
+	if (IsValid(AIController->BrainComponent) == false)
+		return;
+	// 현재 Target 포커스 해제
+	AIController->ClearFocus(EAIFocusPriority::Gameplay);
+	// 이동 중지
+	AIController->StopMovement();
+	// BehaviorTree 중단
+	AIController->BrainComponent->StopLogic(TEXT("Dead"));
+	UE_LOG(LogTemp, Warning, TEXT("[%s] HandleDeath - 몬스터 사망"), *GetName());
+	// GA_Death 어빌리티 발동
+	FGameplayTagContainer DeathTag;
+	DeathTag.AddTag(FEDGameplayTags::Get().State_Dead);
+	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
+	
+}
+
+void AEDMonsterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
+{
+	// 서버에서만 처리하고 이미 죽었으면 호출 X
+	if (HasAuthority() == false || MonsterState == EMonsterState::Dead)
+		return;
+	
+	if (Data.NewValue <= 0.f)
+		HandleDeath();
 }
 
 

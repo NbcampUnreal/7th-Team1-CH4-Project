@@ -13,6 +13,7 @@ class AEDCursorActor;
 class UWidgetComponent;
 class UInputMappingContext;
 class UInputAction;
+class UEDLootInteractionComponent;
 
 DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
 
@@ -39,8 +40,6 @@ protected:
 		// 작성자 : 김동주
     	// Enhanced Input 액션을 실제 처리 함수에 바인딩
 	virtual void SetupInputComponent() override;
-
-
 
 public:
 #pragma region Input UI
@@ -111,6 +110,9 @@ protected:
 	TSubclassOf<AEDCameraActor> CameraActorClass;
 	UPROPERTY()
 	TObjectPtr<AEDCameraActor> CameraActor;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UEDLootInteractionComponent> LootInteractionComponent;
 #pragma endregion
 private:
 #pragma region UI 
@@ -131,5 +133,4 @@ private:
 
 	FGenericTeamId CachedTeamId;
 	
-
 };

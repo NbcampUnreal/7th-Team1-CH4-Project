@@ -7,6 +7,7 @@
 #include "EDInventoryItemDataAsset.generated.h"
 
 class UGameplayEffect;
+class UTexture2D;
 
 UCLASS(BlueprintType)
 class ETERNALDREAMS_API UEDInventoryItemDataAsset : public UPrimaryDataAsset
@@ -19,6 +20,9 @@ public:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
     FText Description;
+    
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+    TObjectPtr<UTexture2D> IconTexture = nullptr;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
     EEDInventoryItemType ItemType = EEDInventoryItemType::Ingredient;
@@ -35,8 +39,11 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "0"))
     int32 Price = 0;
 
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Tags")
     FGameplayTagContainer ItemTags;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Tags")
+    FGameplayTagContainer ItemSpecialTags;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Consumable")
     TSubclassOf<UGameplayEffect> ConsumableEffectClass;

@@ -25,4 +25,16 @@ public:
 
     UFUNCTION(BlueprintPure, Category = "Inventory|Failure")
     static FText GetInventoryActionFailureText(EEDInventoryActionFailure Failure);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Dictionary")
+    static void GetItemDictionaryByTags(const FGameplayTagContainer& FilterTags, TArray<FEDItemDictionaryEntry>& OutItems, EEDItemDictionarySortOption SortOption = EEDItemDictionarySortOption::ByRarity, bool bDescending = false);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Craft|Viewer")
+    static void GetCraftRecipeOptionsForItem(UEDInventoryComponent* InventoryComponent, FPrimaryAssetId ResultItemId, TArray<FEDCraftableRecipeEntry>& OutRecipes);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Craft|Viewer")
+    static void BuildCraftTreeFlat(UEDInventoryComponent* InventoryComponent, FPrimaryAssetId ResultItemId, TArray<FEDCraftTreeFlatNode>& OutNodes, bool& bOutCyclePruned, int32 MaxDepth = 8);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Craft|Viewer")
+    static void BuildCraftTreePaths(UEDInventoryComponent* InventoryComponent, FPrimaryAssetId ResultItemId, TArray<FEDCraftTreePath>& OutPaths, bool& bOutCyclePruned, int32 MaxDepth = 8);
 };

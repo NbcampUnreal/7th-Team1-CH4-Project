@@ -318,6 +318,45 @@ bool IsRecipeRowValid_Craft(const FEDCraftingRecipeRow& RecipeRow)
     return true;
 }
 
+void GetRecipeTables_Craft(const UEDInventoryComponent* InventoryComponent, TArray<UDataTable*>& OutTables)
+{
+    OutTables.Reset();
+
+    if (!InventoryComponent)
+    {
+        return;
+    }
+
+    InventoryComponent->GetAllCraftingRecipeTables(OutTables);
+}
+
+const FEDCraftingRecipeRow* FindRecipeRowById_Craft(const UEDInventoryComponent* InventoryComponent, FName RecipeRowId)
+{
+    if (!InventoryComponent || RecipeRowId.IsNone())
+    {
+        return nullptr;
+    }
+
+    TArray<UDataTable*> RecipeTables;
+    GetRecipeTables_Craft(InventoryComponent, RecipeTables);
+
+    for (UDataTable* RecipeTable : RecipeTables)
+    {
+        if (!RecipeTable)
+        {
+            continue;
+        }
+
+        const FEDCraftingRecipeRow* RecipeRow = RecipeTable->FindRow<FEDCraftingRecipeRow>(RecipeRowId, TEXT("FindRecipeRowById_Craft"));
+        if (RecipeRow)
+        {
+            return RecipeRow;
+        }
+    }
+
+    return nullptr;
+}
+
 int32 CompareCraftableEntry(const FEDCraftableRecipeEntry& A, const FEDCraftableRecipeEntry& B, EEDCraftableRecipeSortOption SortOption)
 {
     auto CompareByName = [](const FText& Left, const FText& Right) -> int32
@@ -376,13 +415,13 @@ bool FEDInventoryCraftService::TryCraftByRecipeId(UEDInventoryComponent* Invento
 {
     SetFailure_Craft(OutFailure, EEDInventoryActionFailure::None);
 
-    if (!InventoryComponent || !InventoryComponent->CraftingRecipeTable || RecipeId.IsNone())
+    if (!InventoryComponent || RecipeId.IsNone())
     {
         SetFailure_Craft(OutFailure, EEDInventoryActionFailure::InvalidRecipe);
         return false;
     }
 
-    const FEDCraftingRecipeRow* RecipeRow = InventoryComponent->CraftingRecipeTable->FindRow<FEDCraftingRecipeRow>(RecipeId, TEXT("TryCraftByRecipeId"));
+    const FEDCraftingRecipeRow* RecipeRow = FindRecipeRowById_Craft(InventoryComponent, RecipeId);
     if (!RecipeRow)
     {
         SetFailure_Craft(OutFailure, EEDInventoryActionFailure::InvalidRecipe);
@@ -508,28 +547,43 @@ void FEDInventoryCraftService::GetCraftableRecipes(const UEDInventoryComponent* 
 {
     OutRecipes.Reset();
 
-    if (!InventoryComponent || !InventoryComponent->CraftingRecipeTable)
+    if (!InventoryComponent)
     {
         return;
     }
 
-    const TArray<FName> RowNames = InventoryComponent->CraftingRecipeTable->GetRowNames();
-    for (const FName RowName : RowNames)
+    TArray<UDataTable*> RecipeTables;
+    GetRecipeTables_Craft(InventoryComponent, RecipeTables);
+    if (RecipeTables.Num() <= 0)
     {
-        const FEDCraftingRecipeRow* RecipeRow = InventoryComponent->CraftingRecipeTable->FindRow<FEDCraftingRecipeRow>(RowName, TEXT("GetCraftableRecipes"));
-        if (!RecipeRow || !CanCraftRecipe(InventoryComponent, *RecipeRow, nullptr))
+        return;
+    }
+
+    for (UDataTable* RecipeTable : RecipeTables)
+    {
+        if (!RecipeTable)
         {
             continue;
         }
 
-        FEDCraftableRecipeEntry Entry;
-        Entry.RowId = RowName;
-        Entry.RecipeId = RecipeRow->RecipeId;
-        Entry.ResultItemId = RecipeRow->ResultItemId;
-        Entry.ResultItemName = ResolveItemDisplayName_Craft(RecipeRow->ResultItemId);
-        Entry.ResultRarity = ResolveItemRarity_Craft(RecipeRow->ResultItemId);
+        const TArray<FName> RowNames = RecipeTable->GetRowNames();
+        for (const FName RowName : RowNames)
+        {
+            const FEDCraftingRecipeRow* RecipeRow = RecipeTable->FindRow<FEDCraftingRecipeRow>(RowName, TEXT("GetCraftableRecipes"));
+            if (!RecipeRow || !CanCraftRecipe(InventoryComponent, *RecipeRow, nullptr))
+            {
+                continue;
+            }
 
-        OutRecipes.Add(MoveTemp(Entry));
+            FEDCraftableRecipeEntry Entry;
+            Entry.RowId = RowName;
+            Entry.RecipeId = RecipeRow->RecipeId;
+            Entry.ResultItemId = RecipeRow->ResultItemId;
+            Entry.ResultItemName = ResolveItemDisplayName_Craft(RecipeRow->ResultItemId);
+            Entry.ResultRarity = ResolveItemRarity_Craft(RecipeRow->ResultItemId);
+
+            OutRecipes.Add(MoveTemp(Entry));
+        }
     }
 
     OutRecipes.Sort([SortOption, bDescending](const FEDCraftableRecipeEntry& A, const FEDCraftableRecipeEntry& B)

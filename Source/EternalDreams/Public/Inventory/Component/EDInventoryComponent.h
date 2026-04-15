@@ -32,7 +32,10 @@ public:
     FPrimaryAssetId DefaultWeaponItemId;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Data")
-    TObjectPtr<UDataTable> CraftingRecipeTable = nullptr;
+    TArray<TObjectPtr<UDataTable>> CraftingRecipeTables;
+
+    UFUNCTION(BlueprintPure, Category = "Inventory|Craft")
+    void GetAllCraftingRecipeTables(TArray<UDataTable*>& OutTables) const;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Loot")
     TObjectPtr<UDataTable> RandomLootTable = nullptr;
@@ -114,12 +117,9 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RequestDropSingleFromSlot(int32 FromSlotIndex);
-    
-    // ---
-    // 작성자: 김동주
+
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool RequestDropPartialFromSlot(int32 FromSlotIndex, int32 Quantity);
-    // ---
+    bool RequestDropCountFromSlot(int32 FromSlotIndex, int32 DropCount);
     
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
     bool RequestEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType);
@@ -188,6 +188,18 @@ public:
     // 테스트용 아이템을 BeginPlay 시 지급할지 여부
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")
     bool bGiveDebugItemsOnBeginPlay = false;
+    
+    // 테스트용 소비 아이템
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")
+    FPrimaryAssetId DebugConsumableItemId;
+    
+    // 테스트용 재료 아이템
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")
+    FPrimaryAssetId DebugMaterialItemId;
+
+    // 테스트용 장비 아이템
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")
+    FPrimaryAssetId DebugEquipItemId;
     // ---
 
 protected:
@@ -210,12 +222,9 @@ protected:
 
     UFUNCTION(Server, Reliable)
     void ServerRequestDropSingleFromSlot(int32 FromSlotIndex);
-    
-    // ---
-    // 작성자: 김동주
+
     UFUNCTION(Server, Reliable)
-    void ServerRequestDropPartialFromSlot(int32 FromSlotIndex, int32 Quantity);
-    // ---
+    void ServerRequestDropCountFromSlot(int32 FromSlotIndex, int32 DropCount);
 
     UFUNCTION(Server, Reliable)
     void ServerRequestAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity);
@@ -267,19 +276,4 @@ protected:
     FActiveGameplayEffectHandle TopArmorEquipEffectHandle;
     FActiveGameplayEffectHandle BottomArmorEquipEffectHandle;
     
-    // ---
-    // 작성자 : 김동주
-
-    // 테스트용 소비 아이템
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")
-    FPrimaryAssetId DebugConsumableItemId;
-    
-    // 테스트용 재료 아이템
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")
-    FPrimaryAssetId DebugMaterialItemId;
-
-    // 테스트용 장비 아이템
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Debug")
-    FPrimaryAssetId DebugEquipItemId;
-    // ---
 };
