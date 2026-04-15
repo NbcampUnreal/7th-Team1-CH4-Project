@@ -26,15 +26,8 @@ AEDGameMode::AEDGameMode()
 
 void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 {
-	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PreLogin — Address: %s, Options: %s"), *Address, *Options);
-
 	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
 
-	if (!ErrorMessage.IsEmpty())
-	{
-		UE_LOG(LogEDCore, Error, TEXT("[GameMode] PreLogin 거부(Super) — Address: %s, Error: %s"), *Address, *ErrorMessage);
-		return;
-	}
 
 	// ============================================================
 	// [IOCP 전환 시 활성화] 토큰 검증 & PendingToken 저장
@@ -80,14 +73,29 @@ void AEDGameMode::PostLogin(APlayerController* NewPlayer)
 
 	Super::PostLogin(NewPlayer);
 
-	if (AEDPlayerState* PS = NewPlayer ? NewPlayer->GetPlayerState<AEDPlayerState>() : nullptr)
-	{
-		UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PostLogin — Player: %s, TeamId: %d"),
-			*PS->GetPlayerName(), PS->TeamId);
-	}
-
 	// [IOCP 전환 시 활성화] 전원 접속 감지 후 Phase 시작
 	// TryStartPhaseSequence();
+}
+
+void AEDGameMode::HandleSeamlessTravelPlayer(AController*& C)
+{
+	// BeginPlay보다 먼저 호출될 수 있으므로 캐시가 비어있으면 선행 초기화
+	if (ZonePlayerStartMap.Num() == 0)
+	{
+		CacheZonePlayerStarts();
+	}
+
+	AEDPlayerState* PS = C ? C->GetPlayerState<AEDPlayerState>() : nullptr;
+	UE_LOG(LogEDCore, Warning, TEXT("[Spawn] SeamlessTravel — Player: %s, DesiredZoneId: %d"),
+		PS ? *PS->GetPlayerName() : TEXT("null"), PS ? PS->DesiredZoneId : -1);
+
+	if (C && C->GetPawn())
+	{
+		C->GetPawn()->Destroy();
+		C->SetPawn(nullptr);
+	}
+
+	Super::HandleSeamlessTravelPlayer(C);
 }
 
 void AEDGameMode::BeginPlay()
@@ -391,7 +399,8 @@ void AEDGameMode::OnMatchFinished()
 
 void AEDGameMode::CacheZonePlayerStarts()
 {
-	ZonePlayerStartMap.Empty();
+	if (ZonePlayerStartMap.Num() > 0) return;
+
 	OccupiedPlayerStarts.Empty();
 
 	for (TActorIterator<AEDPlayerStart> It(GetWorld()); It; ++It)
@@ -401,6 +410,12 @@ void AEDGameMode::CacheZonePlayerStarts()
 		{
 			ZonePlayerStartMap.FindOrAdd(Start->ZoneId).Add(Start);
 		}
+	}
+
+	UE_LOG(LogEDCore, Warning, TEXT("[Spawn] Cache — %d개 구역, 총 포인트:"), ZonePlayerStartMap.Num());
+	for (const auto& Pair : ZonePlayerStartMap)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[Spawn]   Zone %d: %d개"), Pair.Key, Pair.Value.Num());
 	}
 }
 
@@ -416,7 +431,6 @@ AActor* AEDGameMode::ChoosePlayerStart_Implementation(AController* Player)
 
 	if (const TArray<AEDPlayerStart*>* ZoneStarts = ZonePlayerStartMap.Find(ZoneId))
 	{
-		// 해당 구역에서 아직 사용되지 않은 스폰 포인트 수집
 		TArray<AEDPlayerStart*> Available;
 		for (AEDPlayerStart* Start : *ZoneStarts)
 		{
@@ -430,10 +444,16 @@ AActor* AEDGameMode::ChoosePlayerStart_Implementation(AController* Player)
 		{
 			AEDPlayerStart* Chosen = Available[FMath::RandRange(0, Available.Num() - 1)];
 			OccupiedPlayerStarts.Add(Chosen);
+
+			UE_LOG(LogEDCore, Warning, TEXT("[Spawn] %s → Zone %d, 사용가능 %d/%d, 선택: %s"),
+				PS ? *PS->GetPlayerName() : TEXT("?"), ZoneId,
+				Available.Num(), ZoneStarts->Num(), *Chosen->GetName());
 			return Chosen;
 		}
 	}
 
+	UE_LOG(LogEDCore, Warning, TEXT("[Spawn] %s → Zone %d 실패, 기본 폴백"),
+		PS ? *PS->GetPlayerName() : TEXT("?"), ZoneId);
 	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
@@ -471,6 +491,5 @@ void AEDGameMode::TryStartPhaseSequence()
 	//   }
 	// ============================================================
 
-	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] TryStartPhaseSequence — Phase 시작"));
 	StartPhaseSequence();
 }
