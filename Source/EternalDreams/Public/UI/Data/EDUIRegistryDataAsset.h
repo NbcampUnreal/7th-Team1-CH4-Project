@@ -32,8 +32,8 @@ struct FEDUIRegistryEntry
 	EEDUILayer Layer = EEDUILayer::Game;
 
 	// 실제 생성에 사용할 위젯 클래스
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI Registry")
-	TSubclassOf<UUserWidget> WidgetClass = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI Registry", meta=(AssetBundles="UI"))
+	TSoftClassPtr<UUserWidget> WidgetClass;
 };
 
 UCLASS()

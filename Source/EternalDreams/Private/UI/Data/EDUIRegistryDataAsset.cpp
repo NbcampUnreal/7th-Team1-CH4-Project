@@ -36,10 +36,10 @@ bool UEDUIRegistryDataAsset::ValidateEntries() const
 		}
 
 		// 위젯 클래스가 비어 있으면 생성 불가
-		if (!Entry.WidgetClass)
+		if (Entry.WidgetClass.IsNull())
 		{
 			UE_LOG(LogTemp, Warning, TEXT("EDUIRegistryDataAsset: WidgetClass가 비어 있습니다. WidgetId = %s"),
-			       *Entry.WidgetId.ToString());
+				*Entry.WidgetId.ToString());
 			return false;
 		}
 
