@@ -55,7 +55,8 @@ void AEDLobbyGameMode::PostLogin(APlayerController* NewPlayer)
 	PS->TeamId = GetTeamWithFewerPlayers();
 	PS->bReady = false;
 
-	UE_LOG(LogEDCore, Warning, TEXT("[LobbyGM] PostLogin 성공 — Player: %s, TeamId: %d"), *NewPlayer->GetName(), PS->TeamId);
+	UE_LOG(LogEDCore, Warning, TEXT("[LobbyGM] PostLogin 성공 — Player: %s, TeamId: %d"),
+		*NewPlayer->GetName(), PS->TeamId);
 
 	if (AEDLobbyGameState* LobbyGS = GetGameState<AEDLobbyGameState>())
 	{
