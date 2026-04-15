@@ -9,6 +9,7 @@
 #include "Data/Types/EDMonsterTypes.h"
 #include "EDMonsterBase.generated.h"
 
+DECLARE_MULTICAST_DELEGATE(FOnMonsterDeath);
 DECLARE_MULTICAST_DELEGATE(FOnAttackFinished);
 
 class UAbilitySystemComponent;
@@ -34,6 +35,7 @@ public:
 	
 	FVector GetOriginLocation() const { return OriginLocation;}
 	
+	FOnMonsterDeath OnMonsterDeath;
 	FOnAttackFinished OnAttackFinished;
 protected:
 	// Called when the game starts or when spawned
@@ -44,16 +46,13 @@ protected:
 	UFUNCTION()
 	void OnRep_MonsterState();	
 	
-	UFUNCTION()
-	void OnRep_DataAsset();
-	
 	UFUNCTION(BlueprintCallable, Category = "Monster")
 	void SetMonsterState(EMonsterState NewState) { if (HasAuthority()) MonsterState = NewState; }
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_DataAsset, Category = "Monster|Data")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
 	TObjectPtr<UEDMonsterDataAsset> DataAsset;
 private:
 	// 비동기 로드(임시)
@@ -73,4 +72,6 @@ private:
 	
 	FVector OriginLocation;
 	TSharedPtr<FStreamableHandle> VisualLoadHandle;
+	
+	FTimerHandle DestroyMeshTimerHandle;
 };

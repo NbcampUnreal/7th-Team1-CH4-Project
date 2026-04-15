@@ -85,6 +85,7 @@ void AEDMonsterSpawner::SpawnMonster()
 	
 	// 사망 콜백 바인딩- 리스폰 처리용
 	// TODO: 몬스터 사망 델리게이트 연결 예정
+	Monster->OnMonsterDeath.AddUObject(this, &AEDMonsterSpawner::OnMonsterDeath);
 }
 
 void AEDMonsterSpawner::OnMonsterDeath()

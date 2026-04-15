@@ -52,4 +52,5 @@ void UGA_Death::OnMontageCompleted()
 {
 	// Montage 완료 후 Ability 종료
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+	
 }
