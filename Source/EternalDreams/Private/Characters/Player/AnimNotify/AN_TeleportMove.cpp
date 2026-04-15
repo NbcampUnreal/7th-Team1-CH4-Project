@@ -16,14 +16,17 @@ void UAN_TeleportMove::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBas
 		return;
 	}
 	
-	FVector TeleportLocation=Player->GetActorForwardVector()*TeleportDistance+Player->GetActorLocation();
+	FVector TeleportLocation=Player->GetActorForwardVector()*TeleportDistance+Player->GetActorLocation()+FVector(0,0,5.f);
 	
-	bool bCanTeleport = GetWorld()->OverlapAnyTestByChannel(
+	bool bCanTeleport =MeshComp->GetWorld()->OverlapAnyTestByProfile(
 	TeleportLocation,
 	Player->GetActorRotation().Quaternion(),
-	ECollisionChannel::ECC_Pawn,
-	FCollisionShape::MakeCapsule(48.f,128.f)
+	FName("Visibility"),
+	FCollisionShape::MakeCapsule(48.f, 128.f)
 	);
+	DrawDebugCapsule(MeshComp->GetWorld(), TeleportLocation, 128.f, 48.f,Player->GetActorRotation().Quaternion(), 
+	bCanTeleport ? FColor::Red : FColor::Green, false, 3.0f, 0, 2.0f);
+	
 	
 	if (!bCanTeleport)
 	{

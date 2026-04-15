@@ -4,7 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "AttributeSet.h"
 #include "AbilitySystemInterface.h"
+#include "GameplayEffectTypes.h"
 #include "EDPlayerCharacter.generated.h"
 
 class UGameplayAbility;
@@ -17,6 +19,8 @@ class UIMCComponent;
 class UZoneDetectorComponent;
 class UEDInventoryComponent;
 class USkillComponent;
+struct FOnAttributeChangeData;
+
 
 /*
  * 플레이어 캐릭터 클래스
@@ -113,6 +117,10 @@ public:
 	void StartAnimMove(float InDashSpeed, bool InbIsForward, bool InbIsZ );
 	UFUNCTION()
 	void StopAnimMove();
+	
+	//Callback
+	void OnWalkSpeedChanged(const struct FOnAttributeChangeData& Data);
+	
 	
 protected:
 	UPROPERTY()

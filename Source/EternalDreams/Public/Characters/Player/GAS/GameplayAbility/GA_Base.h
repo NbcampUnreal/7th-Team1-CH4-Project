@@ -43,10 +43,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
 	UAnimMontage* AttackMontage;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
-	TSubclassOf<UGameplayEffect> DamageEffectClass;
-	
-	
 	//콜백 함수
 protected:
 	UFUNCTION()

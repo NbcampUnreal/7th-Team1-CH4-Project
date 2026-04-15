@@ -23,5 +23,4 @@ protected:
 	UPROPERTY(EditAnywhere,Category="Distance")
 	float TeleportDistance=100.f;
 	
-	
 };

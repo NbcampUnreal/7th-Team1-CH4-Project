@@ -15,6 +15,7 @@
 #include "Characters/Player/Weapon/EDWeapon.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 
@@ -84,6 +85,13 @@ void AEDPlayerCharacter::BeginPlay()
 		GetCapsuleComponent()->IgnoreActorWhenMoving(WeaponMesh,true);
 	}
 	
+	//ASC Duration Callback
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(BaseAttributeSet->GetWalkSpeedAttribute())
+	.AddUObject(this, &AEDPlayerCharacter::OnWalkSpeedChanged);
 }
 
 void AEDPlayerCharacter::Tick(float DeltaSeconds)
@@ -175,6 +183,11 @@ void AEDPlayerCharacter::StartAnimMove(float InDashSpeed, bool InbIsForward, boo
 void AEDPlayerCharacter::StopAnimMove()
 {
 	bIsAnimMoving=false;
+}
+
+void AEDPlayerCharacter::OnWalkSpeedChanged(const FOnAttributeChangeData& Data)
+{
+	GetCharacterMovement()->MaxWalkSpeed=Data.NewValue;
 }
 
 float AEDPlayerCharacter::GetHealth() const

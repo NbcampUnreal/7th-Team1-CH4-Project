@@ -172,9 +172,9 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("Data.Damage"),
 		FString("SetByCaller용 데미지 Tag")
 	);
-	Tags.Data_StaminaCost = Manager.AddNativeGameplayTag(
-		FName("Data.StaminaCost"),
-		FString("SetByCaller용 스태미너 코스트 Tag")
+	Tags.Data_StatMul = Manager.AddNativeGameplayTag(
+		FName("Data.StatMul"),
+		FString("SetByCaller용 스탯 % 증가 Tag")
 	);
 	
 	//Inventory-Item
@@ -216,4 +216,8 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("Item.Ingredient.Special"),
 		FString("재료 아이템 - 특수")
 	);
+	Tags.Data_StatAdd = Manager.AddNativeGameplayTag(
+	FName("Data.StatAdd"),
+	FString("SetByCaller용 스탯 + 증가 Tag")
+);
 }

@@ -85,6 +85,8 @@ public:
 	FGameplayTag Item_Consumable;
 	FGameplayTag Item_Ingredient_Base;
 	FGameplayTag Item_Ingredient_Special;
+	FGameplayTag Data_StatAdd;
+	FGameplayTag Data_StatMul;
 
 private:
 	// Singleton 인스턴스
