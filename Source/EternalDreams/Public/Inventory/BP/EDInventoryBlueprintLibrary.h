@@ -43,7 +43,4 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory|Craft|Viewer")
     static void GetCraftRecipeViewDataList(UEDInventoryComponent* InventoryComponent, TArray<FEDCraftRecipeViewData>& OutRecipes, bool bOnlyCraftable = false, EEDCraftableRecipeSortOption SortOption = EEDCraftableRecipeSortOption::ByRowId, bool bDescending = false);
 
-    // 특정 RowId의 레시피 하나를 제작 UI용 데이터 형태로 반환
-    UFUNCTION(BlueprintCallable, Category = "Inventory|Craft|Viewer")
-    static bool GetCraftRecipeViewDataByRowId(UEDInventoryComponent* InventoryComponent, FName RecipeRowId, FEDCraftRecipeViewData& OutRecipe);
 };

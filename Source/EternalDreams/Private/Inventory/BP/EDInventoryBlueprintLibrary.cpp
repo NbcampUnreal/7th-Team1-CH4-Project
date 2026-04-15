@@ -844,32 +844,3 @@ void UEDInventoryBlueprintLibrary::GetCraftRecipeViewDataList(
         return bDescending ? (Compare > 0) : (Compare < 0);
     });
 }
-
-bool UEDInventoryBlueprintLibrary::GetCraftRecipeViewDataByRowId(
-    UEDInventoryComponent* InventoryComponent,
-    FName RecipeRowId,
-    FEDCraftRecipeViewData& OutRecipe)
-{
-    // 선택된 레시피 1개를 상세 패널에 표시할 때 사용
-    OutRecipe = FEDCraftRecipeViewData();
-
-    if (!InventoryComponent || RecipeRowId.IsNone())
-    {
-        return false;
-    }
-
-    TArray<FCraftRecipeViewRow> Recipes;
-    GatherCraftRecipes(InventoryComponent, Recipes);
-
-    for (const FCraftRecipeViewRow& Recipe : Recipes)
-    {
-        if (Recipe.RowId != RecipeRowId)
-        {
-            continue;
-        }
-
-        return BuildCraftRecipeViewData(InventoryComponent, Recipe, OutRecipe);
-    }
-
-    return false;
-}
