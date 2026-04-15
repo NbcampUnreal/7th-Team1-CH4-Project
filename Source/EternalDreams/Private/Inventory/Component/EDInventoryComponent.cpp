@@ -235,6 +235,42 @@ const FEDItemSpawnRow* PickLootRowByWeight_Component(const TArray<const FEDItemS
 
     return CandidateRows.Num() > 0 ? CandidateRows.Last() : nullptr;
 }
+
+void AddLooseTags(UAbilitySystemComponent* ASC, const FGameplayTagContainer& Tags)
+{
+    if (!ASC)
+    {
+        return;
+    }
+
+    TArray<FGameplayTag> TagArray;
+    Tags.GetGameplayTagArray(TagArray);
+    for (const FGameplayTag& Tag : TagArray)
+    {
+        if (Tag.IsValid())
+        {
+            ASC->AddLooseGameplayTag(Tag);
+        }
+    }
+}
+
+void RemoveLooseTags(UAbilitySystemComponent* ASC, const FGameplayTagContainer& Tags)
+{
+    if (!ASC)
+    {
+        return;
+    }
+
+    TArray<FGameplayTag> TagArray;
+    Tags.GetGameplayTagArray(TagArray);
+    for (const FGameplayTag& Tag : TagArray)
+    {
+        if (Tag.IsValid())
+        {
+            ASC->RemoveLooseGameplayTag(Tag);
+        }
+    }
+}
 }
 
 UEDInventoryComponent::UEDInventoryComponent()
@@ -384,6 +420,59 @@ FActiveGameplayEffectHandle* UEDInventoryComponent::GetEquipmentEffectHandle(EED
     }
 }
 
+FGameplayTagContainer* UEDInventoryComponent::GetAppliedEquipTagsCache(EEDEquippableType SlotType)
+{
+    switch (SlotType)
+    {
+    case EEDEquippableType::Weapon:
+        return &WeaponAppliedEquipTags;
+    case EEDEquippableType::TopArmor:
+        return &TopArmorAppliedEquipTags;
+    case EEDEquippableType::BottomArmor:
+        return &BottomArmorAppliedEquipTags;
+    default:
+        return nullptr;
+    }
+}
+
+bool UEDInventoryComponent::SyncEquipTagsForSlot(EEDEquippableType SlotType)
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority())
+    {
+        return false;
+    }
+
+    FEDEquipmentSlotData* EquipmentSlot = GetEquipmentSlotData(SlotType);
+    FGameplayTagContainer* AppliedTagsCache = GetAppliedEquipTagsCache(SlotType);
+    if (!EquipmentSlot || !AppliedTagsCache)
+    {
+        return false;
+    }
+
+    UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+    if (!ASC)
+    {
+        AppliedTagsCache->Reset();
+        return false;
+    }
+
+    FGameplayTagContainer DesiredTags;
+    if (EquipmentSlot->EquippedItem.IsValid())
+    {
+        const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Component(EquipmentSlot->EquippedItem.ItemId);
+        if (ItemData)
+        {
+            DesiredTags.AppendTags(ItemData->ItemTags);
+            DesiredTags.AppendTags(ItemData->ItemSpecialTags);
+        }
+    }
+
+    RemoveLooseTags(ASC, *AppliedTagsCache);
+    AddLooseTags(ASC, DesiredTags);
+    *AppliedTagsCache = DesiredTags;
+    return true;
+}
+
 bool UEDInventoryComponent::SyncEquipEffectForSlot(EEDEquippableType SlotType)
 {
     if (!GetOwner() || !GetOwner()->HasAuthority())
@@ -402,6 +491,11 @@ bool UEDInventoryComponent::SyncEquipEffectForSlot(EEDEquippableType SlotType)
     if (!ASC)
     {
         EffectHandle->Invalidate();
+        FGameplayTagContainer* AppliedTagsCache = GetAppliedEquipTagsCache(SlotType);
+        if (AppliedTagsCache)
+        {
+            AppliedTagsCache->Reset();
+        }
         return false;
     }
 
@@ -413,23 +507,24 @@ bool UEDInventoryComponent::SyncEquipEffectForSlot(EEDEquippableType SlotType)
 
     if (!EquipmentSlot->EquippedItem.IsValid())
     {
-        return true;
+        return SyncEquipTagsForSlot(SlotType);
     }
 
     const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Component(EquipmentSlot->EquippedItem.ItemId);
     if (!ItemData || !ItemData->EquipEffectClass)
     {
-        return true;
+        return SyncEquipTagsForSlot(SlotType);
     }
 
     *EffectHandle = UEDInventoryGASBridge::ApplyEquipEffectWithHandle(GetOwner(), ASC, ItemData);
-    if (!EffectHandle->WasSuccessfullyApplied())
+    const bool bEffectApplied = EffectHandle->WasSuccessfullyApplied();
+    if (!bEffectApplied)
     {
         EffectHandle->Invalidate();
-        return false;
     }
 
-    return true;
+    const bool bTagsSynced = SyncEquipTagsForSlot(SlotType);
+    return bEffectApplied && bTagsSynced;
 }
 
 bool UEDInventoryComponent::RequestMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex)

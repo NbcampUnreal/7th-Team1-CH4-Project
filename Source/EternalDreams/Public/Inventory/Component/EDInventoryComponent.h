@@ -271,9 +271,15 @@ protected:
     FEDEquipmentSlotData* GetEquipmentSlotData(EEDEquippableType SlotType);
     FActiveGameplayEffectHandle* GetEquipmentEffectHandle(EEDEquippableType SlotType);
     bool SyncEquipEffectForSlot(EEDEquippableType SlotType);
+    FGameplayTagContainer* GetAppliedEquipTagsCache(EEDEquippableType SlotType);
+    bool SyncEquipTagsForSlot(EEDEquippableType SlotType);
 
     FActiveGameplayEffectHandle WeaponEquipEffectHandle;
     FActiveGameplayEffectHandle TopArmorEquipEffectHandle;
     FActiveGameplayEffectHandle BottomArmorEquipEffectHandle;
+
+    FGameplayTagContainer WeaponAppliedEquipTags;
+    FGameplayTagContainer TopArmorAppliedEquipTags;
+    FGameplayTagContainer BottomArmorAppliedEquipTags;
     
 };
