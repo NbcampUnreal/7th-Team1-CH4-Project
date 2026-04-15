@@ -5,7 +5,8 @@
 #include "CoreMinimal.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/GameInstance.h"
-#include "Widgets/SCompoundWidget.h"
+#include "Engine/Texture2D.h"
+#include "Styling/SlateBrush.h"
 #include "EDGameInstance.generated.h"
 
 class UNetDriver;
@@ -64,7 +65,25 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ED|GameInstance")
 	void HideLoadingScreen();
 
+	// -------------------------------------------------------
+	// 로딩 화면 — 배경 이미지 (에디터에서 지정)
+	// -------------------------------------------------------
+
+	/** 로딩 화면 배경 이미지. GameInstance BP 디테일에서 지정 */
+	UPROPERTY(EditDefaultsOnly, Category = "ED|Loading")
+	TSoftObjectPtr<UTexture2D> LoadingBackgroundImage;
+
 private:
+	/** GC 방지용 텍스처 강한 참조 */
+	UPROPERTY()
+	TObjectPtr<UTexture2D> LoadingBackgroundTexture;
+
+	/** Init에서 미리 로드한 배경 브러시 */
+	FSlateBrush LoadingBackgroundBrush;
+
+	/** 맵 로드 시작 시 엔진이 호출하는 콜백 — 자동으로 로딩 화면 표시 */
+	void OnPreLoadMap(const FString& MapName);
+
 	void HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& ErrorString);
 	void HandleTravelFailure(UWorld* World, ETravelFailure::Type FailureType, const FString& ErrorString);
 };

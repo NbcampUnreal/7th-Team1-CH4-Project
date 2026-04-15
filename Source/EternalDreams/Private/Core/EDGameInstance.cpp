@@ -7,8 +7,12 @@
 #include "GameFramework/PlayerController.h"
 #include "MoviePlayer.h"
 #include "Widgets/SBoxPanel.h"
+#include "Widgets/Images/SImage.h"
+#include "Widgets/Images/SThrobber.h"
 #include "Widgets/Layout/SBorder.h"
-#include "Widgets/Text/STextBlock.h"
+#include "Widgets/Layout/SScaleBox.h"
+
+#include "Widgets/SNullWidget.h"
 
 UEDGameInstance::UEDGameInstance()
 {
@@ -23,10 +27,29 @@ void UEDGameInstance::Init()
 		GEngine->OnNetworkFailure().AddUObject(this, &UEDGameInstance::HandleNetworkFailure);
 		GEngine->OnTravelFailure().AddUObject(this, &UEDGameInstance::HandleTravelFailure);
 	}
+
+	// 로딩 배경 이미지를 앱 시작 시 미리 로드 (첫 실행 누락 방지)
+	if (!LoadingBackgroundImage.IsNull())
+	{
+		LoadingBackgroundTexture = LoadingBackgroundImage.LoadSynchronous();
+		if (LoadingBackgroundTexture)
+		{
+			LoadingBackgroundBrush.SetResourceObject(LoadingBackgroundTexture);
+			LoadingBackgroundBrush.ImageSize = FVector2D(LoadingBackgroundTexture->GetSizeX(), LoadingBackgroundTexture->GetSizeY());
+			LoadingBackgroundBrush.DrawAs = ESlateBrushDrawType::Image;
+			LoadingBackgroundBrush.Tiling = ESlateBrushTileType::NoTile;
+
+		}
+	}
+
+	// 모든 맵 로드 시 자동으로 로딩 화면 표시 (ClientTravel, ServerTravel 모두 대응)
+	FCoreUObjectDelegates::PreLoadMap.AddUObject(this, &UEDGameInstance::OnPreLoadMap);
 }
 
 void UEDGameInstance::Shutdown()
 {
+	FCoreUObjectDelegates::PreLoadMap.RemoveAll(this);
+
 	if (GEngine)
 	{
 		GEngine->OnNetworkFailure().RemoveAll(this);
@@ -57,8 +80,7 @@ void UEDGameInstance::JoinGame(const FString& ServerIP)
 	// 여기서의 ClientTravel이 더 빠르게 완료된다.
 	// ============================================================
 
-	// 로딩 화면 표시 → ClientTravel → 맵 로드 동안 유지
-	ShowLoadingScreen();
+	// 로딩 화면은 PreLoadMap 콜백에서 자동 표시됨
 
 	const FString TravelURL = ServerIP.Contains(TEXT(":")) ? ServerIP : ServerIP + TEXT(":7777");
 
@@ -69,6 +91,11 @@ void UEDGameInstance::JoinGame(const FString& ServerIP)
 // ============================================================
 //  로딩 화면
 // ============================================================
+
+void UEDGameInstance::OnPreLoadMap(const FString& MapName)
+{
+	ShowLoadingScreen();
+}
 
 void UEDGameInstance::ShowLoadingScreen()
 {
@@ -82,22 +109,44 @@ void UEDGameInstance::ShowLoadingScreen()
 		LoadingScreen.bMoviesAreSkippable = false;
 		LoadingScreen.MinimumLoadingScreenDisplayTime = 1.0f;
 
-		// 기본 로딩 위젯 — 향후 UMG 위젯이나 커스텀 SWidget으로 교체 가능
+		// 배경: 이미지가 지정되어 있으면 이미지, 없으면 단색
+		const bool bHasBackground = LoadingBackgroundBrush.GetResourceObject() != nullptr;
+
 		LoadingScreen.WidgetLoadingScreen =
 			SNew(SBorder)
-			.HAlign(HAlign_Center)
-			.VAlign(VAlign_Center)
-			.BorderBackgroundColor(FLinearColor::Black)
+			.BorderBackgroundColor(FLinearColor(0.02f, 0.02f, 0.05f, 1.0f))
 			[
-				SNew(STextBlock)
-				.Text(FText::FromString(TEXT("Loading...")))
-				.Font(FSlateFontInfo(FPaths::EngineContentDir() / TEXT("Slate/Fonts/Roboto-Bold.ttf"), 40))
-				.ColorAndOpacity(FLinearColor::White)
+				SNew(SVerticalBox)
+
+				// 중앙: 배경 이미지 (100%)
+				+ SVerticalBox::Slot()
+				.FillHeight(1.0f)
+				[
+					bHasBackground
+					? SNew(SScaleBox)
+						.Stretch(EStretch::ScaleToFit)
+						.HAlign(HAlign_Center)
+						.VAlign(VAlign_Center)
+						[
+							SNew(SImage)
+							.Image(&LoadingBackgroundBrush)
+						]
+					: SNullWidget::NullWidget
+				]
+
+				// 하단: 스피너
+				+ SVerticalBox::Slot()
+				.AutoHeight()
+				.HAlign(HAlign_Center)
+				.Padding(0.0f, 0.0f, 0.0f, 80.0f)
+				[
+					SNew(SCircularThrobber)
+					.Radius(24.0f)
+					.NumPieces(8)
+				]
 			];
 
 		GetMoviePlayer()->SetupLoadingScreen(LoadingScreen);
-
-		UE_LOG(LogEDCore, Warning, TEXT("[GameInstance] 로딩 화면 시작"));
 	}
 }
 
@@ -106,7 +155,6 @@ void UEDGameInstance::HideLoadingScreen()
 	if (!IsRunningDedicatedServer())
 	{
 		GetMoviePlayer()->StopMovie();
-		UE_LOG(LogEDCore, Warning, TEXT("[GameInstance] 로딩 화면 종료"));
 	}
 }
 
