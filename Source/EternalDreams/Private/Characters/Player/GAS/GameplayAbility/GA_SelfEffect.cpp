@@ -53,13 +53,9 @@ void UGA_SelfEffect::ApplyEffect()
 		FGameplayTag DataTag = FEDGameplayTags::Get().Data_StatMul;
 		if (!DataTag.IsValid())
 		{
-			UE_LOG(LogTemp, Error, TEXT("태그가 유효하지 않습니다! DefaultGameplayTags.ini를 확인하세요."));
+			return;
 		}
 		Spec.Data.Get()->SetSetByCallerMagnitude(DataTag, MulPercent);
-		UE_LOG(LogTemp,Warning,TEXT("Mulpercent %f"),MulPercent);
-		
-		float FoundMagnitude = Spec.Data.Get()->GetSetByCallerMagnitude(DataTag, false);
-		UE_LOG(LogTemp, Warning, TEXT("Confirmed Magnitude in Spec: %f"), FoundMagnitude);
 		ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 	}
 }

@@ -26,9 +26,22 @@ void UANS_AttackTrace::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequen
 		return;
 	}
 	Owner->GetAttachedActors(AttachedActors);
+	//StaticMesh가 nullptr이 아닌 무기가 착용중인 무기이다.
 	if (!AttachedActors.IsEmpty())
 	{
-		Weapon = Cast<AEDWeapon>(AttachedActors[0]);
+		for (AActor* Actor:AttachedActors)
+		{
+			AEDWeapon* WeaponActor=Cast<AEDWeapon>(Actor);
+			if (!IsValid(WeaponActor))
+			{
+				continue;
+			}
+			if (WeaponActor->GetStaticMesh()!=nullptr)
+			{
+				Weapon = WeaponActor;
+				break;
+			}
+		}
 	}
 	if (Weapon == nullptr)
 	{

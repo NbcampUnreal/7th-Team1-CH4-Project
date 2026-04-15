@@ -14,11 +14,34 @@ class ETERNALDREAMS_API AEDWeapon : public AActor
 public:
 	// Sets default values for this actor's properties
 	AEDWeapon();
+	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+	UFUNCTION(BlueprintCallable,Server, Reliable)
+	void SetStaticMesh(UStaticMesh* StaticMesh);
+	
+	UFUNCTION()
+	void OnRep_WeaponStaticMesh();
+	
+	
+	UFUNCTION()
+	FORCEINLINE UStaticMesh* GetStaticMesh() {return WeaponStaticMeshComp->GetStaticMesh();};
+	
 
+	
+
+	
+	
 protected:
 	UPROPERTY()
 	TObjectPtr<USceneComponent> Scene;
 	
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Static Mesh")
-	TObjectPtr<UStaticMeshComponent> WeaponStaticMesh;
+	UPROPERTY(EditAnywhere)
+	TObjectPtr<UStaticMeshComponent> WeaponStaticMeshComp;
+	
+	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Static Mesh",ReplicatedUsing=OnRep_WeaponStaticMesh)
+	TObjectPtr<UStaticMesh> WeaponStaticMesh;
+	
+	
+	
 };

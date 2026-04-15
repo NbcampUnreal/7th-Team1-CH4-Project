@@ -72,17 +72,32 @@ void AEDPlayerCharacter::BeginPlay()
 	}
 	
 	//Weapon Test
-	WeaponMesh=GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
-	if (IsValid(WeaponMesh))
+	if (HasAuthority())
 	{
-		SkeletalMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
-		if (!IsValid(SkeletalMeshComp))
+		RWeaponActor=GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
+		if (IsValid(RWeaponActor))
 		{
-			return;
+			SkeletalMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
+			if (!IsValid(SkeletalMeshComp))
+			{
+				return;
+			}
+			RWeaponActor->SetOwner(this);
+			RWeaponActor->AttachToComponent(GetMesh()->GetChildComponent(0),FAttachmentTransformRules::SnapToTargetNotIncludingScale,RWeaponSocketName);
+			GetCapsuleComponent()->IgnoreActorWhenMoving(RWeaponActor,true);
 		}
-		WeaponMesh->SetOwner(this);
-		WeaponMesh->AttachToComponent(GetMesh()->GetChildComponent(0),FAttachmentTransformRules::SnapToTargetNotIncludingScale,WeaponSocketName);
-		GetCapsuleComponent()->IgnoreActorWhenMoving(WeaponMesh,true);
+		LWeaponActor=GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
+		if (IsValid(LWeaponActor))
+		{
+			SkeletalMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
+			if (!IsValid(SkeletalMeshComp))
+			{
+				return;
+			}
+			LWeaponActor->SetOwner(this);
+			LWeaponActor->AttachToComponent(GetMesh()->GetChildComponent(0),FAttachmentTransformRules::SnapToTargetNotIncludingScale,LWeaponSocketName);
+			GetCapsuleComponent()->IgnoreActorWhenMoving(LWeaponActor,true);
+		}
 	}
 	
 	//ASC Duration Callback

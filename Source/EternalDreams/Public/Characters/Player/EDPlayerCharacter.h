@@ -90,9 +90,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<AEDWeapon> WeaponClass;
 	UPROPERTY()
-	TObjectPtr<AEDWeapon> WeaponMesh;
+	TObjectPtr<AEDWeapon> RWeaponActor;
 	UPROPERTY()
-	FName WeaponSocketName=FName("handslot_r");
+	TObjectPtr<AEDWeapon> LWeaponActor;
+	UPROPERTY()
+	FName RWeaponSocketName=FName("handslot_r");
+	UPROPERTY()
+	FName LWeaponSocketName=FName("handslot_l");
 	
 	//Get Attribute
 public:
