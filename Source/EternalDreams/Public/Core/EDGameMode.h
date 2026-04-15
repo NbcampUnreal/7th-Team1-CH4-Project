@@ -8,7 +8,7 @@
 #include "EDGameMode.generated.h"
 
 class AEDRestrictedArea;
-class AEDTeamPlayerStart;
+class AEDPlayerStart;
 
 /**
  * AEDGameMode
@@ -150,10 +150,10 @@ private:
 	void CacheZonePlayerStarts();
 
 	/** ZoneId → 해당 구역의 PlayerStart 배열 */
-	TMap<int32, TArray<AEDTeamPlayerStart*>> ZonePlayerStartMap;
+	TMap<int32, TArray<AEDPlayerStart*>> ZonePlayerStartMap;
 
 	/** 이미 배정된 스폰 포인트 (중복 스폰 방지) */
-	TSet<AEDTeamPlayerStart*> OccupiedPlayerStarts;
+	TSet<AEDPlayerStart*> OccupiedPlayerStarts;
 
 	/**
 	 * [IOCP 전용] 전원 접속 시 Phase 시작.

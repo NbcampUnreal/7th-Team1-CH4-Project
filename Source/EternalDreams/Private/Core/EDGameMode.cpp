@@ -4,7 +4,7 @@
 #include "EternalDreams.h"
 #include "Core/EDGameState.h"
 #include "Core/EDPlayerState.h"
-#include "Core/EDTeamPlayerStart.h"
+#include "Core/PlayerStart/EDPlayerStart.h"
 #include "Characters/Player/EDPlayerController.h"
 #include "Environment/EDRestrictedArea.h"
 #include "EngineUtils.h"
@@ -394,9 +394,9 @@ void AEDGameMode::CacheZonePlayerStarts()
 	ZonePlayerStartMap.Empty();
 	OccupiedPlayerStarts.Empty();
 
-	for (TActorIterator<AEDTeamPlayerStart> It(GetWorld()); It; ++It)
+	for (TActorIterator<AEDPlayerStart> It(GetWorld()); It; ++It)
 	{
-		AEDTeamPlayerStart* Start = *It;
+		AEDPlayerStart* Start = *It;
 		if (Start && Start->ZoneId > 0)
 		{
 			ZonePlayerStartMap.FindOrAdd(Start->ZoneId).Add(Start);
@@ -414,11 +414,11 @@ AActor* AEDGameMode::ChoosePlayerStart_Implementation(AController* Player)
 	const AEDPlayerState* PS = Player->GetPlayerState<AEDPlayerState>();
 	const int32 ZoneId = PS ? PS->DesiredZoneId : 0;
 
-	if (const TArray<AEDTeamPlayerStart*>* ZoneStarts = ZonePlayerStartMap.Find(ZoneId))
+	if (const TArray<AEDPlayerStart*>* ZoneStarts = ZonePlayerStartMap.Find(ZoneId))
 	{
 		// 해당 구역에서 아직 사용되지 않은 스폰 포인트 수집
-		TArray<AEDTeamPlayerStart*> Available;
-		for (AEDTeamPlayerStart* Start : *ZoneStarts)
+		TArray<AEDPlayerStart*> Available;
+		for (AEDPlayerStart* Start : *ZoneStarts)
 		{
 			if (!OccupiedPlayerStarts.Contains(Start))
 			{
@@ -428,7 +428,7 @@ AActor* AEDGameMode::ChoosePlayerStart_Implementation(AController* Player)
 
 		if (Available.Num() > 0)
 		{
-			AEDTeamPlayerStart* Chosen = Available[FMath::RandRange(0, Available.Num() - 1)];
+			AEDPlayerStart* Chosen = Available[FMath::RandRange(0, Available.Num() - 1)];
 			OccupiedPlayerStarts.Add(Chosen);
 			return Chosen;
 		}
