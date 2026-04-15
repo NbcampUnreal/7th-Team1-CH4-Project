@@ -8,6 +8,7 @@
 #include "EDGameMode.generated.h"
 
 class AEDRestrictedArea;
+class AEDTeamPlayerStart;
 
 /**
  * AEDGameMode
@@ -61,8 +62,20 @@ public:
 
 protected:
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
+	virtual void PostLogin(APlayerController* NewPlayer) override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
+
+	// -------------------------------------------------------
+	// Starting System — 팀별 스폰 위치 결정
+	// -------------------------------------------------------
+
+	/**
+	 * 팀 ID 기반으로 AEDTeamPlayerStart를 검색하여 스폰 위치를 결정한다.
+	 * 구형 로비(SeamlessTravel) — CopyProperties로 TeamId가 보존되어 그대로 동작.
+	 * 신형 IOCP(ClientTravel) — PostLogin에서 TeamId 배정 후 Super가 호출하므로 그대로 동작.
+	 */
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 
 	// -------------------------------------------------------
 	// Phase 설정 (에디터에서 지정)
@@ -129,4 +142,22 @@ private:
 	void AdvanceToPhase(int32 PhaseIndex);
 	float GetPhaseDuration(int32 PhaseIndex) const;
 	void SetPhase(FGameplayTag NewPhase);
+
+	// -------------------------------------------------------
+	// Starting System 내부
+	// -------------------------------------------------------
+
+	/** 레벨의 AEDTeamPlayerStart를 수집하여 캐시. BeginPlay에서 호출 */
+	void CacheTeamPlayerStarts();
+
+	/** TeamId → 해당 팀의 PlayerStart 배열 */
+	TMap<int32, TArray<AEDTeamPlayerStart*>> TeamPlayerStartMap;
+
+	/**
+	 * [IOCP 전용] 전원 접속 시 Phase 시작.
+	 * 현재는 BeginPlay에서 바로 시작하므로 비활성.
+	 * 향후 IOCP 로비 연결 시, BeginPlay의 StartPhaseSequence 호출을 제거하고
+	 * PostLogin에서 이 함수로 전원 접속 감지 후 시작하도록 전환.
+	 */
+	void TryStartPhaseSequence();
 };

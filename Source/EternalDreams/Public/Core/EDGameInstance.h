@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Engine/EngineBaseTypes.h"
 #include "Engine/GameInstance.h"
+#include "Widgets/SCompoundWidget.h"
 #include "EDGameInstance.generated.h"
 
 class UNetDriver;
@@ -50,6 +51,18 @@ public:
 	/** 데디케이티드 서버 IP로 접속. 로컬 테스트: "127.0.0.1" */
 	UFUNCTION(BlueprintCallable, Category = "ED|GameInstance")
 	void JoinGame(const FString& ServerIP);
+
+	// -------------------------------------------------------
+	// 로딩 화면
+	// -------------------------------------------------------
+
+	/** 로딩 화면을 표시한다. JoinGame 내부에서 자동 호출됨 */
+	UFUNCTION(BlueprintCallable, Category = "ED|GameInstance")
+	void ShowLoadingScreen();
+
+	/** 로딩 화면을 수동으로 제거한다. (bAutoComplete=false일 때 사용) */
+	UFUNCTION(BlueprintCallable, Category = "ED|GameInstance")
+	void HideLoadingScreen();
 
 private:
 	void HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& ErrorString);

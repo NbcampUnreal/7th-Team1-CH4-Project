@@ -4,8 +4,10 @@
 #include "EternalDreams.h"
 #include "Core/EDGameState.h"
 #include "Core/EDPlayerState.h"
+#include "Core/EDTeamPlayerStart.h"
 #include "Characters/Player/EDPlayerController.h"
 #include "Environment/EDRestrictedArea.h"
+#include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 
 AEDGameMode::AEDGameMode()
@@ -34,16 +36,82 @@ void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const
 		return;
 	}
 
-	ErrorMessage = TEXT("MatchAlreadyStarted");
-	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PreLogin 거부 — MatchAlreadyStarted, Address: %s"), *Address);
+	// ============================================================
+	// [IOCP 전환 시 활성화] 토큰 검증 & PendingToken 저장
+	// ============================================================
+	// 향후 IOCP 로비에서 접속할 때:
+	//   1. Options에서 token 파싱
+	//   2. DediServerSubsystem->IsTokenAuthorized(Token) 검증
+	//   3. DediServerSubsystem->StorePendingToken(Address, Token)
+	//   4. 검증 실패 시 ErrorMessage 설정하여 거부
+	// 현재는 구형 로비(SeamlessTravel) 사용 중이므로 토큰 검증 생략.
+	// ============================================================
+}
+
+// ============================================================
+//  PostLogin — 팀 배정 → 스폰 → Phase 시작 체크
+// ============================================================
+
+void AEDGameMode::PostLogin(APlayerController* NewPlayer)
+{
+	// ============================================================
+	// [IOCP 전환 시 활성화] IOCP 데이터 기반 팀 배정
+	// ============================================================
+	// 향후 IOCP 로비 연결 시 Super::PostLogin 호출 전에 팀을 배정해야 한다.
+	// Super::PostLogin → HandleStartingNewPlayer → RestartPlayer → FindPlayerStart 순서로
+	// 스폰이 발생하므로, TeamId가 먼저 설정되어야 올바른 위치에 스폰된다.
+	//
+	// 구현 예시:
+	//   if (UEDDediServerSubsystem* DediSub = GetGameInstance()->GetSubsystem<UEDDediServerSubsystem>())
+	//   {
+	//       FString Address = NewPlayer->GetNetConnection()->LowLevelGetRemoteAddress(true);
+	//       FString Token = DediSub->ConsumePendingToken(Address);
+	//       if (const auto* Info = DediSub->GetPlayerInfoByToken(Token))
+	//       {
+	//           AEDPlayerState* PS = NewPlayer->GetPlayerState<AEDPlayerState>();
+	//           if (PS) PS->TeamId = Info->TeamId;
+	//       }
+	//   }
+	// ============================================================
+
+	// 구형 로비: SeamlessTravel로 접속 시 PostLogin이 아닌
+	// HandleSeamlessTravelPlayer가 호출되므로, 여기는 IOCP 전용 경로.
+	// 현재는 Super만 호출 (구형 로비에서는 이 함수 자체가 호출되지 않음).
+
+	Super::PostLogin(NewPlayer);
+
+	if (AEDPlayerState* PS = NewPlayer ? NewPlayer->GetPlayerState<AEDPlayerState>() : nullptr)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PostLogin — Player: %s, TeamId: %d"),
+			*PS->GetPlayerName(), PS->TeamId);
+	}
+
+	// [IOCP 전환 시 활성화] 전원 접속 감지 후 Phase 시작
+	// TryStartPhaseSequence();
 }
 
 void AEDGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
+	CacheTeamPlayerStarts();
 	InitRestrictedZones();
 
+	// ============================================================
+	// [비동기로드] 게임 에셋 로드 시작 위치
+	// ============================================================
+	// 향후 EDGameDataSubsystem를 활용하여 게임 에셋(UI, Item, Monster)을
+	// 비동기로 로드하는 로직을 여기에 추가한다.
+	//
+	// 구현 예시:
+	//   if (UEDGameDataSubsystem* DataSub = UEDGameDataSubsystem::Get(this))
+	//   {
+	//       DataSub->InitializeGameData();
+	//   }
+	// ============================================================
+
+	// 구형 로비 호환: BeginPlay에서 바로 Phase 시작 (테스트용)
+	// [IOCP 전환 시] 아래 블록을 제거하고, PostLogin의 TryStartPhaseSequence()를 활성화
 	if (PhaseSequence.Num() > 0)
 	{
 		StartPhaseSequence();
@@ -315,4 +383,95 @@ void AEDGameMode::OnMatchFinished()
 {
 	// [승패] 최종 승패 판정 & 결과 UI 표시 — S3/S6 담당
 	// [세션] 로비 복귀 또는 세션 정리 — S6 담당
+}
+
+// ============================================================
+//  Starting System — 팀별 스폰 위치
+// ============================================================
+
+void AEDGameMode::CacheTeamPlayerStarts()
+{
+	TeamPlayerStartMap.Empty();
+
+	for (TActorIterator<AEDTeamPlayerStart> It(GetWorld()); It; ++It)
+	{
+		AEDTeamPlayerStart* Start = *It;
+		if (Start && Start->TeamId > 0)
+		{
+			TeamPlayerStartMap.FindOrAdd(Start->TeamId).Add(Start);
+		}
+	}
+
+	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] CacheTeamPlayerStarts — %d팀 등록됨"), TeamPlayerStartMap.Num());
+	for (const auto& Pair : TeamPlayerStartMap)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("  Team %d: %d개 스폰 포인트"), Pair.Key, Pair.Value.Num());
+	}
+}
+
+AActor* AEDGameMode::ChoosePlayerStart_Implementation(AController* Player)
+{
+	if (!Player)
+	{
+		return Super::ChoosePlayerStart_Implementation(Player);
+	}
+
+	// PlayerState에서 TeamId 가져오기
+	const AEDPlayerState* PS = Player->GetPlayerState<AEDPlayerState>();
+	const int32 PlayerTeamId = PS ? PS->TeamId : EDTeam::None;
+
+	// TeamId가 유효하면 해당 팀의 스폰 포인트에서 선택
+	if (const TArray<AEDTeamPlayerStart*>* TeamStarts = TeamPlayerStartMap.Find(PlayerTeamId))
+	{
+		if (TeamStarts->Num() > 0)
+		{
+			AEDTeamPlayerStart* Chosen = (*TeamStarts)[FMath::RandRange(0, TeamStarts->Num() - 1)];
+			UE_LOG(LogEDCore, Warning, TEXT("[GameMode] ChoosePlayerStart — Team %d → %s"),
+				PlayerTeamId, *Chosen->GetName());
+			return Chosen;
+		}
+	}
+
+	// 팀 스폰 포인트를 찾지 못하면 기본 PlayerStart로 폴백
+	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] ChoosePlayerStart — Team %d 스폰 포인트 없음, 기본 폴백"),
+		PlayerTeamId);
+	return Super::ChoosePlayerStart_Implementation(Player);
+}
+
+// ============================================================
+//  [IOCP 전용] 전원 접속 감지 → Phase 시작
+// ============================================================
+
+void AEDGameMode::TryStartPhaseSequence()
+{
+	if (bPhaseSequenceActive) return;
+	if (PhaseSequence.Num() == 0) return;
+
+	// ============================================================
+	// [IOCP 전환 시 활성화] 접속 인원 체크
+	// ============================================================
+	// 향후 구현:
+	//   UEDDediServerSubsystem* DediSub = GetGameInstance()->GetSubsystem<UEDDediServerSubsystem>();
+	//   const int32 ExpectedCount = DediSub ? DediSub->GetExpectedPlayerCount() : 0;
+	//   const int32 CurrentCount = GetNumPlayers();
+	//   if (ExpectedCount > 0 && CurrentCount < ExpectedCount)
+	//   {
+	//       UE_LOG(LogEDCore, Warning, TEXT("[GameMode] TryStartPhaseSequence — 대기 중: %d/%d"),
+	//           CurrentCount, ExpectedCount);
+	//       return;
+	//   }
+	//
+	// [비동기로드] 데이터 로드 완료 체크
+	//   if (UEDGameDataSubsystem* DataSub = UEDGameDataSubsystem::Get(this))
+	//   {
+	//       if (!DataSub->IsDataReady())
+	//       {
+	//           // 데이터 완료 대기 — OnAllDataLoaded 델리게이트에서 재호출
+	//           return;
+	//       }
+	//   }
+	// ============================================================
+
+	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] TryStartPhaseSequence — Phase 시작"));
+	StartPhaseSequence();
 }
