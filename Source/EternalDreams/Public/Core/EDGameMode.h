@@ -67,13 +67,12 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 
 	// -------------------------------------------------------
-	// Starting System — 팀별 스폰 위치 결정
+	// Starting System — 구역(Zone)별 스폰 위치 결정
 	// -------------------------------------------------------
 
 	/**
-	 * 팀 ID 기반으로 AEDTeamPlayerStart를 검색하여 스폰 위치를 결정한다.
-	 * 구형 로비(SeamlessTravel) — CopyProperties로 TeamId가 보존되어 그대로 동작.
-	 * 신형 IOCP(ClientTravel) — PostLogin에서 TeamId 배정 후 Super가 호출하므로 그대로 동작.
+	 * 플레이어가 선택한 구역(DesiredZoneId)의 스폰 포인트 중
+	 * 아직 사용되지 않은 하나를 랜덤으로 선택한다.
 	 */
 	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 
@@ -147,11 +146,14 @@ private:
 	// Starting System 내부
 	// -------------------------------------------------------
 
-	/** 레벨의 AEDTeamPlayerStart를 수집하여 캐시. BeginPlay에서 호출 */
-	void CacheTeamPlayerStarts();
+	/** 레벨의 AEDTeamPlayerStart를 구역별로 수집하여 캐시. BeginPlay에서 호출 */
+	void CacheZonePlayerStarts();
 
-	/** TeamId → 해당 팀의 PlayerStart 배열 */
-	TMap<int32, TArray<AEDTeamPlayerStart*>> TeamPlayerStartMap;
+	/** ZoneId → 해당 구역의 PlayerStart 배열 */
+	TMap<int32, TArray<AEDTeamPlayerStart*>> ZonePlayerStartMap;
+
+	/** 이미 배정된 스폰 포인트 (중복 스폰 방지) */
+	TSet<AEDTeamPlayerStart*> OccupiedPlayerStarts;
 
 	/**
 	 * [IOCP 전용] 전원 접속 시 Phase 시작.

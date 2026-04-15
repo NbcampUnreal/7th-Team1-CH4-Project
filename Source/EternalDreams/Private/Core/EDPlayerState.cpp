@@ -13,6 +13,7 @@ void AEDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 	DOREPLIFETIME(AEDPlayerState, TeamId);
 	DOREPLIFETIME(AEDPlayerState, bReady);
+	DOREPLIFETIME(AEDPlayerState, DesiredZoneId);
 }
 
 void AEDPlayerState::CopyProperties(APlayerState* PlayerState)
@@ -23,5 +24,6 @@ void AEDPlayerState::CopyProperties(APlayerState* PlayerState)
 	{
 		PS->TeamId = TeamId;
 		PS->bReady = bReady;
+		PS->DesiredZoneId = DesiredZoneId;
 	}
 }

@@ -94,7 +94,7 @@ void AEDGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	CacheTeamPlayerStarts();
+	CacheZonePlayerStarts();
 	InitRestrictedZones();
 
 	// ============================================================
@@ -386,26 +386,21 @@ void AEDGameMode::OnMatchFinished()
 }
 
 // ============================================================
-//  Starting System — 팀별 스폰 위치
+//  Starting System — 구역(Zone)별 스폰 위치
 // ============================================================
 
-void AEDGameMode::CacheTeamPlayerStarts()
+void AEDGameMode::CacheZonePlayerStarts()
 {
-	TeamPlayerStartMap.Empty();
+	ZonePlayerStartMap.Empty();
+	OccupiedPlayerStarts.Empty();
 
 	for (TActorIterator<AEDTeamPlayerStart> It(GetWorld()); It; ++It)
 	{
 		AEDTeamPlayerStart* Start = *It;
-		if (Start && Start->TeamId > 0)
+		if (Start && Start->ZoneId > 0)
 		{
-			TeamPlayerStartMap.FindOrAdd(Start->TeamId).Add(Start);
+			ZonePlayerStartMap.FindOrAdd(Start->ZoneId).Add(Start);
 		}
-	}
-
-	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] CacheTeamPlayerStarts — %d팀 등록됨"), TeamPlayerStartMap.Num());
-	for (const auto& Pair : TeamPlayerStartMap)
-	{
-		UE_LOG(LogEDCore, Warning, TEXT("  Team %d: %d개 스폰 포인트"), Pair.Key, Pair.Value.Num());
 	}
 }
 
@@ -416,25 +411,29 @@ AActor* AEDGameMode::ChoosePlayerStart_Implementation(AController* Player)
 		return Super::ChoosePlayerStart_Implementation(Player);
 	}
 
-	// PlayerState에서 TeamId 가져오기
 	const AEDPlayerState* PS = Player->GetPlayerState<AEDPlayerState>();
-	const int32 PlayerTeamId = PS ? PS->TeamId : EDTeam::None;
+	const int32 ZoneId = PS ? PS->DesiredZoneId : 0;
 
-	// TeamId가 유효하면 해당 팀의 스폰 포인트에서 선택
-	if (const TArray<AEDTeamPlayerStart*>* TeamStarts = TeamPlayerStartMap.Find(PlayerTeamId))
+	if (const TArray<AEDTeamPlayerStart*>* ZoneStarts = ZonePlayerStartMap.Find(ZoneId))
 	{
-		if (TeamStarts->Num() > 0)
+		// 해당 구역에서 아직 사용되지 않은 스폰 포인트 수집
+		TArray<AEDTeamPlayerStart*> Available;
+		for (AEDTeamPlayerStart* Start : *ZoneStarts)
 		{
-			AEDTeamPlayerStart* Chosen = (*TeamStarts)[FMath::RandRange(0, TeamStarts->Num() - 1)];
-			UE_LOG(LogEDCore, Warning, TEXT("[GameMode] ChoosePlayerStart — Team %d → %s"),
-				PlayerTeamId, *Chosen->GetName());
+			if (!OccupiedPlayerStarts.Contains(Start))
+			{
+				Available.Add(Start);
+			}
+		}
+
+		if (Available.Num() > 0)
+		{
+			AEDTeamPlayerStart* Chosen = Available[FMath::RandRange(0, Available.Num() - 1)];
+			OccupiedPlayerStarts.Add(Chosen);
 			return Chosen;
 		}
 	}
 
-	// 팀 스폰 포인트를 찾지 못하면 기본 PlayerStart로 폴백
-	UE_LOG(LogEDCore, Warning, TEXT("[GameMode] ChoosePlayerStart — Team %d 스폰 포인트 없음, 기본 폴백"),
-		PlayerTeamId);
 	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
