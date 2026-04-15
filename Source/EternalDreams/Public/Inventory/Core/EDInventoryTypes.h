@@ -308,3 +308,53 @@ struct ETERNALDREAMS_API FEDCraftRecipeViewData
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft|View")
     TArray<FEDCraftIngredientViewData> Ingredients;
 };
+
+USTRUCT(BlueprintType)
+struct ETERNALDREAMS_API FEDCraftTreeNodeViewData
+{
+    GENERATED_BODY()
+
+    // 트리 내부에서 노드를 구분하기 위한 ID
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft|TreeView")
+    int32 NodeId = -1;
+
+    // 부모 노드 ID. 루트 노드는 -1을 사용
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft|TreeView")
+    int32 ParentNodeId = -1;
+
+    // 트리에서 몇 단계 아래에 있는지 나타내는 깊이 값
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft|TreeView")
+    int32 Depth = 0;
+
+    // 이 노드가 가리키는 아이템 ID
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft|TreeView")
+    FPrimaryAssetId ItemId;
+
+    // UI에 표시할 아이템 이름
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft|TreeView")
+    FText DisplayName;
+
+    // UI에 표시할 아이템 희귀도
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft|TreeView")
+    EEDItemRarity Rarity = EEDItemRarity::Normal;
+
+    // UI에 표시할 아이콘 텍스처
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft|TreeView")
+    TObjectPtr<UTexture2D> IconTexture = nullptr;
+
+    // 이 노드가 요구하는 수량
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft|TreeView")
+    int32 RequiredQuantity = 1;
+
+    // 현재 플레이어가 보유한 수량. 인벤토리와 장비 슬롯을 합산한 값
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft|TreeView")
+    int32 OwnedQuantity = 0;
+
+    // 요구 수량을 충족했는지 여부
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft|TreeView")
+    bool bSatisfied = false;
+
+    // 이 노드 아이템 자체가 하위 재료로 다시 제작 가능한지 여부
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Craft|TreeView")
+    bool bIsCraftable = false;
+};

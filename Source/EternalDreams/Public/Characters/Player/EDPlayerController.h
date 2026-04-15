@@ -13,6 +13,7 @@ class AEDCursorActor;
 class UWidgetComponent;
 class UInputMappingContext;
 class UInputAction;
+class UEDCraftingInteractionComponent;
 class UEDLootInteractionComponent;
 
 DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
@@ -80,6 +81,10 @@ public:
 	TObjectPtr<UInputAction> LookAction=nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
 	TObjectPtr<UInputAction> BasicAttackAction=nullptr;
+
+	// 제작 실행 입력 액션
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
+	TObjectPtr<UInputAction> CraftItemAction = nullptr;
 #pragma endregion
 #pragma region Input Camera
 	//IMC_Camera
@@ -113,6 +118,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UEDLootInteractionComponent> LootInteractionComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
+	TObjectPtr<UEDCraftingInteractionComponent> CraftingInteractionComponent;
 #pragma endregion
 private:
 #pragma region UI 
@@ -121,6 +129,9 @@ private:
 
 	// ESC 입력 시 패널 닫기 또는 Pause 메뉴 열기 처리
 	void HandleUIBack();
+
+	// 제작 입력 시 현재 선택된 레시피 제작을 시도
+	void HandleCraftItem();
 
 	// 애플리케이션 복귀 시 현재 열린 UI 상태에 맞게 입력 모드와 포커스 복구를 요청
 	void HandleApplicationReactivated();

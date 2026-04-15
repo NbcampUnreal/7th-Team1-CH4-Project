@@ -1,13 +1,42 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/HUD/EDItemCraftingWidget.h"
 
+#include "Blueprint/WidgetTree.h"
+#include "Components/HorizontalBox.h"
+#include "Components/Image.h"
 #include "Components/PanelWidget.h"
 #include "Components/TextBlock.h"
+#include "Engine/AssetManager.h"
 #include "GameFramework/Pawn.h"
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
 #include "Inventory/Component/EDInventoryComponent.h"
+#include "Item/Data/EDInventoryItemDataAsset.h"
 #include "UI/HUD/EDCraftIngredientEntryWidget.h"
 #include "UI/HUD/EDCraftRecipeEntryWidget.h"
+#include "UI/HUD/EDCraftTreeNodeWidget.h"
+
+namespace
+{
+const UEDInventoryItemDataAsset* ResolveCraftTreeItemData(const FPrimaryAssetId& ItemId)
+{
+	if (!ItemId.IsValid())
+	{
+		return nullptr;
+	}
+
+	UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(ItemId);
+	if (!ItemObject)
+	{
+		const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(ItemId);
+		if (AssetPath.IsValid())
+		{
+			ItemObject = AssetPath.TryLoad();
+		}
+	}
+
+	return Cast<UEDInventoryItemDataAsset>(ItemObject);
+}
+}
 
 void UEDItemCraftingWidget::NativeConstruct()
 {
@@ -109,6 +138,7 @@ void UEDItemCraftingWidget::RefreshCraftRecipes()
 	{
 		RebuildRecipeEntries();
 		RebuildIngredientEntries();
+		RebuildCraftTreeNodes();
 		RefreshSelectedRecipeSummary();
 		return;
 	}
@@ -142,6 +172,7 @@ void UEDItemCraftingWidget::RefreshCraftRecipes()
 
 	RebuildRecipeEntries();
 	RebuildIngredientEntries();
+	RebuildCraftTreeNodes();
 	RefreshSelectedRecipeSummary();
 }
 
@@ -214,11 +245,102 @@ void UEDItemCraftingWidget::RebuildIngredientEntries()
 	}
 }
 
+void UEDItemCraftingWidget::RebuildCraftTreeNodes()
+{
+	if (!CraftTreeContainer)
+	{
+		return;
+	}
+
+	CraftTreeContainer->ClearChildren();
+	CraftTreeNodeWidgets.Reset();
+
+	if (!CraftTreeNodeWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDItemCraftingWidget: CraftTreeNodeWidgetClass가 설정되지 않았습니다."));
+		return;
+	}
+
+	FEDCraftRecipeViewData SelectedRecipe;
+	if (!TryGetSelectedRecipeViewData(SelectedRecipe))
+	{
+		return;
+	}
+
+	TArray<FEDCraftTreeFlatNode> FlatNodes;
+	bool bCyclePruned = false;
+	UEDInventoryBlueprintLibrary::BuildCraftTreeFlat(
+		InventoryComponent,
+		SelectedRecipe.ResultItemId,
+		FlatNodes,
+		bCyclePruned,
+		8);
+
+	if (FlatNodes.Num() <= 0 || !WidgetTree)
+	{
+		return;
+	}
+
+	FlatNodes.Sort([](const FEDCraftTreeFlatNode& A, const FEDCraftTreeFlatNode& B)
+	{
+		if (A.Depth != B.Depth)
+		{
+			return A.Depth < B.Depth;
+		}
+
+		return A.NodeId < B.NodeId;
+	});
+
+	int32 CurrentDepth = INDEX_NONE;
+	UHorizontalBox* CurrentRow = nullptr;
+
+	for (const FEDCraftTreeFlatNode& FlatNode : FlatNodes)
+	{
+		if (CurrentDepth != FlatNode.Depth)
+		{
+			CurrentDepth = FlatNode.Depth;
+			CurrentRow = WidgetTree->ConstructWidget<UHorizontalBox>(UHorizontalBox::StaticClass());
+			if (!CurrentRow)
+			{
+				continue;
+			}
+
+			CraftTreeContainer->AddChild(CurrentRow);
+		}
+
+		if (!CurrentRow)
+		{
+			continue;
+		}
+
+		FEDCraftTreeNodeViewData NodeViewData;
+		if (!BuildCraftTreeNodeViewData(FlatNode, NodeViewData))
+		{
+			continue;
+		}
+
+		UEDCraftTreeNodeWidget* NodeWidget = CreateWidget<UEDCraftTreeNodeWidget>(this, CraftTreeNodeWidgetClass);
+		if (!NodeWidget)
+		{
+			continue;
+		}
+
+		NodeWidget->SetTreeNodeViewData(NodeViewData);
+		CurrentRow->AddChildToHorizontalBox(NodeWidget);
+		CraftTreeNodeWidgets.Add(NodeWidget);
+	}
+}
+
 void UEDItemCraftingWidget::RefreshSelectedRecipeSummary()
 {
 	FEDCraftRecipeViewData SelectedRecipe;
 	if (!TryGetSelectedRecipeViewData(SelectedRecipe))
 	{
+		if (SelectedRecipeIconImage)
+		{
+			SelectedRecipeIconImage->SetBrushFromTexture(nullptr);
+		}
+
 		if (SelectedRecipeNameText)
 		{
 			SelectedRecipeNameText->SetText(FText::FromString(TEXT("No Recipe Selected")));
@@ -232,6 +354,11 @@ void UEDItemCraftingWidget::RefreshSelectedRecipeSummary()
 		return;
 	}
 
+	if (SelectedRecipeIconImage)
+	{
+		SelectedRecipeIconImage->SetBrushFromTexture(SelectedRecipe.ResultIconTexture);
+	}
+
 	if (SelectedRecipeNameText)
 	{
 		SelectedRecipeNameText->SetText(SelectedRecipe.ResultItemName);
@@ -241,7 +368,7 @@ void UEDItemCraftingWidget::RefreshSelectedRecipeSummary()
 	{
 		SelectedRecipeStateText->SetText(
 			SelectedRecipe.bCanCraft
-				? FText::FromString(TEXT("Press Interaction Key to craft"))
+				? FText::FromString(TEXT("Press Craft Key to craft"))
 				: FText::FromString(TEXT("Collect all required materials")));
 	}
 }
@@ -260,6 +387,68 @@ bool UEDItemCraftingWidget::TryGetSelectedRecipeViewData(FEDCraftRecipeViewData&
 	return false;
 }
 
+bool UEDItemCraftingWidget::BuildCraftTreeNodeViewData(const FEDCraftTreeFlatNode& InFlatNode, FEDCraftTreeNodeViewData& OutNodeData) const
+{
+	OutNodeData = FEDCraftTreeNodeViewData();
+
+	if (!InFlatNode.ItemId.IsValid())
+	{
+		return false;
+	}
+
+	const UEDInventoryItemDataAsset* ItemData = ResolveCraftTreeItemData(InFlatNode.ItemId);
+
+	OutNodeData.NodeId = InFlatNode.NodeId;
+	OutNodeData.ParentNodeId = InFlatNode.ParentNodeId;
+	OutNodeData.Depth = InFlatNode.Depth;
+	OutNodeData.ItemId = InFlatNode.ItemId;
+	OutNodeData.DisplayName = ItemData && !ItemData->DisplayName.IsEmpty()
+		? ItemData->DisplayName
+		: FText::FromName(InFlatNode.ItemId.PrimaryAssetName);
+	OutNodeData.Rarity = ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
+	OutNodeData.IconTexture = ItemData ? ItemData->IconTexture : nullptr;
+	OutNodeData.RequiredQuantity = FMath::Max(1, InFlatNode.Quantity);
+	OutNodeData.OwnedQuantity = CountOwnedItemQuantity(InFlatNode.ItemId);
+	OutNodeData.bSatisfied = OutNodeData.OwnedQuantity >= OutNodeData.RequiredQuantity;
+	OutNodeData.bIsCraftable = InFlatNode.bIsCraftable;
+	return true;
+}
+
+int32 UEDItemCraftingWidget::CountOwnedItemQuantity(const FPrimaryAssetId& ItemId) const
+{
+	if (!InventoryComponent || !ItemId.IsValid())
+	{
+		return 0;
+	}
+
+	int32 OwnedQuantity = 0;
+
+	for (const FEDInventorySlotData& SlotData : InventoryComponent->InventorySlots)
+	{
+		if (!SlotData.IsEmpty() && SlotData.Item.ItemId == ItemId)
+		{
+			OwnedQuantity += SlotData.Item.Quantity;
+		}
+	}
+
+	const TArray<const FEDEquipmentSlotData*> EquipmentSlots =
+	{
+		&InventoryComponent->WeaponSlot,
+		&InventoryComponent->TopArmorSlot,
+		&InventoryComponent->BottomArmorSlot
+	};
+
+	for (const FEDEquipmentSlotData* EquipmentSlot : EquipmentSlots)
+	{
+		if (EquipmentSlot && EquipmentSlot->EquippedItem.IsValid() && EquipmentSlot->EquippedItem.ItemId == ItemId)
+		{
+			OwnedQuantity += EquipmentSlot->EquippedItem.Quantity;
+		}
+	}
+
+	return OwnedQuantity;
+}
+
 void UEDItemCraftingWidget::HandleRecipeEntryClicked(FName InRecipeRowId)
 {
 	if (InRecipeRowId.IsNone())
@@ -270,6 +459,7 @@ void UEDItemCraftingWidget::HandleRecipeEntryClicked(FName InRecipeRowId)
 	SelectedRecipeRowId = InRecipeRowId;
 	RebuildRecipeEntries();
 	RebuildIngredientEntries();
+	RebuildCraftTreeNodes();
 	RefreshSelectedRecipeSummary();
 }
 
