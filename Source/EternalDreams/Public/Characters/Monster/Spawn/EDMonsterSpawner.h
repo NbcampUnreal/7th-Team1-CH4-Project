@@ -4,10 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Core/EDGameDataSubsystem.h"
 #include "EDMonsterSpawner.generated.h"
 
 class UEDMonsterDataAsset;
 class AEDMonsterBase;
+class UEDMonsterSpawnSubsystem;
 
 UCLASS()
 class ETERNALDREAMS_API AEDMonsterSpawner : public AActor
@@ -21,13 +23,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Spawn")
 	void TriggerSpawn();
 	
-	UEDMonsterDataAsset* GetMonsterDataAsset() const { return MonsterDataAsset; }
+	UEDMonsterDataAsset* GetMonsterDataAsset() const;
 protected:
 	virtual void BeginPlay() override;
 	
-	// 스폰할 몬스터 DA
+	// 스폰할 몬스터 DA의 에셋 Id
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
-	TObjectPtr<UEDMonsterDataAsset> MonsterDataAsset;
+	FPrimaryAssetId MonsterDataAssetId;
+	
 	// 리스폰 딜레이
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
 	float RespawnDelay = 30.f;

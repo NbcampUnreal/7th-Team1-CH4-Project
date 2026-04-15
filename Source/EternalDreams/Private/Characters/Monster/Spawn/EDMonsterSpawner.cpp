@@ -18,6 +18,15 @@ void AEDMonsterSpawner::TriggerSpawn()
 	SpawnMonster();
 }
 
+UEDMonsterDataAsset* AEDMonsterSpawner::GetMonsterDataAsset() const
+{
+	UEDGameDataSubsystem* DataSubsystem = UEDGameDataSubsystem::Get(this);
+	if (!IsValid(DataSubsystem))
+		return nullptr;
+
+	return DataSubsystem->GetData<UEDMonsterDataAsset>(MonsterDataAssetId);
+}
+
 // Called when the game starts or when spawned
 void AEDMonsterSpawner::BeginPlay()
 {
@@ -32,7 +41,10 @@ void AEDMonsterSpawner::BeginPlay()
 	// 서브 시스템 스포너 등록
 	Subsystem->RegisterSpawner(this);
 	// Normal은 게임 시작과 동시에 스폰 Elite/Boss는 트리거 대기
-	if (IsValid(MonsterDataAsset) == false || MonsterDataAsset->GetGrade() != EMonsterGrade::Normal)
+	
+	UEDMonsterDataAsset* DataAsset = GetMonsterDataAsset();
+
+	if (!IsValid(DataAsset) || DataAsset->GetGrade() != EMonsterGrade::Normal)
 		return;
 	
 	SpawnMonster();
@@ -40,19 +52,24 @@ void AEDMonsterSpawner::BeginPlay()
 
 void AEDMonsterSpawner::SpawnMonster()
 {
-	if (IsValid(MonsterDataAsset) == false)
+	if (IsValid(SpawnedMonster)) return;
+
+	// SpawnMonster 진입할때 캐싱데이터 접근
+	UEDMonsterDataAsset* DataAsset = GetMonsterDataAsset();
+	if (!IsValid(DataAsset))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] SpawnMonster: DataAsset 없음"), *GetName());
+		UE_LOG(LogTemp, Warning, TEXT("[%s] SpawnMonster: DataAsset 없음 (Id: %s)"),
+			*GetName(), *MonsterDataAssetId.ToString());
 		return;
 	}
 	
-	TSubclassOf<AEDMonsterBase> SpawnClass = MonsterDataAsset->GetMonsterClass();
+	TSubclassOf<AEDMonsterBase> SpawnClass = DataAsset->GetMonsterClass();
 	if (IsValid(SpawnClass) == false)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[%s] SpawnMonster: MonsterClass 없음"), *GetName());
 		return;
 	}
-	
+
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 	SpawnParams.bDeferConstruction = true;
@@ -70,7 +87,7 @@ void AEDMonsterSpawner::SpawnMonster()
 	}
 	
 	// DA 적용
-	Monster->InitializeFromDataAsset(MonsterDataAsset);
+	Monster->InitializeFromDataAsset(DataAsset);
 	Monster->FinishSpawning(FTransform(GetActorRotation(), GetActorLocation()));
 		
 	SpawnedMonster = Monster;
