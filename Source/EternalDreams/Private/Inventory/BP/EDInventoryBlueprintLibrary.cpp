@@ -130,6 +130,171 @@ int32 CompareItemDictionaryEntry(const FEDItemDictionaryEntry& A, const FEDItemD
     return FCString::Stricmp(*A.ItemId.ToString(), *B.ItemId.ToString());
 }
 
+int32 CountItemInInventory_BP(const UEDInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId)
+{
+    // 일반 인벤토리 슬롯 안에 있는 같은 아이템 수량을 모두 합산
+    if (!InventoryComponent || !ItemId.IsValid())
+    {
+        return 0;
+    }
+
+    int32 Count = 0;
+    for (const FEDInventorySlotData& SlotData : InventoryComponent->InventorySlots)
+    {
+        if (!SlotData.IsEmpty() && SlotData.Item.ItemId == ItemId)
+        {
+            Count += SlotData.Item.Quantity;
+        }
+    }
+
+    return Count;
+}
+
+int32 CountItemInEquipment_BP(const UEDInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId)
+{
+    // 무기 / 상의 / 하의 장비 슬롯에 장착된 같은 아이템 수량을 합산
+    if (!InventoryComponent || !ItemId.IsValid())
+    {
+        return 0;
+    }
+
+    int32 Count = 0;
+    const TArray<const FEDEquipmentSlotData*> EquipmentSlots =
+    {
+        &InventoryComponent->WeaponSlot,
+        &InventoryComponent->TopArmorSlot,
+        &InventoryComponent->BottomArmorSlot
+    };
+
+    for (const FEDEquipmentSlotData* EquipmentSlot : EquipmentSlots)
+    {
+        if (EquipmentSlot && EquipmentSlot->EquippedItem.IsValid() && EquipmentSlot->EquippedItem.ItemId == ItemId)
+        {
+            Count += EquipmentSlot->EquippedItem.Quantity;
+        }
+    }
+
+    return Count;
+}
+
+int32 CountItemTotal_BP(const UEDInventoryComponent* InventoryComponent, const FPrimaryAssetId& ItemId)
+{
+    // 제작은 장착 중인 장비도 재료로 소비할 수 있으므로,
+    // 인벤토리 수량과 장비 슬롯 수량을 합친 총량을 사용
+    return CountItemInInventory_BP(InventoryComponent, ItemId) + CountItemInEquipment_BP(InventoryComponent, ItemId);
+}
+
+int32 CompareCraftRecipeViewData(const FEDCraftRecipeViewData& A, const FEDCraftRecipeViewData& B, EEDCraftableRecipeSortOption SortOption)
+{
+    // 제작 UI 리스트 정렬에 사용할 비교 함수
+    auto CompareText = [](const FText& Left, const FText& Right) -> int32
+    {
+        return FCString::Stricmp(*Left.ToString(), *Right.ToString());
+    };
+
+    switch (SortOption)
+    {
+    case EEDCraftableRecipeSortOption::ByRarity:
+        if (A.ResultRarity != B.ResultRarity)
+        {
+            return static_cast<int32>(A.ResultRarity) - static_cast<int32>(B.ResultRarity);
+        }
+        break;
+
+    case EEDCraftableRecipeSortOption::ByResultItemId:
+        {
+            const int32 IdCompare = FCString::Stricmp(*A.ResultItemId.ToString(), *B.ResultItemId.ToString());
+            if (IdCompare != 0)
+            {
+                return IdCompare;
+            }
+        }
+        break;
+
+    case EEDCraftableRecipeSortOption::ByResultItemName:
+        {
+            const int32 NameCompare = CompareText(A.ResultItemName, B.ResultItemName);
+            if (NameCompare != 0)
+            {
+                return NameCompare;
+            }
+        }
+        break;
+
+    case EEDCraftableRecipeSortOption::ByRowId:
+    default:
+        break;
+    }
+
+    const int32 RowCompare = FCString::Stricmp(*A.RowId.ToString(), *B.RowId.ToString());
+    if (RowCompare != 0)
+    {
+        return RowCompare;
+    }
+
+    return FCString::Stricmp(*A.RecipeId.ToString(), *B.RecipeId.ToString());
+}
+
+bool BuildCraftRecipeViewData(
+    UEDInventoryComponent* InventoryComponent,
+    const FCraftRecipeViewRow& Recipe,
+    FEDCraftRecipeViewData& OutRecipe)
+{
+    // 데이터 테이블의 레시피 1개를
+    // UI에서 바로 그릴 수 있는 형태로 변환
+    if (!InventoryComponent || !Recipe.ResultItemId.IsValid())
+    {
+        return false;
+    }
+
+    OutRecipe = FEDCraftRecipeViewData();
+    OutRecipe.RowId = Recipe.RowId;
+    OutRecipe.RecipeId = Recipe.RecipeId;
+    OutRecipe.ResultItemId = Recipe.ResultItemId;
+    OutRecipe.ResultItemName = ResolveDisplayName_BP(Recipe.ResultItemId);
+    OutRecipe.ResultQuantity = Recipe.ResultQuantity;
+    OutRecipe.bCanCraft = InventoryComponent->CanCraftRecipeByRowId(Recipe.RowId);
+
+    const UEDInventoryItemDataAsset* ResultData = ResolveItemData_BP(Recipe.ResultItemId);
+    if (ResultData)
+    {
+        OutRecipe.ResultRarity = ResultData->Rarity;
+        OutRecipe.ResultIconTexture = ResultData->IconTexture;
+    }
+
+    for (const FEDCraftingIngredientRow& Ingredient : Recipe.Ingredients)
+    {
+        if (!Ingredient.ItemId.IsValid() || Ingredient.Quantity <= 0)
+        {
+            continue;
+        }
+
+        FEDCraftIngredientViewData IngredientView;
+        IngredientView.ItemId = Ingredient.ItemId;
+        IngredientView.DisplayName = ResolveDisplayName_BP(Ingredient.ItemId);
+        IngredientView.RequiredQuantity = Ingredient.Quantity;
+
+        // 현재 플레이어가 실제로 가진 수량을 계산
+        // 장비 슬롯에 있는 아이템도 포함
+        IngredientView.OwnedQuantity = CountItemTotal_BP(InventoryComponent, Ingredient.ItemId);
+
+        // 필요 수량 이상 보유했는지 여부를 미리 계산
+        // UI에서는 이 값을 이용해 강조 색상 등을 바로 적용
+        IngredientView.bSatisfied = IngredientView.OwnedQuantity >= IngredientView.RequiredQuantity;
+
+        const UEDInventoryItemDataAsset* IngredientData = ResolveItemData_BP(Ingredient.ItemId);
+        if (IngredientData)
+        {
+            IngredientView.Rarity = IngredientData->Rarity;
+            IngredientView.IconTexture = IngredientData->IconTexture;
+        }
+
+        OutRecipe.Ingredients.Add(MoveTemp(IngredientView));
+    }
+
+    return true;
+}
+
 void GatherCraftRecipes(UEDInventoryComponent* InventoryComponent, TArray<FCraftRecipeViewRow>& OutRecipes)
 {
     OutRecipes.Reset();
@@ -636,4 +801,75 @@ void UEDInventoryBlueprintLibrary::BuildCraftTreePaths(UEDInventoryComponent* In
             OutPaths,
             bOutCyclePruned);
     }
+}
+
+void UEDInventoryBlueprintLibrary::GetCraftRecipeViewDataList(
+    UEDInventoryComponent* InventoryComponent,
+    TArray<FEDCraftRecipeViewData>& OutRecipes,
+    bool bOnlyCraftable,
+    EEDCraftableRecipeSortOption SortOption,
+    bool bDescending)
+{
+    // 제작 UI 우측 리스트용 전체 레시피 데이터를 만듦
+    // 필요하면 현재 제작 가능한 레시피만 필터링 가능
+    OutRecipes.Reset();
+
+    if (!InventoryComponent)
+    {
+        return;
+    }
+
+    TArray<FCraftRecipeViewRow> Recipes;
+    GatherCraftRecipes(InventoryComponent, Recipes);
+
+    for (const FCraftRecipeViewRow& Recipe : Recipes)
+    {
+        FEDCraftRecipeViewData RecipeView;
+        if (!BuildCraftRecipeViewData(InventoryComponent, Recipe, RecipeView))
+        {
+            continue;
+        }
+
+        if (bOnlyCraftable && !RecipeView.bCanCraft)
+        {
+            continue;
+        }
+
+        OutRecipes.Add(MoveTemp(RecipeView));
+    }
+
+    OutRecipes.Sort([SortOption, bDescending](const FEDCraftRecipeViewData& A, const FEDCraftRecipeViewData& B)
+    {
+        const int32 Compare = CompareCraftRecipeViewData(A, B, SortOption);
+        return bDescending ? (Compare > 0) : (Compare < 0);
+    });
+}
+
+bool UEDInventoryBlueprintLibrary::GetCraftRecipeViewDataByRowId(
+    UEDInventoryComponent* InventoryComponent,
+    FName RecipeRowId,
+    FEDCraftRecipeViewData& OutRecipe)
+{
+    // 선택된 레시피 1개를 상세 패널에 표시할 때 사용
+    OutRecipe = FEDCraftRecipeViewData();
+
+    if (!InventoryComponent || RecipeRowId.IsNone())
+    {
+        return false;
+    }
+
+    TArray<FCraftRecipeViewRow> Recipes;
+    GatherCraftRecipes(InventoryComponent, Recipes);
+
+    for (const FCraftRecipeViewRow& Recipe : Recipes)
+    {
+        if (Recipe.RowId != RecipeRowId)
+        {
+            continue;
+        }
+
+        return BuildCraftRecipeViewData(InventoryComponent, Recipe, OutRecipe);
+    }
+
+    return false;
 }
