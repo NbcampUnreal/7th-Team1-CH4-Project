@@ -21,10 +21,10 @@ class ETERNALDREAMS_API UEDCraftRecipeEntryWidget : public UCommonUserWidget
 	GENERATED_BODY()
 
 public:
-	// 레시피 뷰 데이터를 반영해 한 줄 UI 갱신
+	// 레시피 뷰 데이터를 반영해서 카드 UI를 갱신
 	void SetRecipeViewData(const FEDCraftRecipeViewData& InRecipeData);
 
-	// 선택 여부에 따라 시각 상태 갱신
+	// 선택 여부에 따라 강조 상태를 갱신
 	void SetSelectedState(bool bSelected);
 
 	// 이 엔트리가 어떤 레시피 Row를 나타내는지 반환
@@ -58,6 +58,7 @@ protected:
 	TObjectPtr<UBorder> SelectionBorder;
 
 private:
+	// 희귀도 강조 라인 색상 반환
 	FLinearColor GetRarityColor(EEDItemRarity InRarity) const;
 
 	// 현재 레시피 Row ID

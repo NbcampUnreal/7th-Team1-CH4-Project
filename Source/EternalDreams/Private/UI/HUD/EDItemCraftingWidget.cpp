@@ -2,7 +2,10 @@
 #include "UI/HUD/EDItemCraftingWidget.h"
 
 #include "Blueprint/WidgetTree.h"
+#include "Components/Border.h"
 #include "Components/Button.h"
+#include "Components/CanvasPanel.h"
+#include "Components/CanvasPanelSlot.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/Image.h"
@@ -14,7 +17,6 @@
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
-#include "Rendering/DrawElements.h"
 #include "UI/HUD/EDCraftRecipeEntryWidget.h"
 #include "UI/HUD/EDCraftTreeNodeWidget.h"
 
@@ -59,7 +61,7 @@ FText GetCraftFailureText(EEDInventoryActionFailure Failure)
 	case EEDInventoryActionFailure::NoSpace:
 		return FText::FromString(TEXT("인벤토리 공간이 부족합니다."));
 	case EEDInventoryActionFailure::StackLimit:
-		return FText::FromString(TEXT("더 이상 같은 아이템을 쌓을 수 없습니다."));
+		return FText::FromString(TEXT("더 이상 같은 아이템을 넣을 수 없습니다."));
 	case EEDInventoryActionFailure::MissingData:
 		return FText::FromString(TEXT("아이템 데이터가 없습니다."));
 	case EEDInventoryActionFailure::InvalidRecipe:
@@ -86,6 +88,7 @@ void UEDItemCraftingWidget::NativeConstruct()
 	BindCategoryTabButtons();
 	BindInventoryChanged();
 	RefreshCraftRecipes();
+	MarkCraftTreeLinesDirty();
 }
 
 void UEDItemCraftingWidget::NativeDestruct()
@@ -110,6 +113,33 @@ void UEDItemCraftingWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
+void UEDItemCraftingWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	if (!CraftTreeLineCanvas || !CraftTreeContainer)
+	{
+		return;
+	}
+
+	const FVector2D CurrentLineCanvasSize = CraftTreeLineCanvas->GetCachedGeometry().GetLocalSize();
+	const FVector2D CurrentTreeContentSize = CraftTreeContainer->GetCachedGeometry().GetLocalSize();
+	const uint32 CurrentLayoutHash = BuildCraftTreeLayoutHash();
+
+	const bool bCanvasSizeChanged = !CurrentLineCanvasSize.Equals(LastCraftTreeLineCanvasSize, 0.5f);
+	const bool bContentSizeChanged = !CurrentTreeContentSize.Equals(LastCraftTreeContentSize, 0.5f);
+	const bool bLayoutChanged = CurrentLayoutHash != LastCraftTreeLayoutHash;
+
+	if (bCraftTreeLinesDirty || bCanvasSizeChanged || bContentSizeChanged || bLayoutChanged)
+	{
+		RebuildCraftTreeLines();
+		LastCraftTreeLineCanvasSize = CurrentLineCanvasSize;
+		LastCraftTreeContentSize = CurrentTreeContentSize;
+		LastCraftTreeLayoutHash = CurrentLayoutHash;
+		bCraftTreeLinesDirty = false;
+	}
+}
+
 int32 UEDItemCraftingWidget::NativePaint(
 	const FPaintArgs& Args,
 	const FGeometry& AllottedGeometry,
@@ -119,90 +149,12 @@ int32 UEDItemCraftingWidget::NativePaint(
 	const FWidgetStyle& InWidgetStyle,
 	bool bParentEnabled) const
 {
-	int32 PaintLayerId = LayerId;
-
-	if (CraftTreeContainer && CachedFlatTreeNodes.Num() > 0 && CraftTreeNodeWidgetMap.Num() > 0)
-	{
-		const FLinearColor LineColor(0.42f, 0.36f, 0.29f, 1.0f);
-		const float LineThickness = 2.0f;
-		const float ParentBottomInset = 3.0f;
-		const float ChildTopInset = 3.0f;
-
-		for (const FEDCraftTreeFlatNode& FlatNode : CachedFlatTreeNodes)
-		{
-			if (FlatNode.ParentNodeId < 0)
-			{
-				continue;
-			}
-
-			const TObjectPtr<UEDCraftTreeNodeWidget>* ParentWidgetPtr = CraftTreeNodeWidgetMap.Find(FlatNode.ParentNodeId);
-			const TObjectPtr<UEDCraftTreeNodeWidget>* ChildWidgetPtr = CraftTreeNodeWidgetMap.Find(FlatNode.NodeId);
-			if (!ParentWidgetPtr || !ChildWidgetPtr || !(*ParentWidgetPtr) || !(*ChildWidgetPtr))
-			{
-				continue;
-			}
-
-			const FGeometry ParentGeometry = (*ParentWidgetPtr)->GetCachedGeometry();
-			const FGeometry ChildGeometry = (*ChildWidgetPtr)->GetCachedGeometry();
-			if (ParentGeometry.GetLocalSize().IsNearlyZero() || ChildGeometry.GetLocalSize().IsNearlyZero())
-			{
-				continue;
-			}
-
-			const FVector2D ParentBottomAbsolute = ParentGeometry.LocalToAbsolute(
-				FVector2D(ParentGeometry.GetLocalSize().X * 0.5f, ParentGeometry.GetLocalSize().Y - ParentBottomInset));
-			const FVector2D ChildTopAbsolute = ChildGeometry.LocalToAbsolute(
-				FVector2D(ChildGeometry.GetLocalSize().X * 0.5f, ChildTopInset));
-
-			const FVector2D ParentBottomLocal = AllottedGeometry.AbsoluteToLocal(ParentBottomAbsolute);
-			const FVector2D ChildTopLocal = AllottedGeometry.AbsoluteToLocal(ChildTopAbsolute);
-			if (ChildTopLocal.Y <= ParentBottomLocal.Y)
-			{
-				continue;
-			}
-
-			const float MidY = ParentBottomLocal.Y + ((ChildTopLocal.Y - ParentBottomLocal.Y) * 0.5f);
-
-			FSlateDrawElement::MakeLines(
-				OutDrawElements,
-				PaintLayerId,
-				AllottedGeometry.ToPaintGeometry(),
-				{ParentBottomLocal, FVector2D(ParentBottomLocal.X, MidY)},
-				ESlateDrawEffect::None,
-				LineColor,
-				true,
-				LineThickness);
-
-			FSlateDrawElement::MakeLines(
-				OutDrawElements,
-				PaintLayerId,
-				AllottedGeometry.ToPaintGeometry(),
-				{FVector2D(ParentBottomLocal.X, MidY), FVector2D(ChildTopLocal.X, MidY)},
-				ESlateDrawEffect::None,
-				LineColor,
-				true,
-				LineThickness);
-
-			FSlateDrawElement::MakeLines(
-				OutDrawElements,
-				PaintLayerId,
-				AllottedGeometry.ToPaintGeometry(),
-				{FVector2D(ChildTopLocal.X, MidY), ChildTopLocal},
-				ESlateDrawEffect::None,
-				LineColor,
-				true,
-				LineThickness);
-		}
-
-		++PaintLayerId;
-	}
-
 	return Super::NativePaint(
 		Args,
 		AllottedGeometry,
 		MyCullingRect,
 		OutDrawElements,
-		PaintLayerId,
+		LayerId,
 		InWidgetStyle,
 		bParentEnabled);
 }
@@ -447,6 +399,7 @@ void UEDItemCraftingWidget::RebuildCraftTreeNodes()
 	CraftTreeNodeWidgets.Reset();
 	CachedFlatTreeNodes.Reset();
 	CraftTreeNodeWidgetMap.Reset();
+	MarkCraftTreeLinesDirty();
 
 	if (!CraftTreeNodeWidgetClass)
 	{
@@ -531,9 +484,199 @@ void UEDItemCraftingWidget::RebuildCraftTreeNodes()
 			NodeSlot->SetHorizontalAlignment(HAlign_Center);
 			NodeSlot->SetVerticalAlignment(VAlign_Center);
 		}
+
 		CraftTreeNodeWidgets.Add(NodeWidget);
 		CraftTreeNodeWidgetMap.Add(FlatNode.NodeId, NodeWidget);
 	}
+
+	MarkCraftTreeLinesDirty();
+}
+
+void UEDItemCraftingWidget::RebuildCraftTreeLines()
+{
+	CraftTreeLineWidgets.Reset();
+
+	if (!CraftTreeLineCanvas)
+	{
+		return;
+	}
+
+	CraftTreeLineCanvas->ClearChildren();
+
+	if (CachedFlatTreeNodes.Num() <= 0 || CraftTreeNodeWidgetMap.Num() <= 0 || !WidgetTree)
+	{
+		return;
+	}
+
+	const FGeometry LineCanvasGeometry = CraftTreeLineCanvas->GetCachedGeometry();
+	if (LineCanvasGeometry.GetLocalSize().IsNearlyZero())
+	{
+		return;
+	}
+
+	const FLinearColor LineColor(0.42f, 0.36f, 0.29f, 1.0f);
+	const float LineThickness = 2.0f;
+	const float ParentBottomInset = 3.0f;
+	const float ChildTopInset = 3.0f;
+	const float ParentStemLength = 12.0f;
+	const float ChildStemLength = 12.0f;
+
+	for (const FEDCraftTreeFlatNode& FlatNode : CachedFlatTreeNodes)
+	{
+		if (FlatNode.ParentNodeId < 0)
+		{
+			continue;
+		}
+
+		const TObjectPtr<UEDCraftTreeNodeWidget>* ParentWidgetPtr = CraftTreeNodeWidgetMap.Find(FlatNode.ParentNodeId);
+		const TObjectPtr<UEDCraftTreeNodeWidget>* ChildWidgetPtr = CraftTreeNodeWidgetMap.Find(FlatNode.NodeId);
+		if (!ParentWidgetPtr || !ChildWidgetPtr || !(*ParentWidgetPtr) || !(*ChildWidgetPtr))
+		{
+			continue;
+		}
+
+		const FGeometry ParentGeometry = (*ParentWidgetPtr)->GetCachedGeometry();
+		const FGeometry ChildGeometry = (*ChildWidgetPtr)->GetCachedGeometry();
+		if (ParentGeometry.GetLocalSize().IsNearlyZero() || ChildGeometry.GetLocalSize().IsNearlyZero())
+		{
+			continue;
+		}
+
+		const FVector2D ParentBottomAbsolute = ParentGeometry.LocalToAbsolute(
+			FVector2D(ParentGeometry.GetLocalSize().X * 0.5f, ParentGeometry.GetLocalSize().Y - ParentBottomInset));
+		const FVector2D ChildTopAbsolute = ChildGeometry.LocalToAbsolute(
+			FVector2D(ChildGeometry.GetLocalSize().X * 0.5f, ChildTopInset));
+
+		const FVector2D ParentBottomLocal = LineCanvasGeometry.AbsoluteToLocal(ParentBottomAbsolute);
+		const FVector2D ChildTopLocal = LineCanvasGeometry.AbsoluteToLocal(ChildTopAbsolute);
+		if (ChildTopLocal.Y <= ParentBottomLocal.Y)
+		{
+			continue;
+		}
+
+		float MidY = FMath::Min(
+			ParentBottomLocal.Y + ParentStemLength,
+			ChildTopLocal.Y - ChildStemLength);
+
+		if (MidY <= ParentBottomLocal.Y || MidY >= ChildTopLocal.Y)
+		{
+			MidY = ParentBottomLocal.Y + ((ChildTopLocal.Y - ParentBottomLocal.Y) * 0.5f);
+		}
+
+		AddCraftTreeLineSegment(ParentBottomLocal, FVector2D(ParentBottomLocal.X, MidY), LineColor, LineThickness);
+		AddCraftTreeLineSegment(FVector2D(ParentBottomLocal.X, MidY), FVector2D(ChildTopLocal.X, MidY), LineColor, LineThickness);
+		AddCraftTreeLineSegment(FVector2D(ChildTopLocal.X, MidY), ChildTopLocal, LineColor, LineThickness);
+	}
+}
+
+void UEDItemCraftingWidget::AddCraftTreeLineSegment(
+	const FVector2D& StartPoint,
+	const FVector2D& EndPoint,
+	const FLinearColor& LineColor,
+	float LineThickness)
+{
+	if (!CraftTreeLineCanvas || !WidgetTree)
+	{
+		return;
+	}
+
+	const FVector2D Delta = EndPoint - StartPoint;
+	const bool bIsHorizontal = FMath::Abs(Delta.X) >= FMath::Abs(Delta.Y);
+
+	FVector2D SegmentPosition = StartPoint;
+	FVector2D SegmentSize = FVector2D::ZeroVector;
+
+	if (bIsHorizontal)
+	{
+		SegmentPosition.X = FMath::Min(StartPoint.X, EndPoint.X);
+		SegmentPosition.Y = StartPoint.Y - (LineThickness * 0.5f);
+		SegmentSize.X = FMath::Abs(Delta.X);
+		SegmentSize.Y = LineThickness;
+	}
+	else
+	{
+		SegmentPosition.X = StartPoint.X - (LineThickness * 0.5f);
+		SegmentPosition.Y = FMath::Min(StartPoint.Y, EndPoint.Y);
+		SegmentSize.X = LineThickness;
+		SegmentSize.Y = FMath::Abs(Delta.Y);
+	}
+
+	if (SegmentSize.X <= KINDA_SMALL_NUMBER || SegmentSize.Y <= KINDA_SMALL_NUMBER)
+	{
+		return;
+	}
+
+	UBorder* LineWidget = WidgetTree->ConstructWidget<UBorder>(UBorder::StaticClass());
+	if (!LineWidget)
+	{
+		return;
+	}
+
+	LineWidget->SetBrushColor(LineColor);
+
+	if (UCanvasPanelSlot* LineSlot = CraftTreeLineCanvas->AddChildToCanvas(LineWidget))
+	{
+		LineSlot->SetAutoSize(false);
+		LineSlot->SetPosition(SegmentPosition);
+		LineSlot->SetSize(SegmentSize);
+	}
+
+	CraftTreeLineWidgets.Add(LineWidget);
+}
+
+void UEDItemCraftingWidget::MarkCraftTreeLinesDirty()
+{
+	bCraftTreeLinesDirty = true;
+	LastCraftTreeLineCanvasSize = FVector2D::ZeroVector;
+	LastCraftTreeContentSize = FVector2D::ZeroVector;
+	LastCraftTreeLayoutHash = 0;
+}
+
+uint32 UEDItemCraftingWidget::BuildCraftTreeLayoutHash() const
+{
+	if (!CraftTreeLineCanvas || CraftTreeNodeWidgetMap.Num() <= 0)
+	{
+		return 0;
+	}
+
+	const FGeometry LineCanvasGeometry = CraftTreeLineCanvas->GetCachedGeometry();
+	if (LineCanvasGeometry.GetLocalSize().IsNearlyZero())
+	{
+		return 0;
+	}
+
+	TArray<int32> NodeIds;
+	CraftTreeNodeWidgetMap.GenerateKeyArray(NodeIds);
+	NodeIds.Sort();
+
+	uint32 LayoutHash = 0;
+
+	for (const int32 NodeId : NodeIds)
+	{
+		const TObjectPtr<UEDCraftTreeNodeWidget>* NodeWidgetPtr = CraftTreeNodeWidgetMap.Find(NodeId);
+		if (!NodeWidgetPtr || !(*NodeWidgetPtr))
+		{
+			continue;
+		}
+
+		const FGeometry NodeGeometry = (*NodeWidgetPtr)->GetCachedGeometry();
+		if (NodeGeometry.GetLocalSize().IsNearlyZero())
+		{
+			continue;
+		}
+
+		const FVector2D NodeCenterAbsolute = NodeGeometry.LocalToAbsolute(NodeGeometry.GetLocalSize() * 0.5f);
+		const FVector2D NodeCenterLocal = LineCanvasGeometry.AbsoluteToLocal(NodeCenterAbsolute);
+		const FVector2D NodeSize = NodeGeometry.GetLocalSize();
+
+		LayoutHash = HashCombineFast(LayoutHash, GetTypeHash(NodeId));
+		LayoutHash = HashCombineFast(LayoutHash, GetTypeHash(FMath::RoundToInt(NodeCenterLocal.X * 10.0f)));
+		LayoutHash = HashCombineFast(LayoutHash, GetTypeHash(FMath::RoundToInt(NodeCenterLocal.Y * 10.0f)));
+		LayoutHash = HashCombineFast(LayoutHash, GetTypeHash(FMath::RoundToInt(NodeSize.X * 10.0f)));
+		LayoutHash = HashCombineFast(LayoutHash, GetTypeHash(FMath::RoundToInt(NodeSize.Y * 10.0f)));
+	}
+
+	return LayoutHash;
 }
 
 void UEDItemCraftingWidget::RefreshSelectedRecipeSummary()
@@ -548,7 +691,7 @@ void UEDItemCraftingWidget::RefreshSelectedRecipeSummary()
 
 		if (SelectedRecipeNameText)
 		{
-			SelectedRecipeNameText->SetText(FText::FromString(TEXT("선택된 제작식이 없습니다.")));
+			SelectedRecipeNameText->SetText(FText::FromString(TEXT("선택된 레시피가 없습니다.")));
 		}
 
 		if (SelectedRecipeStateText)

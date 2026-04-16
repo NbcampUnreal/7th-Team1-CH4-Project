@@ -23,8 +23,8 @@ void UEDCraftRecipeEntryWidget::SetRecipeViewData(const FEDCraftRecipeViewData& 
 	if (CraftStateText)
 	{
 		CraftStateText->SetText(InRecipeData.bCanCraft
-			? FText::FromString(TEXT("Craftable"))
-			: FText::FromString(TEXT("Missing Materials")));
+			? FText::FromString(TEXT("제작 가능"))
+			: FText::FromString(TEXT("재료 부족")));
 		CraftStateText->SetColorAndOpacity(
 			InRecipeData.bCanCraft
 				? FSlateColor(FLinearColor(0.20f, 0.85f, 0.35f, 1.00f))
