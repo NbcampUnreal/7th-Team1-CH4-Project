@@ -6,7 +6,7 @@
 const FPrimaryAssetType UEDGameDataSubsystem::LobbyAssetType = FPrimaryAssetType(TEXT("LobbyData"));
 
 const FPrimaryAssetType UEDGameDataSubsystem::UIAssetType = FPrimaryAssetType(TEXT("UIData"));
-const FPrimaryAssetType UEDGameDataSubsystem::ItemAssetType = FPrimaryAssetType(TEXT("ItemData"));
+const FPrimaryAssetType UEDGameDataSubsystem::ItemAssetType = FPrimaryAssetType(TEXT("InventoryItem"));
 const FPrimaryAssetType UEDGameDataSubsystem::MonsterAssetType = FPrimaryAssetType(TEXT("MonsterData"));
 
 void UEDGameDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -34,13 +34,9 @@ UEDGameDataSubsystem* UEDGameDataSubsystem::Get(const UObject* WorldContextObjec
 // 외부에서 호출
 void UEDGameDataSubsystem::InitializeGameData()
 {
-	if (CurrentPhase != EDataLoadPhase::LobbyReady)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - InitializeGameData] 로비 데이터가 아직 준비되지 않았습니다."));
-		return;
-	}
-	UnloadPhaseData(LobbyAssetType, TEXT("Lobby"));
+	if (CurrentPhase != EDataLoadPhase::LobbyReady) return;
 	LoadPhase_UI();
+	UnloadPhaseData(LobbyAssetType, TEXT("Lobby"));
 }
 
 // ================================================================
@@ -107,7 +103,6 @@ void UEDGameDataSubsystem::LoadPhase_Lobby()
 	AM.GetPrimaryAssetIdList(LobbyAssetType, Ids);
 	if (Ids.IsEmpty())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - LoadPhase_Lobby] Data가 없습니다. 다음 단계로 건너뜁니다."));
 		OnLobbyDataLoaded();
 		return;
 	}
@@ -129,7 +124,6 @@ void UEDGameDataSubsystem::LoadPhase_UI()
 	AM.GetPrimaryAssetIdList(UIAssetType, Ids);
 	if (Ids.IsEmpty())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - LoadPhase_UI] Data가 없습니다. 다음 단계로 건너뜁니다."));
 		OnUIDataLoaded();
 		return;
 	}
@@ -150,7 +144,6 @@ void UEDGameDataSubsystem::LoadPhase_Item()
 	AM.GetPrimaryAssetIdList(ItemAssetType, Ids);
 	if (Ids.IsEmpty())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - LoadPhase_Item] Data가 없습니다. 다음 단계로 건너뜁니다."));
 		OnItemDataLoaded();
 		return;
 	}
@@ -171,7 +164,6 @@ void UEDGameDataSubsystem::LoadPhase_Monster()
 	AM.GetPrimaryAssetIdList(MonsterAssetType, Ids);
 	if (Ids.IsEmpty())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - LoadPhase_Monster] Data가 없습니다. 다음 단계로 건너뜁니다."));
 		OnMonsterDataLoaded();
 		return;
 	}
@@ -198,27 +190,23 @@ void UEDGameDataSubsystem::OnLobbyDataLoaded()
 	CacheLoadedAssets(LobbyAssetType);
 	SetPhase(EDataLoadPhase::LobbyReady);
 	OnLobbyDataReady.Broadcast();
-	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem - OnLobbyDataLoaded] Lobby 데이터 로드 완료"));
 }
 
 void UEDGameDataSubsystem::OnUIDataLoaded()
 {
 	CacheLoadedAssets(UIAssetType);
-	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem - OnUIDataLoaded] UI 데이터 로드 완료"));
 	LoadPhase_Item();
 }
 
 void UEDGameDataSubsystem::OnItemDataLoaded()
 {
 	CacheLoadedAssets(ItemAssetType);
-	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem - OnItemDataLoaded] Item 데이터 로드 완료"));
 	LoadPhase_Monster();
 }
 
 void UEDGameDataSubsystem::OnMonsterDataLoaded()
 {
 	CacheLoadedAssets(MonsterAssetType);
-	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem - OnMonsterDataLoaded]  Monster 데이터 로드 완료"));
 	SetPhase(EDataLoadPhase::Completed);
 	
 	// 완료 신호
@@ -237,11 +225,7 @@ void UEDGameDataSubsystem::CacheLoadedAssets(const FPrimaryAssetType& AssetType)
 	for (const FPrimaryAssetId& Id : Ids)
 	{
 		UObject* Obj = AM.GetPrimaryAssetObject(Id);
-		if (!Obj)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem - CacheLoadedAssets] 로드 실패 : %s"), *Id.ToString());
-			continue;
-		}
+		if (!Obj) continue;
 		DataCache.Add(Id, Obj);
 	}
 }

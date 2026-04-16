@@ -1,14 +1,17 @@
-#include "Inventory/Component/EDInventoryComponent.h"
+﻿#include "Inventory/Component/EDInventoryComponent.h"
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "Engine/AssetManager.h"
+#include "EngineUtils.h"
+#include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Inventory/GAS/EDInventoryGASBridge.h"
 #include "Inventory/System/EDInventoryCraftService.h"
 #include "Inventory/System/EDInventoryEquipmentService.h"
 #include "Inventory/System/EDInventoryTransferService.h"
 #include "Inventory/System/EDInventoryValidationService.h"
+#include "Inventory/World/EDDroppedItemActor.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "Item/Data/EDItemDataRows.h"
 #include "Net/UnrealNetwork.h"
@@ -271,12 +274,201 @@ void RemoveLooseTags(UAbilitySystemComponent* ASC, const FGameplayTagContainer& 
         }
     }
 }
+
+FRandomStream BuildRandomStreamFromOptionalSeed(const int32 Seed)
+{
+    FRandomStream RandomStream;
+    if (Seed != 0)
+    {
+        RandomStream.Initialize(Seed);
+    }
+    else
+    {
+        RandomStream.GenerateNewSeed();
+    }
+    return RandomStream;
+}
+
+UEDInventoryComponent* ResolveInventoryComponentFromActor_Component(AActor* Actor)
+{
+    return Actor ? Actor->FindComponentByClass<UEDInventoryComponent>() : nullptr;
+}
+
+EEDItemRarity ResolveItemRarity_Component(const FPrimaryAssetId& ItemId)
+{
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Component(ItemId);
+    return ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
+}
+
+template<typename T>
+void ShuffleArray_Component(TArray<T>& Array, FRandomStream& RandomStream)
+{
+    for (int32 Index = Array.Num() - 1; Index > 0; --Index)
+    {
+        const int32 SwapIndex = RandomStream.RandRange(0, Index);
+        if (SwapIndex != Index)
+        {
+            Array.Swap(Index, SwapIndex);
+        }
+    }
+}
+
+int32 GetReceivableCapacityForTargets_Component(const TArray<UEDInventoryComponent*>& Targets, const FPrimaryAssetId& ItemId)
+{
+    int32 TotalCapacity = 0;
+    for (const UEDInventoryComponent* Target : Targets)
+    {
+        TotalCapacity += GetReceivableCapacity_Component(Target, ItemId);
+    }
+    return TotalCapacity;
+}
+
+void SetFailure_Component(EEDInventoryActionFailure* OutFailure, EEDInventoryActionFailure Failure)
+{
+    if (OutFailure)
+    {
+        *OutFailure = Failure;
+    }
+}
+
+bool PrecheckTransferAuto_Component(const UEDInventoryComponent* FromInventory, const UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure* OutFailure)
+{
+    SetFailure_Component(OutFailure, EEDInventoryActionFailure::None);
+
+    if (!FromInventory || !ToInventory)
+    {
+        SetFailure_Component(OutFailure, EEDInventoryActionFailure::InvalidInventory);
+        return false;
+    }
+
+    if (!FromInventory->InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        SetFailure_Component(OutFailure, EEDInventoryActionFailure::InvalidSlot);
+        return false;
+    }
+
+    const FEDInventorySlotData& SourceSlot = FromInventory->InventorySlots[FromSlotIndex];
+    if (SourceSlot.IsEmpty())
+    {
+        SetFailure_Component(OutFailure, EEDInventoryActionFailure::EmptySlot);
+        return false;
+    }
+
+    const int32 MoveQuantity = FMath::Min(Quantity, SourceSlot.Item.Quantity);
+    if (MoveQuantity <= 0)
+    {
+        SetFailure_Component(OutFailure, EEDInventoryActionFailure::InvalidQuantity);
+        return false;
+    }
+
+    if (GetReceivableCapacity_Component(ToInventory, SourceSlot.Item.ItemId) <= 0)
+    {
+        SetFailure_Component(OutFailure, EEDInventoryActionFailure::NoSpace);
+        return false;
+    }
+
+    return true;
+}
+
+bool PrecheckTransferToSlot_Component(const UEDInventoryComponent* FromInventory, const UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure* OutFailure)
+{
+    SetFailure_Component(OutFailure, EEDInventoryActionFailure::None);
+
+    if (!FromInventory || !ToInventory)
+    {
+        SetFailure_Component(OutFailure, EEDInventoryActionFailure::InvalidInventory);
+        return false;
+    }
+
+    if (FromInventory == ToInventory && FromSlotIndex == ToSlotIndex)
+    {
+        SetFailure_Component(OutFailure, EEDInventoryActionFailure::SlotConflict);
+        return false;
+    }
+
+    if (!FromInventory->InventorySlots.IsValidIndex(FromSlotIndex) || !ToInventory->InventorySlots.IsValidIndex(ToSlotIndex))
+    {
+        SetFailure_Component(OutFailure, EEDInventoryActionFailure::InvalidSlot);
+        return false;
+    }
+
+    const FEDInventorySlotData& SourceSlot = FromInventory->InventorySlots[FromSlotIndex];
+    if (SourceSlot.IsEmpty())
+    {
+        SetFailure_Component(OutFailure, EEDInventoryActionFailure::EmptySlot);
+        return false;
+    }
+
+    const int32 MoveQuantity = FMath::Min(Quantity, SourceSlot.Item.Quantity);
+    if (MoveQuantity <= 0)
+    {
+        SetFailure_Component(OutFailure, EEDInventoryActionFailure::InvalidQuantity);
+        return false;
+    }
+
+    const FEDInventorySlotData& DestinationSlot = ToInventory->InventorySlots[ToSlotIndex];
+    if (DestinationSlot.IsEmpty())
+    {
+        return true;
+    }
+
+    const int32 MaxStack = GetItemMaxStack_Component(SourceSlot.Item.ItemId);
+    if (DestinationSlot.Item.ItemId == SourceSlot.Item.ItemId)
+    {
+        const int32 SpaceLeft = FMath::Max(0, MaxStack - DestinationSlot.Item.Quantity);
+        if (SpaceLeft <= 0)
+        {
+            SetFailure_Component(OutFailure, EEDInventoryActionFailure::StackLimit);
+            return false;
+        }
+        return true;
+    }
+
+    if (MoveQuantity != SourceSlot.Item.Quantity)
+    {
+        SetFailure_Component(OutFailure, EEDInventoryActionFailure::SlotConflict);
+        return false;
+    }
+
+    return true;
+}
+
+bool TryFindRecipeById_Component(const UEDInventoryComponent* InventoryComponent, FName RecipeId, FEDCraftingRecipeRow& OutRecipe)
+{
+    if (!InventoryComponent || RecipeId.IsNone())
+    {
+        return false;
+    }
+
+    for (UDataTable* RecipeTable : InventoryComponent->CraftingRecipeTables)
+    {
+        if (!RecipeTable)
+        {
+            continue;
+        }
+
+        TArray<FName> RowNames = RecipeTable->GetRowNames();
+        for (const FName RowName : RowNames)
+        {
+            const FEDCraftingRecipeRow* Row = RecipeTable->FindRow<FEDCraftingRecipeRow>(RowName, TEXT("TryFindRecipeById"));
+            if (Row && Row->RecipeId == RecipeId)
+            {
+                OutRecipe = *Row;
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
 }
 
 UEDInventoryComponent::UEDInventoryComponent()
 {
     PrimaryComponentTick.bCanEverTick = false;
     SetIsReplicatedByDefault(true);
+
+    DroppedItemActorClass = AEDDroppedItemActor::StaticClass();
 
     WeaponSlot.SlotType = EEDEquippableType::Weapon;
     TopArmorSlot.SlotType = EEDEquippableType::TopArmor;
@@ -288,6 +480,7 @@ void UEDInventoryComponent::BeginPlay()
     Super::BeginPlay();
 
     OnInventoryChanged.AddUniqueDynamic(this, &UEDInventoryComponent::HandleInventoryChangedInternal);
+    OnInventoryDropRequested.AddUniqueDynamic(this, &UEDInventoryComponent::HandleDropRequestSpawnWorldItem);
 
     if (GetOwner() && GetOwner()->HasAuthority() && InventorySlots.Num() != MaxInventorySlots)
     {
@@ -312,10 +505,15 @@ void UEDInventoryComponent::BeginPlay()
         RequestInitializeRandomLootDetailed(RandomLootRollCount, RandomLootMinIndex, RandomLootMaxIndex, RandomLootSeed, Failure);
     }
 
+    if (GetOwner() && GetOwner()->HasAuthority() && bAutoDistributeInventoryOnBeginPlay && !bDistributionCompleted)
+    {
+        TryStartDeferredDistribution();
+    }
+
     RefreshCraftableRecipesCache();
-    
+
     // ---
-    // 작성자 : 김동주
+    // ?묒꽦??: 源?숈＜
     if (GetOwner() && GetOwner()->HasAuthority())
     {
         UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s bGiveDebugItemsOnBeginPlay=%s MaxSlots=%d"),
@@ -527,6 +725,454 @@ bool UEDInventoryComponent::SyncEquipEffectForSlot(EEDEquippableType SlotType)
     return bEffectApplied && bTagsSynced;
 }
 
+bool UEDInventoryComponent::PredicateMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!InventorySlots.IsValidIndex(FromSlotIndex) || !InventorySlots.IsValidIndex(ToSlotIndex))
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidSlot;
+        return false;
+    }
+
+    if (FromSlotIndex == ToSlotIndex)
+    {
+        OutFailure = EEDInventoryActionFailure::SlotConflict;
+        return false;
+    }
+
+    if (InventorySlots[FromSlotIndex].IsEmpty())
+    {
+        OutFailure = EEDInventoryActionFailure::EmptySlot;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex) : true;
+}
+
+bool UEDInventoryComponent::PredicateTransferItemAuto(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!PrecheckTransferAuto_Component(FromInventory, ToInventory, FromSlotIndex, Quantity, &OutFailure))
+    {
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestTransferItemAuto(FromInventory, ToInventory, FromSlotIndex, Quantity) : true;
+}
+
+bool UEDInventoryComponent::PredicateTransferItemToSlot(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!PrecheckTransferToSlot_Component(FromInventory, ToInventory, FromSlotIndex, ToSlotIndex, Quantity, &OutFailure))
+    {
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestTransferItemToSlot(FromInventory, ToInventory, FromSlotIndex, ToSlotIndex, Quantity) : true;
+}
+
+bool UEDInventoryComponent::PredicateDropAllFromSlot(int32 FromSlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidSlot;
+        return false;
+    }
+
+    if (InventorySlots[FromSlotIndex].IsEmpty())
+    {
+        OutFailure = EEDInventoryActionFailure::EmptySlot;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestDropAllFromSlot(FromSlotIndex) : true;
+}
+
+bool UEDInventoryComponent::PredicateDropSingleFromSlot(int32 FromSlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    const bool bValid = PredicateDropAllFromSlot(FromSlotIndex, OutFailure, false);
+    if (!bValid)
+    {
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestDropSingleFromSlot(FromSlotIndex) : true;
+}
+
+bool UEDInventoryComponent::PredicateDropCountFromSlot(int32 FromSlotIndex, int32 DropCount, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (DropCount <= 0)
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidQuantity;
+        return false;
+    }
+
+    if (!InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidSlot;
+        return false;
+    }
+
+    const FEDInventorySlotData& Slot = InventorySlots[FromSlotIndex];
+    if (Slot.IsEmpty())
+    {
+        OutFailure = EEDInventoryActionFailure::EmptySlot;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestDropCountFromSlot(FromSlotIndex, DropCount) : true;
+}
+
+bool UEDInventoryComponent::PredicatePickupDroppedItem(AEDDroppedItemActor* DroppedItemActor, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!IsValid(DroppedItemActor))
+    {
+        OutFailure = EEDInventoryActionFailure::MissingData;
+        return false;
+    }
+
+    const FPrimaryAssetId ItemId = DroppedItemActor->GetItemId();
+    const int32 Quantity = DroppedItemActor->GetQuantity();
+    if (!ItemId.IsValid() || Quantity <= 0)
+    {
+        OutFailure = EEDInventoryActionFailure::MissingData;
+        return false;
+    }
+
+    if (GetReceivableCapacity_Component(this, ItemId) < Quantity)
+    {
+        OutFailure = EEDInventoryActionFailure::NoSpace;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestPickupDroppedItem(DroppedItemActor) : true;
+}
+
+bool UEDInventoryComponent::PredicateEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidSlot;
+        return false;
+    }
+
+    const FEDInventorySlotData& SourceSlot = InventorySlots[FromSlotIndex];
+    if (SourceSlot.IsEmpty())
+    {
+        OutFailure = EEDInventoryActionFailure::EmptySlot;
+        return false;
+    }
+
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Component(SourceSlot.Item.ItemId);
+    if (!ItemData)
+    {
+        OutFailure = EEDInventoryActionFailure::MissingData;
+        return false;
+    }
+
+    if (!FEDInventoryValidationService::CanEquipToSlot(ItemData, TargetSlotType))
+    {
+        OutFailure = EEDInventoryActionFailure::SlotConflict;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestEquipItemFromSlot(FromSlotIndex, TargetSlotType) : true;
+}
+
+bool UEDInventoryComponent::PredicateUnequipTopArmor(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (TopArmorSlot.EquippedItem.IsValid() == false)
+    {
+        OutFailure = EEDInventoryActionFailure::EmptySlot;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestUnequipTopArmor() : true;
+}
+
+bool UEDInventoryComponent::PredicateUnequipBottomArmor(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (BottomArmorSlot.EquippedItem.IsValid() == false)
+    {
+        OutFailure = EEDInventoryActionFailure::EmptySlot;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestUnequipBottomArmor() : true;
+}
+
+bool UEDInventoryComponent::PredicateAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!ItemId.IsValid() || !ResolveItemData_Component(ItemId))
+    {
+        OutFailure = EEDInventoryActionFailure::MissingData;
+        return false;
+    }
+
+    if (Quantity <= 0)
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidQuantity;
+        return false;
+    }
+
+    if (GetReceivableCapacity_Component(this, ItemId) < Quantity)
+    {
+        OutFailure = EEDInventoryActionFailure::NoSpace;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestAddItemAuto(ItemId, Quantity) : true;
+}
+
+bool UEDInventoryComponent::PredicateAddItemToSlot(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!ItemId.IsValid() || !ResolveItemData_Component(ItemId))
+    {
+        OutFailure = EEDInventoryActionFailure::MissingData;
+        return false;
+    }
+
+    if (Quantity <= 0)
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidQuantity;
+        return false;
+    }
+
+    if (!InventorySlots.IsValidIndex(SlotIndex))
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidSlot;
+        return false;
+    }
+
+    const FEDInventorySlotData& Slot = InventorySlots[SlotIndex];
+    const int32 MaxStack = GetItemMaxStack_Component(ItemId);
+    if (Slot.IsEmpty())
+    {
+        if (Quantity > MaxStack)
+        {
+            OutFailure = EEDInventoryActionFailure::StackLimit;
+            return false;
+        }
+    }
+    else
+    {
+        if (Slot.Item.ItemId != ItemId)
+        {
+            OutFailure = EEDInventoryActionFailure::SlotConflict;
+            return false;
+        }
+
+        if (Quantity > FMath::Max(0, MaxStack - Slot.Item.Quantity))
+        {
+            OutFailure = EEDInventoryActionFailure::StackLimit;
+            return false;
+        }
+    }
+
+    return bAutoRequestIfValid ? RequestAddItemToSlot(ItemId, Quantity, SlotIndex) : true;
+}
+
+bool UEDInventoryComponent::PredicateInitializeRandomLoot(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!RandomLootTable)
+    {
+        OutFailure = EEDInventoryActionFailure::MissingData;
+        return false;
+    }
+
+    if (RandomLootSpawnMode == EEDInventoryLootSpawnMode::QuantityMax && RandomLootMaxTotalQuantity <= 0)
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidQuantity;
+        return false;
+    }
+
+    if (RandomLootSpawnMode == EEDInventoryLootSpawnMode::RollCountMax && RandomLootRollCount <= 0)
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidQuantity;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestInitializeRandomLoot() : true;
+}
+
+bool UEDInventoryComponent::PredicateDistributeInventoryToTargets(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!IsReadyForDistribution())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    TArray<UEDInventoryComponent*> ReadyTargets;
+    bool bHasPendingTargets = false;
+    GatherDistributionTargets(ReadyTargets, bHasPendingTargets);
+    if (bHasPendingTargets)
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestDistributeInventoryToTargets() : true;
+}
+
+bool UEDInventoryComponent::PredicateCraftItem(FName RecipeId, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    FEDCraftingRecipeRow RecipeRow;
+    if (!TryFindRecipeById_Component(this, RecipeId, RecipeRow))
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidRecipe;
+        return false;
+    }
+
+    if (!FEDInventoryCraftService::CanCraftRecipe(this, RecipeRow, &OutFailure))
+    {
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestCraftItem(RecipeId) : true;
+}
+
+bool UEDInventoryComponent::PredicateConsumeItemAtSlot(int32 SlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!InventorySlots.IsValidIndex(SlotIndex))
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidSlot;
+        return false;
+    }
+
+    if (InventorySlots[SlotIndex].IsEmpty())
+    {
+        OutFailure = EEDInventoryActionFailure::EmptySlot;
+        return false;
+    }
+
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Component(InventorySlots[SlotIndex].Item.ItemId);
+    if (!FEDInventoryValidationService::CanConsumeItem(ItemData, GetOwner(), &OutFailure))
+    {
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestConsumeItemAtSlot(SlotIndex) : true;
+}
+
+bool UEDInventoryComponent::PredicateEnsureDefaultEquipment(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestEnsureDefaultEquipment() : true;
+}
+
 bool UEDInventoryComponent::RequestMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex)
 {
     if (!GetOwner())
@@ -571,11 +1217,10 @@ bool UEDInventoryComponent::RequestTransferItemAutoDetailed(UEDInventoryComponen
         return false;
     }
 
-    UE_LOG(LogTemp, Warning, TEXT("TransferDebug: Owner=%s HasAuthority=%s FromSlot=%d Quantity=%d"),
-    GetOwner() ? *GetOwner()->GetName() : TEXT("None"),
-    GetOwner() && GetOwner()->HasAuthority() ? TEXT("true") : TEXT("false"),
-    FromSlotIndex,
-    Quantity);
+    if (!PrecheckTransferAuto_Component(FromInventory, ToInventory, FromSlotIndex, Quantity, &OutFailure))
+    {
+        return false;
+    }
 
     if (!GetOwner()->HasAuthority())
     {
@@ -618,6 +1263,11 @@ bool UEDInventoryComponent::RequestTransferItemToSlotDetailed(UEDInventoryCompon
         return false;
     }
 
+    if (!PrecheckTransferToSlot_Component(FromInventory, ToInventory, FromSlotIndex, ToSlotIndex, Quantity, &OutFailure))
+    {
+        return false;
+    }
+
     if (!GetOwner()->HasAuthority())
     {
         ServerRequestTransferItemToSlot(FromInventory, ToInventory, FromSlotIndex, ToSlotIndex, Quantity);
@@ -650,7 +1300,12 @@ bool UEDInventoryComponent::RequestDropAllFromSlot(int32 FromSlotIndex)
         return true;
     }
 
-    if (!InventorySlots.IsValidIndex(FromSlotIndex) || InventorySlots[FromSlotIndex].IsEmpty())
+    if (!InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        return false;
+    }
+
+    if (InventorySlots[FromSlotIndex].IsEmpty())
     {
         return false;
     }
@@ -679,7 +1334,12 @@ bool UEDInventoryComponent::RequestDropSingleFromSlot(int32 FromSlotIndex)
         return true;
     }
 
-    if (!InventorySlots.IsValidIndex(FromSlotIndex) || InventorySlots[FromSlotIndex].IsEmpty())
+    if (!InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        return false;
+    }
+
+    if (InventorySlots[FromSlotIndex].IsEmpty())
     {
         return false;
     }
@@ -719,7 +1379,12 @@ bool UEDInventoryComponent::RequestDropCountFromSlot(int32 FromSlotIndex, int32 
         return true;
     }
 
-    if (!InventorySlots.IsValidIndex(FromSlotIndex) || InventorySlots[FromSlotIndex].IsEmpty())
+    if (!InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        return false;
+    }
+
+    if (InventorySlots[FromSlotIndex].IsEmpty())
     {
         return false;
     }
@@ -745,6 +1410,55 @@ bool UEDInventoryComponent::RequestDropCountFromSlot(int32 FromSlotIndex, int32 
 
     OnInventoryDropRequested.Broadcast(DropRequest);
     OnInventoryChanged.Broadcast();
+    return true;
+}
+
+bool UEDInventoryComponent::RequestPickupDroppedItem(AEDDroppedItemActor* DroppedItemActor)
+{
+    EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+    return RequestPickupDroppedItemDetailed(DroppedItemActor, Failure);
+}
+
+bool UEDInventoryComponent::RequestPickupDroppedItemDetailed(AEDDroppedItemActor* DroppedItemActor, EEDInventoryActionFailure& OutFailure)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!IsValid(DroppedItemActor))
+    {
+        OutFailure = EEDInventoryActionFailure::MissingData;
+        return false;
+    }
+
+    if (!GetOwner()->HasAuthority())
+    {
+        ServerRequestPickupDroppedItem(DroppedItemActor);
+        return true;
+    }
+
+    const FPrimaryAssetId ItemId = DroppedItemActor->GetItemId();
+    const int32 Quantity = DroppedItemActor->GetQuantity();
+    if (!ItemId.IsValid() || Quantity <= 0)
+    {
+        OutFailure = EEDInventoryActionFailure::MissingData;
+        return false;
+    }
+
+    if (!RequestAddItemAutoDetailed(ItemId, Quantity, OutFailure))
+    {
+        return false;
+    }
+
+    if (IsValid(DroppedItemActor))
+    {
+        DroppedItemActor->Destroy();
+    }
+
     return true;
 }
 
@@ -847,6 +1561,18 @@ bool UEDInventoryComponent::RequestCraftItemDetailed(FName RecipeId, EEDInventor
     if (!GetOwner())
     {
         OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    FEDCraftingRecipeRow RecipeRow;
+    if (!TryFindRecipeById_Component(this, RecipeId, RecipeRow))
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidRecipe;
+        return false;
+    }
+
+    if (!FEDInventoryCraftService::CanCraftRecipe(this, RecipeRow, &OutFailure))
+    {
         return false;
     }
 
@@ -965,12 +1691,6 @@ bool UEDInventoryComponent::RequestConsumeItemAtSlotDetailed(int32 SlotIndex, EE
         return false;
     }
 
-    if (!GetOwner()->HasAuthority())
-    {
-        ServerRequestConsumeItemAtSlot(SlotIndex);
-        return true;
-    }
-
     if (!InventorySlots.IsValidIndex(SlotIndex))
     {
         OutFailure = EEDInventoryActionFailure::InvalidSlot;
@@ -987,6 +1707,12 @@ bool UEDInventoryComponent::RequestConsumeItemAtSlotDetailed(int32 SlotIndex, EE
     if (!FEDInventoryValidationService::CanConsumeItem(ItemData, GetOwner(), &OutFailure))
     {
         return false;
+    }
+
+    if (!GetOwner()->HasAuthority())
+    {
+        ServerRequestConsumeItemAtSlot(SlotIndex);
+        return true;
     }
 
     if (ItemData && ItemData->ConsumableEffectClass)
@@ -1034,29 +1760,14 @@ bool UEDInventoryComponent::RequestEnsureDefaultEquipment()
 
 bool UEDInventoryComponent::RequestAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity)
 {
-    EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-    return RequestAddItemAutoDetailed(ItemId, Quantity, Failure);
-}
-
-bool UEDInventoryComponent::RequestAddItemAutoDetailed(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure)
-{
-    OutFailure = EEDInventoryActionFailure::None;
-
     if (!GetOwner())
     {
-        OutFailure = EEDInventoryActionFailure::InvalidInventory;
         return false;
     }
 
-    if (!ItemId.IsValid() || !ResolveItemData_Component(ItemId))
+    EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+    if (!PredicateAddItemAuto(ItemId, Quantity, Failure, false))
     {
-        OutFailure = EEDInventoryActionFailure::MissingData;
-        return false;
-    }
-
-    if (Quantity <= 0)
-    {
-        OutFailure = EEDInventoryActionFailure::InvalidQuantity;
         return false;
     }
 
@@ -1066,41 +1777,35 @@ bool UEDInventoryComponent::RequestAddItemAutoDetailed(FPrimaryAssetId ItemId, i
         return true;
     }
 
-    if (!AddItemAuto_Component(this, ItemId, Quantity))
+    const bool bSucceeded = AddItemAuto_Component(this, ItemId, Quantity);
+    if (bSucceeded)
     {
-        OutFailure = EEDInventoryActionFailure::NoSpace;
+        OnInventoryChanged.Broadcast();
+    }
+
+    return bSucceeded;
+}
+
+bool UEDInventoryComponent::RequestAddItemAutoDetailed(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure)
+{
+    if (!PredicateAddItemAuto(ItemId, Quantity, OutFailure, false))
+    {
         return false;
     }
 
-    OnInventoryChanged.Broadcast();
-    return true;
+    return RequestAddItemAuto(ItemId, Quantity);
 }
 
 bool UEDInventoryComponent::RequestAddItemToSlot(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex)
 {
-    EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-    return RequestAddItemToSlotDetailed(ItemId, Quantity, SlotIndex, Failure);
-}
-
-bool UEDInventoryComponent::RequestAddItemToSlotDetailed(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex, EEDInventoryActionFailure& OutFailure)
-{
-    OutFailure = EEDInventoryActionFailure::None;
-
     if (!GetOwner())
     {
-        OutFailure = EEDInventoryActionFailure::InvalidInventory;
         return false;
     }
 
-    if (!ItemId.IsValid() || !ResolveItemData_Component(ItemId))
+    EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+    if (!PredicateAddItemToSlot(ItemId, Quantity, SlotIndex, Failure, false))
     {
-        OutFailure = EEDInventoryActionFailure::MissingData;
-        return false;
-    }
-
-    if (Quantity <= 0)
-    {
-        OutFailure = EEDInventoryActionFailure::InvalidQuantity;
         return false;
     }
 
@@ -1110,13 +1815,23 @@ bool UEDInventoryComponent::RequestAddItemToSlotDetailed(FPrimaryAssetId ItemId,
         return true;
     }
 
-    if (!AddItemToSlot_Component(this, ItemId, Quantity, SlotIndex, &OutFailure))
+    const bool bSucceeded = AddItemToSlot_Component(this, ItemId, Quantity, SlotIndex, &Failure);
+    if (bSucceeded)
+    {
+        OnInventoryChanged.Broadcast();
+    }
+
+    return bSucceeded;
+}
+
+bool UEDInventoryComponent::RequestAddItemToSlotDetailed(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex, EEDInventoryActionFailure& OutFailure)
+{
+    if (!PredicateAddItemToSlot(ItemId, Quantity, SlotIndex, OutFailure, false))
     {
         return false;
     }
 
-    OnInventoryChanged.Broadcast();
-    return true;
+    return RequestAddItemToSlot(ItemId, Quantity, SlotIndex);
 }
 
 bool UEDInventoryComponent::RequestInitializeRandomLoot()
@@ -1184,15 +1899,7 @@ bool UEDInventoryComponent::RequestInitializeRandomLootDetailed(int32 RollCount,
         return false;
     }
 
-    FRandomStream RandomStream;
-    if (Seed != 0)
-    {
-        RandomStream.Initialize(Seed);
-    }
-    else
-    {
-        RandomStream.GenerateNewSeed();
-    }
+    FRandomStream RandomStream = BuildRandomStreamFromOptionalSeed(Seed);
 
     switch (RandomLootSpawnMode)
     {
@@ -1310,6 +2017,488 @@ bool UEDInventoryComponent::RequestInitializeRandomLootDetailed(int32 RollCount,
     return true;
 }
 
+bool UEDInventoryComponent::RequestDistributeInventoryToTargets()
+{
+    EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+    return RequestDistributeInventoryToTargetsDetailed(Failure);
+}
+
+bool UEDInventoryComponent::RequestDistributeInventoryToTargetsDetailed(EEDInventoryActionFailure& OutFailure)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!GetOwner()->HasAuthority())
+    {
+        ServerRequestDistributeInventoryToTargets();
+        return true;
+    }
+
+    TArray<UEDInventoryComponent*> ReadyTargets;
+    bool bHasPendingTargets = false;
+    GatherDistributionTargets(ReadyTargets, bHasPendingTargets);
+
+    if (!IsReadyForDistribution() || bHasPendingTargets)
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    const bool bSucceeded = ExecuteDistribution(ReadyTargets, OutFailure);
+    if (bSucceeded)
+    {
+        bDistributionCompleted = true;
+        OnInventoryChanged.Broadcast();
+    }
+
+    return bSucceeded;
+}
+
+bool UEDInventoryComponent::IsInventoryReadyForDistribution(const UEDInventoryComponent* InventoryComponent)
+{
+    if (!InventoryComponent)
+    {
+        return false;
+    }
+
+    if (InventoryComponent->InventorySlots.Num() != InventoryComponent->MaxInventorySlots)
+    {
+        return false;
+    }
+
+    if (InventoryComponent->bAutoInitializeLootOnBeginPlay && InventoryComponent->RandomLootTable && !InventoryComponent->bRandomLootInitialized)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool UEDInventoryComponent::IsReadyForDistribution() const
+{
+    return IsInventoryReadyForDistribution(this);
+}
+
+void UEDInventoryComponent::GatherDistributionTargets(TArray<UEDInventoryComponent*>& OutReadyTargets, bool& bOutHasPendingTargets) const
+{
+    OutReadyTargets.Reset();
+    bOutHasPendingTargets = false;
+
+    if (!GetOwner())
+    {
+        return;
+    }
+
+    TSet<UEDInventoryComponent*> UniqueTargets;
+
+    for (AActor* TargetActor : DistributionTargetActors)
+    {
+        UEDInventoryComponent* TargetInventory = ResolveInventoryComponentFromActor_Component(TargetActor);
+        if (!TargetInventory || TargetInventory == this)
+        {
+            continue;
+        }
+
+        if (UniqueTargets.Contains(TargetInventory))
+        {
+            continue;
+        }
+        UniqueTargets.Add(TargetInventory);
+
+        if (IsInventoryReadyForDistribution(TargetInventory))
+        {
+            OutReadyTargets.Add(TargetInventory);
+        }
+        else
+        {
+            bOutHasPendingTargets = true;
+        }
+    }
+}
+
+bool UEDInventoryComponent::ExecuteDistribution(const TArray<UEDInventoryComponent*>& ReadyTargets, EEDInventoryActionFailure& OutFailure)
+{
+    if (ReadyTargets.Num() == 0)
+    {
+        return true;
+    }
+
+    FRandomStream RandomStream = BuildRandomStreamFromOptionalSeed(DistributionSeed);
+
+    switch (DistributionMode)
+    {
+    case EEDInventorySplitMode::SplitByRarity:
+        return ExecuteDistributionByRarity(ReadyTargets, RandomStream);
+    case EEDInventorySplitMode::SplitByType:
+        return ExecuteDistributionByType(ReadyTargets, RandomStream);
+    case EEDInventorySplitMode::SplitByCount:
+    default:
+        return ExecuteDistributionByCount(ReadyTargets, RandomStream);
+    }
+}
+
+bool UEDInventoryComponent::ExecuteDistributionByCount(const TArray<UEDInventoryComponent*>& ReadyTargets, FRandomStream& RandomStream)
+{
+    bool bMovedAny = false;
+
+    for (int32 SlotIndex = 0; SlotIndex < InventorySlots.Num(); ++SlotIndex)
+    {
+        while (InventorySlots.IsValidIndex(SlotIndex) && !InventorySlots[SlotIndex].IsEmpty())
+        {
+            const FPrimaryAssetId ItemId = InventorySlots[SlotIndex].Item.ItemId;
+            if (!ItemId.IsValid())
+            {
+                break;
+            }
+
+            TArray<UEDInventoryComponent*> Candidates;
+            for (UEDInventoryComponent* Target : ReadyTargets)
+            {
+                if (GetReceivableCapacity_Component(Target, ItemId) > 0)
+                {
+                    Candidates.Add(Target);
+                }
+            }
+
+            if (Candidates.Num() == 0)
+            {
+                break;
+            }
+
+            const int32 PickIndex = RandomStream.RandRange(0, Candidates.Num() - 1);
+            UEDInventoryComponent* PickedTarget = Candidates[PickIndex];
+            const int32 MoveQuantity = FMath::Min(InventorySlots[SlotIndex].Item.Quantity, GetReceivableCapacity_Component(PickedTarget, ItemId));
+            if (MoveQuantity <= 0)
+            {
+                break;
+            }
+
+            EEDInventoryActionFailure TransferFailure = EEDInventoryActionFailure::None;
+            if (!FEDInventoryTransferService::TransferAuto(this, PickedTarget, SlotIndex, MoveQuantity, &TransferFailure))
+            {
+                break;
+            }
+
+            bMovedAny = true;
+        }
+    }
+
+    if (bMovedAny)
+    {
+        for (UEDInventoryComponent* Target : ReadyTargets)
+        {
+            if (Target)
+            {
+                Target->OnInventoryChanged.Broadcast();
+            }
+        }
+        OnInventoryChanged.Broadcast();
+    }
+
+    return true;
+}
+
+bool UEDInventoryComponent::ExecuteDistributionByType(const TArray<UEDInventoryComponent*>& ReadyTargets, FRandomStream& RandomStream)
+{
+    bool bMovedAny = false;
+
+    TSet<FPrimaryAssetId> UniqueItemIds;
+    for (const FEDInventorySlotData& Slot : InventorySlots)
+    {
+        if (!Slot.IsEmpty() && Slot.Item.ItemId.IsValid())
+        {
+            UniqueItemIds.Add(Slot.Item.ItemId);
+        }
+    }
+
+    for (const FPrimaryAssetId& ItemId : UniqueItemIds)
+    {
+        TArray<UEDInventoryComponent*> OrderedTargets;
+        for (UEDInventoryComponent* Target : ReadyTargets)
+        {
+            if (GetReceivableCapacity_Component(Target, ItemId) > 0)
+            {
+                OrderedTargets.Add(Target);
+            }
+        }
+
+        if (OrderedTargets.Num() == 0)
+        {
+            continue;
+        }
+
+        ShuffleArray_Component(OrderedTargets, RandomStream);
+
+        for (int32 SlotIndex = 0; SlotIndex < InventorySlots.Num(); ++SlotIndex)
+        {
+            while (InventorySlots.IsValidIndex(SlotIndex) && !InventorySlots[SlotIndex].IsEmpty() && InventorySlots[SlotIndex].Item.ItemId == ItemId)
+            {
+                bool bTransferredThisStep = false;
+                for (UEDInventoryComponent* Target : OrderedTargets)
+                {
+                    if (!Target)
+                    {
+                        continue;
+                    }
+
+                    const int32 Capacity = GetReceivableCapacity_Component(Target, ItemId);
+                    if (Capacity <= 0)
+                    {
+                        continue;
+                    }
+
+                    const int32 MoveQuantity = FMath::Min(InventorySlots[SlotIndex].Item.Quantity, Capacity);
+                    EEDInventoryActionFailure TransferFailure = EEDInventoryActionFailure::None;
+                    if (!FEDInventoryTransferService::TransferAuto(this, Target, SlotIndex, MoveQuantity, &TransferFailure))
+                    {
+                        continue;
+                    }
+
+                    bMovedAny = true;
+                    bTransferredThisStep = true;
+                    if (InventorySlots[SlotIndex].IsEmpty())
+                    {
+                        break;
+                    }
+                }
+
+                if (!bTransferredThisStep)
+                {
+                    break;
+                }
+            }
+        }
+    }
+
+    if (bMovedAny)
+    {
+        for (UEDInventoryComponent* Target : ReadyTargets)
+        {
+            if (Target)
+            {
+                Target->OnInventoryChanged.Broadcast();
+            }
+        }
+        OnInventoryChanged.Broadcast();
+    }
+
+    return true;
+}
+
+bool UEDInventoryComponent::ExecuteDistributionByRarity(const TArray<UEDInventoryComponent*>& ReadyTargets, FRandomStream& RandomStream)
+{
+    bool bMovedAny = false;
+
+    // ?믪? ?ш??꾨???癒쇱? 遺꾨같?쒕떎.
+    static const EEDItemRarity RarityOrder[] =
+    {
+        EEDItemRarity::Unique,
+        EEDItemRarity::Legendary,
+        EEDItemRarity::Epic,
+        EEDItemRarity::Rare,
+        EEDItemRarity::Normal
+    };
+
+    for (const EEDItemRarity CurrentRarity : RarityOrder)
+    {
+        if (DistributionRaritySecondaryMode == EEDInventoryRaritySecondarySplitMode::ByType)
+        {
+            TSet<FPrimaryAssetId> UniqueItemIds;
+            for (const FEDInventorySlotData& Slot : InventorySlots)
+            {
+                if (Slot.IsEmpty() || !Slot.Item.ItemId.IsValid())
+                {
+                    continue;
+                }
+
+                if (ResolveItemRarity_Component(Slot.Item.ItemId) == CurrentRarity)
+                {
+                    UniqueItemIds.Add(Slot.Item.ItemId);
+                }
+            }
+
+            for (const FPrimaryAssetId& ItemId : UniqueItemIds)
+            {
+                TArray<UEDInventoryComponent*> OrderedTargets;
+                for (UEDInventoryComponent* Target : ReadyTargets)
+                {
+                    if (GetReceivableCapacity_Component(Target, ItemId) > 0)
+                    {
+                        OrderedTargets.Add(Target);
+                    }
+                }
+
+                if (OrderedTargets.Num() == 0)
+                {
+                    continue;
+                }
+
+                ShuffleArray_Component(OrderedTargets, RandomStream);
+
+                for (int32 SlotIndex = 0; SlotIndex < InventorySlots.Num(); ++SlotIndex)
+                {
+                    while (InventorySlots.IsValidIndex(SlotIndex)
+                        && !InventorySlots[SlotIndex].IsEmpty()
+                        && InventorySlots[SlotIndex].Item.ItemId == ItemId)
+                    {
+                        bool bTransferredThisStep = false;
+
+                        for (UEDInventoryComponent* Target : OrderedTargets)
+                        {
+                            if (!Target)
+                            {
+                                continue;
+                            }
+
+                            const int32 Capacity = GetReceivableCapacity_Component(Target, ItemId);
+                            if (Capacity <= 0)
+                            {
+                                continue;
+                            }
+
+                            const int32 MoveQuantity = FMath::Min(InventorySlots[SlotIndex].Item.Quantity, Capacity);
+                            EEDInventoryActionFailure TransferFailure = EEDInventoryActionFailure::None;
+                            if (!FEDInventoryTransferService::TransferAuto(this, Target, SlotIndex, MoveQuantity, &TransferFailure))
+                            {
+                                continue;
+                            }
+
+                            bMovedAny = true;
+                            bTransferredThisStep = true;
+                            if (InventorySlots[SlotIndex].IsEmpty())
+                            {
+                                break;
+                            }
+                        }
+
+                        if (!bTransferredThisStep)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+            continue;
+        }
+
+        // Secondary = ByCount: 媛숈? ?ш???踰붿쐞 ?덉뿉???섎웾 ?⑥쐞 ?쒕뜡 遺꾨같
+        for (int32 SlotIndex = 0; SlotIndex < InventorySlots.Num(); ++SlotIndex)
+        {
+            while (InventorySlots.IsValidIndex(SlotIndex) && !InventorySlots[SlotIndex].IsEmpty())
+            {
+                const FPrimaryAssetId ItemId = InventorySlots[SlotIndex].Item.ItemId;
+                if (!ItemId.IsValid() || ResolveItemRarity_Component(ItemId) != CurrentRarity)
+                {
+                    break;
+                }
+
+                TArray<UEDInventoryComponent*> Candidates;
+                for (UEDInventoryComponent* Target : ReadyTargets)
+                {
+                    if (GetReceivableCapacity_Component(Target, ItemId) > 0)
+                    {
+                        Candidates.Add(Target);
+                    }
+                }
+
+                if (Candidates.Num() == 0)
+                {
+                    break;
+                }
+
+                const int32 PickIndex = RandomStream.RandRange(0, Candidates.Num() - 1);
+                UEDInventoryComponent* PickedTarget = Candidates[PickIndex];
+                const int32 MoveQuantity = FMath::Min(InventorySlots[SlotIndex].Item.Quantity, GetReceivableCapacity_Component(PickedTarget, ItemId));
+                if (MoveQuantity <= 0)
+                {
+                    break;
+                }
+
+                EEDInventoryActionFailure TransferFailure = EEDInventoryActionFailure::None;
+                if (!FEDInventoryTransferService::TransferAuto(this, PickedTarget, SlotIndex, MoveQuantity, &TransferFailure))
+                {
+                    break;
+                }
+
+                bMovedAny = true;
+            }
+        }
+    }
+
+    if (bMovedAny)
+    {
+        for (UEDInventoryComponent* Target : ReadyTargets)
+        {
+            if (Target)
+            {
+                Target->OnInventoryChanged.Broadcast();
+            }
+        }
+        OnInventoryChanged.Broadcast();
+    }
+
+    return true;
+}
+
+void UEDInventoryComponent::TryStartDeferredDistribution()
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority() || bDistributionCompleted || !GetWorld())
+    {
+        return;
+    }
+
+    DeferredDistributionStartTime = GetWorld()->GetTimeSeconds();
+
+    TArray<UEDInventoryComponent*> ReadyTargets;
+    bool bHasPendingTargets = false;
+    GatherDistributionTargets(ReadyTargets, bHasPendingTargets);
+
+    const bool bSourceReady = IsReadyForDistribution();
+    if (bSourceReady && !bHasPendingTargets)
+    {
+        EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+        bDistributionCompleted = ExecuteDistribution(ReadyTargets, Failure);
+        return;
+    }
+
+    const float RetryInterval = FMath::Max(0.01f, DistributionRetryInterval);
+    GetWorld()->GetTimerManager().SetTimer(DeferredDistributionTimerHandle, this, &UEDInventoryComponent::ProcessDeferredDistribution, RetryInterval, true);
+}
+
+void UEDInventoryComponent::ProcessDeferredDistribution()
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority() || bDistributionCompleted || !GetWorld())
+    {
+        if (GetWorld())
+        {
+            GetWorld()->GetTimerManager().ClearTimer(DeferredDistributionTimerHandle);
+        }
+        return;
+    }
+
+    TArray<UEDInventoryComponent*> ReadyTargets;
+    bool bHasPendingTargets = false;
+    GatherDistributionTargets(ReadyTargets, bHasPendingTargets);
+
+    const bool bSourceReady = IsReadyForDistribution();
+    const float Elapsed = GetWorld()->GetTimeSeconds() - DeferredDistributionStartTime;
+    const bool bTimedOut = Elapsed >= FMath::Max(0.0f, DistributionTargetWaitTimeout);
+
+    if (!bTimedOut && (!bSourceReady || bHasPendingTargets))
+   {
+        return;
+    }
+
+    EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+    bDistributionCompleted = ExecuteDistribution(ReadyTargets, Failure);
+    GetWorld()->GetTimerManager().ClearTimer(DeferredDistributionTimerHandle);
+}
+
 void UEDInventoryComponent::ServerRequestMoveItemBetweenSlots_Implementation(int32 FromSlotIndex, int32 ToSlotIndex)
 {
     RequestMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex);
@@ -1343,6 +2532,12 @@ void UEDInventoryComponent::ServerRequestDropSingleFromSlot_Implementation(int32
 void UEDInventoryComponent::ServerRequestDropCountFromSlot_Implementation(int32 FromSlotIndex, int32 DropCount)
 {
     RequestDropCountFromSlot(FromSlotIndex, DropCount);
+}
+
+void UEDInventoryComponent::ServerRequestPickupDroppedItem_Implementation(AEDDroppedItemActor* DroppedItemActor)
+{
+    EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+    RequestPickupDroppedItemDetailed(DroppedItemActor, Failure);
 }
 
 void UEDInventoryComponent::ServerRequestEquipItemFromSlot_Implementation(int32 FromSlotIndex, EEDEquippableType TargetSlotType)
@@ -1391,6 +2586,12 @@ void UEDInventoryComponent::ServerRequestInitializeRandomLoot_Implementation(int
     RequestInitializeRandomLootDetailed(RollCount, MinLootIndex, MaxLootIndex, Seed, Failure);
 }
 
+void UEDInventoryComponent::ServerRequestDistributeInventoryToTargets_Implementation()
+{
+    EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+    RequestDistributeInventoryToTargetsDetailed(Failure);
+}
+
 void UEDInventoryComponent::OnRep_InventorySlots()
 {
     UE_LOG(LogTemp, Warning, TEXT("InventoryRep: Owner=%s Slots=%d"),
@@ -1422,6 +2623,72 @@ void UEDInventoryComponent::HandleInventoryChangedInternal()
     }
 }
 
+void UEDInventoryComponent::HandleDropRequestSpawnWorldItem(const FEDInventoryDropRequest& DropRequest)
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority() || !bSpawnDroppedItemActor)
+    {
+        return;
+    }
+
+    if (!DropRequest.Item.IsValid())
+    {
+        return;
+    }
+
+    const FVector SpawnOrigin = GetOwner()->GetActorLocation() + DroppedItemSpawnOffset;
+    TrySpawnOrMergeDroppedItem(DropRequest.Item, SpawnOrigin);
+}
+
+bool UEDInventoryComponent::TrySpawnOrMergeDroppedItem(const FEDInventoryItemHandle& ItemHandle, const FVector& SpawnOrigin)
+{
+    if (!GetWorld() || !ItemHandle.IsValid())
+    {
+        return false;
+    }
+
+    if (DroppedItemMergeRadius > 0.0f)
+    {
+        const float MergeDistanceSq = FMath::Square(DroppedItemMergeRadius);
+        for (TActorIterator<AEDDroppedItemActor> It(GetWorld()); It; ++It)
+        {
+            AEDDroppedItemActor* ExistingDrop = *It;
+            if (!ExistingDrop)
+            {
+                continue;
+            }
+
+            if (FVector::DistSquared(ExistingDrop->GetActorLocation(), SpawnOrigin) > MergeDistanceSq)
+            {
+                continue;
+            }
+
+            if (ExistingDrop->TryMergeDroppedItem(ItemHandle.ItemId, ItemHandle.Quantity))
+            {
+                return true;
+            }
+        }
+    }
+
+    UClass* SpawnClass = DroppedItemActorClass ? DroppedItemActorClass.Get() : AEDDroppedItemActor::StaticClass();
+    if (!SpawnClass)
+    {
+        return false;
+    }
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Owner = GetOwner();
+    SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+    AEDDroppedItemActor* NewDropActor = GetWorld()->SpawnActor<AEDDroppedItemActor>(SpawnClass, SpawnOrigin, FRotator::ZeroRotator, SpawnParams);
+    if (!NewDropActor)
+    {
+        return false;
+    }
+
+    NewDropActor->InitializeDroppedItem(ItemHandle.ItemId, ItemHandle.Quantity);
+    return true;
+}
+
 void UEDInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -1432,3 +2699,11 @@ void UEDInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
     DOREPLIFETIME(UEDInventoryComponent, TopArmorSlot);
     DOREPLIFETIME(UEDInventoryComponent, BottomArmorSlot);
 }
+
+
+
+
+
+
+
+
