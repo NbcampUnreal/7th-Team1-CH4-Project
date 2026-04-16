@@ -69,6 +69,14 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("Player.Skill.Whirlwind"),
 		FString("스킬: 휠윈드")
 	);
+	Tags.Player_Skill_Whirllaser = Manager.AddNativeGameplayTag(
+	FName("Player.Skill.Whirllaser"),
+	FString("스킬: 휠레이저")
+);
+	Tags.Player_Skill_BasicKnockBack = Manager.AddNativeGameplayTag(
+	FName("Player.Skill.BasicKnockBack"),
+	FString("스킬: 베이직넉백")
+);
 	
 	//CoolDown
 	Tags.CoolDown_Evade_Hammer = Manager.AddNativeGameplayTag(
@@ -96,6 +104,15 @@ void FEDGameplayTags::InitializeNativeTags()
 		FString("쿨다운: 휠윈드")
 	);
 	
+	Tags.CoolDown_Skill_Whirllaser = Manager.AddNativeGameplayTag(
+	FName("CoolDown.Skill.Whirllaser"),
+	FString("쿨다운: 휠레이저")
+);
+	
+	Tags.CoolDown_Skill_BasicKnockBack = Manager.AddNativeGameplayTag(
+	FName("CoolDown.Skill.BasicKnockBack"),
+	FString("쿨다운: 베이직넉백")
+);
 	
 	//Effect_Debuff
 	Tags.Effect_Debuff_Slow = Manager.AddNativeGameplayTag(

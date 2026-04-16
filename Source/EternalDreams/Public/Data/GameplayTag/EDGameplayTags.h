@@ -30,22 +30,28 @@ public:
 	//Ability_Monster
 	FGameplayTag Ability_Monster_Attack;
 	FGameplayTag Ability_Monster_Skill;
-	//Player
+	//Player_BasicAttack
 	FGameplayTag Player_BasicAttack_Hammer;
 	FGameplayTag Player_BasicAttack_Sword;
 	FGameplayTag Player_BasicAttack_Staff;
 	FGameplayTag Player_BasicAttack_Bow;
+	//Player_Evade
 	FGameplayTag Player_Evade_Hammer;
 	FGameplayTag Player_Evade_Sword;
 	FGameplayTag Player_Evade_Staff;
 	FGameplayTag Player_Evade_Bow;
+	//Player_Skill
 	FGameplayTag Player_Skill_Whirlwind;
+	FGameplayTag Player_Skill_Whirllaser;
+	FGameplayTag Player_Skill_BasicKnockBack;
 	//CoolDown
 	FGameplayTag CoolDown_Evade_Hammer;
 	FGameplayTag CoolDown_Evade_Sword;
 	FGameplayTag CoolDown_Evade_Staff;
 	FGameplayTag CoolDown_Evade_Bow;
 	FGameplayTag CoolDown_Skill_Whirlwind;
+	FGameplayTag CoolDown_Skill_Whirllaser;
+	FGameplayTag CoolDown_Skill_BasicKnockBack;
 	//Effect_Debuff
 	FGameplayTag Effect_Debuff_Slow;
 	FGameplayTag Effect_Debuff_Stun;
