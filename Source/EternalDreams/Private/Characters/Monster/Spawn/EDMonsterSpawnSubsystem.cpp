@@ -38,11 +38,13 @@ void UEDMonsterSpawnSubsystem::TriggerSpawnByGrade(EMonsterGrade Grade)
 	for (const TWeakObjectPtr<AEDMonsterSpawner>& Weak : ActiveSpawners)
 	{
 		AEDMonsterSpawner* Spawner = Weak.Get();
-		if (IsValid(Spawner) == false || IsValid(Spawner->GetMonsterDataAsset()) == false)
-			continue;
+		if (IsValid(Spawner) == false) continue;
+		UEDMonsterDataAsset* DataAsset = Spawner->GetMonsterDataAsset();
 		// 해당 Grade의 스포너만 트리거
-		if (Spawner->GetMonsterDataAsset()->GetGrade() == Grade)
+		if (IsValid(DataAsset) && Spawner->GetMonsterDataAsset()->GetGrade() == Grade)
+		{
 			Spawner->TriggerSpawn();
+		}
 	}
 }
 
