@@ -8,6 +8,7 @@
 #include "EDGameMode.generated.h"
 
 class AEDRestrictedArea;
+class AEDPlayerStart;
 
 /**
  * AEDGameMode
@@ -61,8 +62,20 @@ public:
 
 protected:
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
+	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
+
+	// -------------------------------------------------------
+	// Starting System — 구역(Zone)별 스폰 위치 결정
+	// -------------------------------------------------------
+
+	/**
+	 * 플레이어가 선택한 구역(DesiredZoneId)의 스폰 포인트 중
+	 * 아직 사용되지 않은 하나를 랜덤으로 선택한다.
+	 */
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 
 	// -------------------------------------------------------
 	// Phase 설정 (에디터에서 지정)
@@ -129,4 +142,25 @@ private:
 	void AdvanceToPhase(int32 PhaseIndex);
 	float GetPhaseDuration(int32 PhaseIndex) const;
 	void SetPhase(FGameplayTag NewPhase);
+
+	// -------------------------------------------------------
+	// Starting System 내부
+	// -------------------------------------------------------
+
+	/** 레벨의 AEDTeamPlayerStart를 구역별로 수집하여 캐시. BeginPlay에서 호출 */
+	void CacheZonePlayerStarts();
+
+	/** ZoneId → 해당 구역의 PlayerStart 배열 */
+	TMap<int32, TArray<AEDPlayerStart*>> ZonePlayerStartMap;
+
+	/** 이미 배정된 스폰 포인트 (중복 스폰 방지) */
+	TSet<AEDPlayerStart*> OccupiedPlayerStarts;
+
+	/**
+	 * [IOCP 전용] 전원 접속 시 Phase 시작.
+	 * 현재는 BeginPlay에서 바로 시작하므로 비활성.
+	 * 향후 IOCP 로비 연결 시, BeginPlay의 StartPhaseSequence 호출을 제거하고
+	 * PostLogin에서 이 함수로 전원 접속 감지 후 시작하도록 전환.
+	 */
+	void TryStartPhaseSequence();
 };

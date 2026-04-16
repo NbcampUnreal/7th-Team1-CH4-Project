@@ -23,6 +23,10 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_ChangeTeam(int32 NewTeamId);
 
+	/** 스폰 구역 선택 요청 (클라이언트 → 서버) */
+	UFUNCTION(Server, Reliable)
+	void Server_SelectZone(int32 ZoneId);
+
 protected:
 	virtual void BeginPlay() override;
 

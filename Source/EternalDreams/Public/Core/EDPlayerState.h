@@ -60,5 +60,9 @@ public:
 	/** 준비 완료 여부 */
 	UPROPERTY(Replicated, BlueprintReadWrite, Category = "ED|Player")
 	bool bReady = false;
+
+	/** 희망 스폰 구역 ID (1~4). UI에서 선택 후 설정 */
+	UPROPERTY(Replicated, BlueprintReadWrite, Category = "ED|Player")
+	int32 DesiredZoneId = 0;
 };
 

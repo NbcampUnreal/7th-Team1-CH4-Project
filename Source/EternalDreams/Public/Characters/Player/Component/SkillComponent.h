@@ -16,8 +16,6 @@ class ETERNALDREAMS_API USkillComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this component's properties
-	USkillComponent();
 	
 	virtual void BeginPlay() override;
 
@@ -40,23 +38,23 @@ protected:
 	
 #pragma region Getter/Setter
 public:
-	UFUNCTION()
-	FORCEINLINE void SetBasicAttackTag(FGameplayTag& Tag) {BasicAttackTag=Tag;};
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE void SetBasicAttackTag(const FGameplayTag Tag) {BasicAttackTag=Tag;};
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetBasicAttackTag() {return BasicAttackTag;};
 
-	UFUNCTION()
-	FORCEINLINE void SetQSkillTag(FGameplayTag& Tag) {QSkillTag=Tag;};
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE void SetQSkillTag(const FGameplayTag Tag) {QSkillTag=Tag;};
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetQSkillTag() {return QSkillTag;}
 	
-	UFUNCTION()
-	FORCEINLINE void SetESkillTag(FGameplayTag& Tag) {ESkillTag=Tag;};
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE void SetESkillTag(const FGameplayTag Tag) {ESkillTag=Tag;};
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetSetESkillTag() {return ESkillTag;};
 	
-	UFUNCTION()
-	FORCEINLINE void SetSpaceSkillTag(FGameplayTag& Tag) {SpaceSkillTag=Tag;};
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE void SetSpaceSkillTag(const FGameplayTag Tag) {SpaceSkillTag=Tag;};
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetSpaceSkillTag() {return SpaceSkillTag;};
 #pragma endregion
@@ -72,5 +70,8 @@ public:
 	UFUNCTION()
 	void ActivateSpaceSkill();
 	
-
+//Activate Skill By Tag
+protected:
+	void ActivateTag(FGameplayTag& Tag);
+	
 };

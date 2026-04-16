@@ -11,9 +11,11 @@
 #include "Characters/Player/GAS/EDPlayerAttributeSet.h"
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
+#include "Characters/Player/Component/SkillComponent.h"
 #include "Characters/Player/Weapon/EDWeapon.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 
@@ -29,6 +31,9 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 	//AttributeSet 생성
 	BaseAttributeSet = CreateDefaultSubobject<UEDBaseAttributeSet>(TEXT("BaseAttributeSet"));
 	PlayerAttributeSet = CreateDefaultSubobject<UEDPlayerAttributeSet>(TEXT("EDAttributeSet"));
+	
+	//Skill 컴포넌트 생성
+	PlayerSkillComponent=CreateDefaultSubobject<USkillComponent>(TEXT("PlayerSkillComponent"));
 	
 	//IMC 컴포넌트 생성
 	IMCComponent=CreateDefaultSubobject<UIMCComponent>(TEXT("IMCComponent"));
@@ -67,21 +72,67 @@ void AEDPlayerCharacter::BeginPlay()
 	}
 	
 	//Weapon Test
-	WeaponMesh=GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
-	if (IsValid(WeaponMesh))
+	if (HasAuthority())
 	{
-		SkeletalMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
-		if (!IsValid(SkeletalMeshComp))
+		RWeaponActor=GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
+		if (IsValid(RWeaponActor))
 		{
-			return;
+			SkeletalMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
+			if (!IsValid(SkeletalMeshComp))
+			{
+				return;
+			}
+			RWeaponActor->SetOwner(this);
+			RWeaponActor->AttachToComponent(GetMesh()->GetChildComponent(0),FAttachmentTransformRules::SnapToTargetNotIncludingScale,RWeaponSocketName);
+			GetCapsuleComponent()->IgnoreActorWhenMoving(RWeaponActor,true);
 		}
-		WeaponMesh->SetOwner(this);
-		WeaponMesh->AttachToComponent(GetMesh()->GetChildComponent(0),FAttachmentTransformRules::SnapToTargetNotIncludingScale,WeaponSocketName);
-		GetCapsuleComponent()->IgnoreActorWhenMoving(WeaponMesh,true);
+		LWeaponActor=GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
+		if (IsValid(LWeaponActor))
+		{
+			SkeletalMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
+			if (!IsValid(SkeletalMeshComp))
+			{
+				return;
+			}
+			LWeaponActor->SetOwner(this);
+			LWeaponActor->AttachToComponent(GetMesh()->GetChildComponent(0),FAttachmentTransformRules::SnapToTargetNotIncludingScale,LWeaponSocketName);
+			GetCapsuleComponent()->IgnoreActorWhenMoving(LWeaponActor,true);
+		}
 	}
 	
+	//ASC Duration Callback
+	if (!IsValid(AbilitySystemComponent))
+	{
+		return;
+	}
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(BaseAttributeSet->GetWalkSpeedAttribute())
+	.AddUObject(this, &AEDPlayerCharacter::OnWalkSpeedChanged);
 }
 
+void AEDPlayerCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	
+	if (!bIsAnimMoving)
+	{
+		return;
+	}
+	
+	if (bIsForward)
+	{
+		MoveVector=GetActorForwardVector();
+	}
+	else if (bIsZ)
+	{
+		MoveVector=FVector(0,0,1.f);
+	}
+	else
+	{
+		MoveVector=FVector::ZeroVector;
+	}
+	MoveVector*=DashSpeed*DeltaSeconds;
+	AddActorWorldOffset(MoveVector, true, &Hit,ETeleportType::None);
+}
 
 
 // Called to bind functionality to input
@@ -93,6 +144,21 @@ void AEDPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputC
  		IMCComponent->SetupPlayerInput(PlayerInputComponent);
  	}
  }
+
+void AEDPlayerCharacter::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+	
+	if (!IsValid(IMCComponent)||!IsValid(PlayerSkillComponent))
+	{
+		return;
+	}
+	IMCComponent->OnBasicAttackInput.BindUObject(PlayerSkillComponent,&USkillComponent::ActivateBasicAttack);
+	IMCComponent->OnQSkillInput.BindUObject(PlayerSkillComponent,&USkillComponent::ActivateQSkill);
+	IMCComponent->OnESkillInput.BindUObject(PlayerSkillComponent,&USkillComponent::ActivateESkill);
+	IMCComponent->OnSpaceSkillInput.BindUObject(PlayerSkillComponent,&USkillComponent::ActivateSpaceSkill);
+}
+
 
 UAbilitySystemComponent* AEDPlayerCharacter::GetAbilitySystemComponent() const
 {
@@ -119,6 +185,24 @@ void AEDPlayerCharacter::GiveDefaultAbilities()
 			AbilitySystemComponent->GiveAbility(AbilitySpec);
 		}
 	}
+}
+
+void AEDPlayerCharacter::StartAnimMove(float InDashSpeed, bool InbIsForward, bool InbIsZ)
+{
+	DashSpeed=InDashSpeed;
+	bIsForward=InbIsForward;
+	bIsZ=InbIsZ;
+	bIsAnimMoving=true;
+}
+
+void AEDPlayerCharacter::StopAnimMove()
+{
+	bIsAnimMoving=false;
+}
+
+void AEDPlayerCharacter::OnWalkSpeedChanged(const FOnAttributeChangeData& Data)
+{
+	GetCharacterMovement()->MaxWalkSpeed=Data.NewValue;
 }
 
 float AEDPlayerCharacter::GetHealth() const

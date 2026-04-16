@@ -4,6 +4,8 @@
 #include "Characters/Base/GAS/EDBaseAttributeSet.h"
 
 #include "GameplayEffectExtension.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
 
 UEDBaseAttributeSet::UEDBaseAttributeSet()
@@ -54,7 +56,11 @@ void UEDBaseAttributeSet::OnRep_MaxDefensive(const FGameplayAttributeData& OldMa
 void UEDBaseAttributeSet::OnRep_WalkSpeed(const FGameplayAttributeData& OldWalkSpeed)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDBaseAttributeSet,WalkSpeed, OldWalkSpeed);
-	//TODO: 플레이어쪽 콜백
+	
+	if (ACharacter* CharacterBase = Cast<ACharacter>(GetOwningActor()))
+	{
+		CharacterBase->GetCharacterMovement()->MaxWalkSpeed = GetWalkSpeed();
+	}
 }
 
 void UEDBaseAttributeSet::OnRep_MaxWalkSpeed(const FGameplayAttributeData& OldMaxWalkSpeed)
@@ -77,7 +83,7 @@ void UEDBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute
 	}
 	if (Attribute==GetWalkSpeedAttribute())
 	{
-		NewValue=FMath::Clamp(NewValue, 0.0f, GetMaxWalkSpeed());
+		NewValue=FMath::Clamp(NewValue, 0.0f, MaxAttributeValue);
 	}
 }
 
@@ -100,7 +106,14 @@ void UEDBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 	if (Data.EvaluatedData.Attribute == GetWalkSpeedAttribute())
 	{
 		// WalkSpeed가 변경되었을 때
-		SetWalkSpeed(FMath::Clamp(GetWalkSpeed(), 0.0f, GetMaxWalkSpeed()));
+		SetWalkSpeed(FMath::Clamp(GetWalkSpeed(), 0.0f, MaxAttributeValue));
+		
+		AActor* TargetActor = Data.Target.GetAvatarActor();
+		if (ACharacter* CharacterBase = Cast<ACharacter>(TargetActor))
+		{
+			CharacterBase->GetCharacterMovement()->MaxWalkSpeed = GetWalkSpeed();
+		}
+		
 	}
 }
 

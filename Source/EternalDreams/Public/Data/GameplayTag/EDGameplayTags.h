@@ -30,10 +30,16 @@ public:
 	//Ability_Monster
 	FGameplayTag Ability_Monster_Attack;
 	FGameplayTag Ability_Monster_Skill;
-	//Ability_Player
-	FGameplayTag Ability_Player_BasicAttack;
-	FGameplayTag Ability_Player_Skill;
-	FGameplayTag Ability_Player_Buff;
+	//Player
+	FGameplayTag Player_BasicAttack_Hammer;
+	FGameplayTag Player_BasicAttack_Sword;
+	FGameplayTag Player_BasicAttack_Staff;
+	FGameplayTag Player_BasicAttack_Bow;
+	FGameplayTag Player_Evade_Hammer;
+	FGameplayTag Player_Evade_Sword;
+	FGameplayTag Player_Evade_Staff;
+	FGameplayTag Player_Evade_Bow;
+	FGameplayTag Player_Skill_Whirlwind;
 	//Effect_Debuff
 	FGameplayTag Effect_Debuff_Slow;
 	FGameplayTag Effect_Debuff_Stun;
@@ -45,6 +51,7 @@ public:
 	FGameplayTag State_Player_CannotCanceled;
 	FGameplayTag State_Player_Invincible;
 	FGameplayTag State_Player_Unstoppable;
+	FGameplayTag State_Player_Stop;
 	
 	FGameplayTag State_Player_RestrictedArea;
 	FGameplayTag State_Debuff_RestrictedArea;
@@ -65,6 +72,21 @@ public:
 	//Data
 	FGameplayTag Data_Damage;
 	FGameplayTag Data_StaminaCost;
+	
+	//Inventory-Item
+	FGameplayTag Item_Weapon_Sword;
+	FGameplayTag Item_Weapon_Hammer;
+	FGameplayTag Item_Weapon_Bow;
+	FGameplayTag Item_Weapon_Staff;
+	
+	FGameplayTag Item_Armor_TopArmor;
+	FGameplayTag Item_Armor_BottomArmor;
+	
+	FGameplayTag Item_Consumable;
+	FGameplayTag Item_Ingredient_Base;
+	FGameplayTag Item_Ingredient_Special;
+	FGameplayTag Data_StatAdd;
+	FGameplayTag Data_StatMul;
 
 private:
 	// Singleton 인스턴스
