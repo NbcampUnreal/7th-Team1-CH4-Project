@@ -10,6 +10,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Engine/AssetManager.h"
 #include "AIController.h"
+#include "Components/CapsuleComponent.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
 
 // Sets default values
@@ -96,28 +97,23 @@ void AEDMonsterBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>&
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AEDMonsterBase, MonsterState);
-	DOREPLIFETIME(AEDMonsterBase, DataAsset);
 }
 
 void AEDMonsterBase::OnRep_MonsterState()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[%s] Monster State: %d"), *GetName(), (int32)MonsterState);
-	// TODO: AnimInstance에 전달
+	
+	if (MonsterState == EMonsterState::Dead)
+	{
+		// 캡슐 콜리전 비활성화
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
 	UEDMonsterAnimInstance* Anim = Cast<UEDMonsterAnimInstance>(GetMesh()->GetAnimInstance());
 	if (IsValid(Anim) == false)
 		return;
 	
 	Anim->SetMonsterState(MonsterState);
-}
-
-void AEDMonsterBase::OnRep_DataAsset()
-{
-	if (IsValid(DataAsset) == false)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] OnRep_DataAsset: DataAsset null"), *GetName());
-		return;
-	}
-	LoadVisuals(DataAsset);
 }
 
 void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)
@@ -168,12 +164,18 @@ void AEDMonsterBase::HandleDeath()
 {
 	// Dead 상태로 전환 (OnRep_MonsterState로 클라이언트에 복제)
 	MonsterState = EMonsterState::Dead;
+	OnRep_MonsterState();
 	// AIController BT 중단 및 Focus 해제
 	AAIController* AIController = Cast<AAIController>(GetController());
 	if (IsValid(AIController) == false)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] HandleDeath - AIController 없음"), *GetName());
 		return;
+	}
+	
 	if (IsValid(AIController->BrainComponent) == false)
 		return;
+	
 	// 현재 Target 포커스 해제
 	AIController->ClearFocus(EAIFocusPriority::Gameplay);
 	// 이동 중지
@@ -185,7 +187,17 @@ void AEDMonsterBase::HandleDeath()
 	FGameplayTagContainer DeathTag;
 	DeathTag.AddTag(FEDGameplayTags::Get().State_Dead);
 	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
-	
+	// MonsterDeath 브로드 캐스트
+	OnMonsterDeath.Broadcast();
+	// 20초 뒤에 몬스터 시체 처리 
+	// TODO: 아이템 루팅 기능 부착(예정)
+	GetWorldTimerManager().SetTimer(
+		DestroyMeshTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this,[this]()
+		{
+			Destroy();
+		}),
+		20.f, false);
 }
 
 void AEDMonsterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
@@ -196,6 +208,6 @@ void AEDMonsterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 	
 	if (Data.NewValue <= 0.f)
 		HandleDeath();
+	
+	// TODO: 히트 리액션 추가(필요시)
 }
-
-

@@ -29,12 +29,19 @@ void AEDMonsterSpawner::BeginPlay()
 	UEDMonsterSpawnSubsystem* Subsystem = GetWorld()->GetSubsystem<UEDMonsterSpawnSubsystem>();
 	if (IsValid(Subsystem) == false)
 		return;
-	// 서브 시스템 스포너 등록
-	Subsystem->RegisterSpawner(this);
+	
+	// Subsystem 캐싱
+	CachedSubsystem = Subsystem;
+
 	// Normal은 게임 시작과 동시에 스폰 Elite/Boss는 트리거 대기
-	if (IsValid(MonsterDataAsset) == false || MonsterDataAsset->GetGrade() != EMonsterGrade::Normal)
+	if (IsValid(MonsterDataAsset) == false)
 		return;
 	
+	// 서브 시스템 스포너 등록(Grade랑 같이)
+	Subsystem->RegisterSpawner(this, MonsterDataAsset->GetGrade());
+	// Normal만 스폰
+	if (MonsterDataAsset->GetGrade() != EMonsterGrade::Normal)
+		return;
 	SpawnMonster();
 }
 
@@ -75,29 +82,28 @@ void AEDMonsterSpawner::SpawnMonster()
 		
 	SpawnedMonster = Monster;
 	// 서브시스템에 등록
-	UEDMonsterSpawnSubsystem* Subsystem = GetWorld()->GetSubsystem<UEDMonsterSpawnSubsystem>();
+	UEDMonsterSpawnSubsystem* Subsystem = CachedSubsystem.Get();
 	if (IsValid(Subsystem) == false)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[%s] Subsystem: 등록 실패"), *GetName());
 		return;
 	}
 	Subsystem->RegisterMonster(Monster);
-	
 	// 사망 콜백 바인딩- 리스폰 처리용
-	// TODO: 몬스터 사망 델리게이트 연결 예정
+	Monster->OnMonsterDeath.AddUObject(this, &AEDMonsterSpawner::OnMonsterDeath);
 }
 
 void AEDMonsterSpawner::OnMonsterDeath()
 {
 	// 서브시스템에 사망 통보
-	UEDMonsterSpawnSubsystem* Subsystem = GetWorld()->GetSubsystem<UEDMonsterSpawnSubsystem>();
+	UEDMonsterSpawnSubsystem* Subsystem = CachedSubsystem.Get();
 	if (IsValid(Subsystem) == false)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[%s] Subsystem: 해제 실패"), *GetName());
 		return;
 	}
-	Subsystem->OnMonsterDeath(SpawnedMonster);
-	SpawnedMonster = nullptr;
+	Subsystem->OnMonsterDeath(SpawnedMonster.Get());
+	SpawnedMonster.Reset();
 	
 	// RespawnDelay가 0이면 리스폰 없음 (BOSS)
 	if (RespawnDelay <= 0.f)

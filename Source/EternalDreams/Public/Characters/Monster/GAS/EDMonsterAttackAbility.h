@@ -30,12 +30,8 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
 	TObjectPtr<UAnimMontage> AttackMontage;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
-	TSubclassOf<UGameplayEffect> DamageEffect;
+
 private:
 	UFUNCTION()
 	void OnMontageCompleted();
-	
-	// virtual void PostInitProperties() override;
 };
