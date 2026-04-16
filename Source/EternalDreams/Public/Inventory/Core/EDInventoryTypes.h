@@ -47,16 +47,23 @@ enum class EEDInventoryLootSpawnMode : uint8
 UENUM(BlueprintType)
 enum class EEDInventorySplitMode : uint8
 {
-    SplitByCount,
-    SplitByType,
-    SplitByRarity
+    ByCount,
+    ByType
 };
 
 UENUM(BlueprintType)
 enum class EEDInventoryRaritySecondarySplitMode : uint8
 {
-    ByCount,
-    ByType
+    NoRaritySorting,
+    RaritySorting
+};
+
+UENUM(BlueprintType)
+enum class EEDInventoryStackPolicy : uint8
+{
+    Randomize,
+    SplitIfPossible,
+    UnionAsPossible
 };
 
 USTRUCT(BlueprintType)
