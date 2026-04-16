@@ -66,6 +66,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void RestoreUIFocus();
 
+	// HUD의 알림/경고 슬롯에 짧은 토스트 메시지를 표시
+	UFUNCTION(BlueprintCallable, Category = "UI|Toast")
+	void ShowToastMessage(const FText& InMessage, EEDUIMessageType InMessageType, float InDuration = 3.0f);
+
 protected:
 	// 실제로 생성된 HUD 위젯 인스턴스를 보관
 	UPROPERTY(Transient)

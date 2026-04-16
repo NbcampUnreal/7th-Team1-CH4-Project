@@ -211,6 +211,22 @@ void UEDUIManageSubsystem::RestoreUIFocus()
 	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: UI 포커스를 복구했습니다. 패널 ID = %s"), *TargetPanelId.ToString());
 }
 
+void UEDUIManageSubsystem::ShowToastMessage(const FText& InMessage, EEDUIMessageType InMessageType, float InDuration)
+{
+	if (!HUDLayoutInstance)
+	{
+		CreateHUDInternal();
+	}
+
+	if (!HUDLayoutInstance)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: HUD가 없어 토스트 메시지를 표시할 수 없습니다."));
+		return;
+	}
+
+	HUDLayoutInstance->ShowToastMessage(InMessage, InMessageType, InDuration);
+}
+
 bool UEDUIManageSubsystem::IsHUDCreated() const
 {
 	return HUDLayoutInstance != nullptr;

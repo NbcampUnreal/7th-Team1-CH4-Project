@@ -19,6 +19,7 @@
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "UI/HUD/EDCraftRecipeEntryWidget.h"
 #include "UI/HUD/EDCraftTreeNodeWidget.h"
+#include "UI/Subsystem/EDUIManageSubsystem.h"
 
 namespace
 {
@@ -595,8 +596,8 @@ void UEDItemCraftingWidget::AddCraftTreeLineSegment(
 	const FVector2D Delta = EndPoint - StartPoint;
 	const bool bIsHorizontal = FMath::Abs(Delta.X) >= FMath::Abs(Delta.Y);
 
-	FVector2D SegmentPosition = StartPoint;
-	FVector2D SegmentSize = FVector2D::ZeroVector;
+	FVector2D SegmentPosition;
+	FVector2D SegmentSize;
 
 	// 선 위젯은 얇은 사각형 Border를 가로/세로로 배치해서 만듦
 	// 구간이 가로선인지 세로선인지 먼저 판단한 뒤, 캔버스에 올릴 위치와 크기를 계산
@@ -858,6 +859,21 @@ void UEDItemCraftingWidget::HandleInventoryChanged()
 
 void UEDItemCraftingWidget::ShowCraftSuccess(const FText& InMessage) const
 {
+	if (ULocalPlayer* LocalPlayer = GetOwningLocalPlayer())
+	{
+		if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
+		{
+			UIManageSubsystem->ShowToastMessage(InMessage, EEDUIMessageType::Success, 3.0f);
+
+			if (ActionResultText)
+			{
+				ActionResultText->SetText(FText::GetEmpty());
+				ActionResultText->SetVisibility(ESlateVisibility::Collapsed);
+			}
+			return;
+		}
+	}
+
 	if (!ActionResultText)
 	{
 		return;
@@ -870,6 +886,21 @@ void UEDItemCraftingWidget::ShowCraftSuccess(const FText& InMessage) const
 
 void UEDItemCraftingWidget::ShowCraftFailure(EEDInventoryActionFailure Failure) const
 {
+	if (ULocalPlayer* LocalPlayer = GetOwningLocalPlayer())
+	{
+		if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
+		{
+			UIManageSubsystem->ShowToastMessage(GetCraftFailureText(Failure), EEDUIMessageType::Error, 3.0f);
+
+			if (ActionResultText)
+			{
+				ActionResultText->SetText(FText::GetEmpty());
+				ActionResultText->SetVisibility(ESlateVisibility::Collapsed);
+			}
+			return;
+		}
+	}
+
 	if (!ActionResultText)
 	{
 		return;
