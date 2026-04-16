@@ -35,12 +35,6 @@ AEDTestLootContainer::AEDTestLootContainer()
 		InventoryComponent->bUseEquipmentSlots = false;
 		InventoryComponent->bGiveDefaultWeaponOnBeginPlay = false;
 		InventoryComponent->MaxInventorySlots = 10;
-		
-		// 루팅 테스트용 더미 아이템 지급 강제
-		InventoryComponent->bGiveDebugItemsOnBeginPlay = true;
-		InventoryComponent->DebugConsumableItemId = FPrimaryAssetId(TEXT("InventoryItem"), TEXT("DA_ConsumableTest1"));
-		InventoryComponent->DebugMaterialItemId = FPrimaryAssetId(TEXT("InventoryItem"), TEXT("DA_IngredientTest1"));
-		InventoryComponent->DebugEquipItemId = FPrimaryAssetId(TEXT("InventoryItem"), TEXT("DA_BotArmorTest1"));
 	}
 }
 
