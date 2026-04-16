@@ -45,4 +45,7 @@ private:
 	TObjectPtr<AEDMonsterBase> SpawnedMonster;
 	
 	FTimerHandle RespawnTimerHandle;
+	
+	UFUNCTION()
+	void OnDataLoadedResponse();
 };

@@ -31,10 +31,8 @@ UEDMonsterDataAsset* AEDMonsterSpawner::GetMonsterDataAsset() const
 void AEDMonsterSpawner::BeginPlay()
 {
 	Super::BeginPlay();
-	
 	if (HasAuthority() == false)
 		return;
-	
 	UEDMonsterSpawnSubsystem* Subsystem = GetWorld()->GetSubsystem<UEDMonsterSpawnSubsystem>();
 	if (IsValid(Subsystem) == false)
 		return;
@@ -42,28 +40,48 @@ void AEDMonsterSpawner::BeginPlay()
 	Subsystem->RegisterSpawner(this);
 	// Normal은 게임 시작과 동시에 스폰 Elite/Boss는 트리거 대기
 	
-	UEDMonsterDataAsset* DataAsset = GetMonsterDataAsset();
+	UEDGameDataSubsystem* DataSubsystem = UEDGameDataSubsystem::Get(this);
+	if (!DataSubsystem) return;
 
-	if (!IsValid(DataAsset) || DataAsset->GetGrade() != EMonsterGrade::Normal)
-		return;
-	
-	SpawnMonster();
+	if (DataSubsystem->IsDataReady())
+	{
+		// 데이터 로드되어있으면 바로 스폰
+		SpawnMonster();
+	}
+	else
+	{
+		// 데이터 로딩중이면 스폰 체크함수 바인딩해놓음
+		DataSubsystem->OnAllDataLoaded.AddDynamic(this, &AEDMonsterSpawner::OnDataLoadedResponse);
+	}
+}
+void AEDMonsterSpawner::OnDataLoadedResponse()
+{
+	UEDGameDataSubsystem* DataSubsystem = UEDGameDataSubsystem::Get(this);
+	if (!DataSubsystem) return;
+
+	// 로드 끝나고 들어왔으므로 정상적으로 DataAsset포인터 반환
+	UEDMonsterDataAsset* DataAsset = DataSubsystem->GetData<UEDMonsterDataAsset>(MonsterDataAssetId);
+    
+	// Normal은 게임 시작과 동시에 스폰 Elite/Boss는 트리거 대기
+	if (IsValid(DataAsset) && DataAsset->GetGrade() == EMonsterGrade::Normal)
+	{
+		SpawnMonster();
+	}
 }
 
 void AEDMonsterSpawner::SpawnMonster()
 {
-	if (IsValid(SpawnedMonster)) return;
-
-	// SpawnMonster 진입할때 캐싱데이터 접근
-	UEDMonsterDataAsset* DataAsset = GetMonsterDataAsset();
-	if (!IsValid(DataAsset))
+	UEDGameDataSubsystem* DataSubsystem = UEDGameDataSubsystem::Get(this);
+	if (!DataSubsystem || !MonsterDataAssetId.IsValid()) return;
+	UEDMonsterDataAsset* MonsterDataAsset = DataSubsystem->GetData<UEDMonsterDataAsset>(MonsterDataAssetId); //
+	
+	if (!IsValid(MonsterDataAsset))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] SpawnMonster: DataAsset 없음 (Id: %s)"),
-			*GetName(), *MonsterDataAssetId.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("[%s] SpawnMonster: 캐시된 DataAsset을 찾을 수 없음"), *GetName());
 		return;
 	}
 	
-	TSubclassOf<AEDMonsterBase> SpawnClass = DataAsset->GetMonsterClass();
+	TSubclassOf<AEDMonsterBase> SpawnClass = MonsterDataAsset->GetMonsterClass();
 	if (IsValid(SpawnClass) == false)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[%s] SpawnMonster: MonsterClass 없음"), *GetName());
@@ -87,7 +105,7 @@ void AEDMonsterSpawner::SpawnMonster()
 	}
 	
 	// DA 적용
-	Monster->InitializeFromDataAsset(DataAsset);
+	Monster->InitializeFromDataAsset(MonsterDataAsset);
 	Monster->FinishSpawning(FTransform(GetActorRotation(), GetActorLocation()));
 		
 	SpawnedMonster = Monster;
