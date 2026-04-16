@@ -102,7 +102,7 @@ void UANS_MonsterAttackTrace::NotifyTick(USkeletalMeshComponent* MeshComp, UAnim
 		if (SpecHandle.IsValid() == false)
 			continue;
 		// Data_Damage에 -Atk 수치 입력 및 TargetASC(Player)에게 GE로 데미지 적용
-		SpecHandle.Data->SetSetByCallerMagnitude(FEDGameplayTags::Get().Data_Damage, -Atk);
+		SpecHandle.Data->SetSetByCallerMagnitude(FEDGameplayTags::Get().Data_Damage, Atk);
 		MonsterASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 		
 		UE_LOG(LogTemp, Warning, TEXT("[MonsterAttackTrace] 플레이어 HP: %.1f"),
