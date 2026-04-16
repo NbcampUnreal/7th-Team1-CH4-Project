@@ -7,13 +7,6 @@
 #include "Data/GameplayTag/EDGameplayTags.h"
 
 
-// Sets default values for this component's properties
-USkillComponent::USkillComponent()
-{
-	
-
-}
-
 void USkillComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -22,44 +15,31 @@ void USkillComponent::BeginPlay()
 
 void USkillComponent::ActivateBasicAttack()
 {
-	if (IsValid(AbilitySystemComponent))
-	{
-		FGameplayTagContainer AbilityTagContainer;
-		const FEDGameplayTags& Tags = FEDGameplayTags::Get();
-		AbilityTagContainer.AddTag(BasicAttackTag);
-		AbilitySystemComponent->TryActivateAbilitiesByTag(AbilityTagContainer);
-	}
+	ActivateTag(BasicAttackTag);
 }
 
 void USkillComponent::ActivateQSkill()
 {
-	if (IsValid(AbilitySystemComponent))
-	{
-		FGameplayTagContainer AbilityTagContainer;
-		const FEDGameplayTags& Tags = FEDGameplayTags::Get();
-		AbilityTagContainer.AddTag(QSkillTag);
-		AbilitySystemComponent->TryActivateAbilitiesByTag(AbilityTagContainer);
-	}
+	ActivateTag(QSkillTag);
 }
 
 void USkillComponent::ActivateESkill()
 {
-	if (IsValid(AbilitySystemComponent))
-	{
-		FGameplayTagContainer AbilityTagContainer;
-		const FEDGameplayTags& Tags = FEDGameplayTags::Get();
-		AbilityTagContainer.AddTag(ESkillTag);
-		AbilitySystemComponent->TryActivateAbilitiesByTag(AbilityTagContainer);
-	}
+	ActivateTag(ESkillTag);
 }
 
 void USkillComponent::ActivateSpaceSkill()
+{
+	ActivateTag(SpaceSkillTag);
+}
+
+void USkillComponent::ActivateTag(FGameplayTag& Tag)
 {
 	if (IsValid(AbilitySystemComponent))
 	{
 		FGameplayTagContainer AbilityTagContainer;
 		const FEDGameplayTags& Tags = FEDGameplayTags::Get();
-		AbilityTagContainer.AddTag(SpaceSkillTag);
+		AbilityTagContainer.AddTag(Tag);
 		AbilitySystemComponent->TryActivateAbilitiesByTag(AbilityTagContainer);
 	}
 }

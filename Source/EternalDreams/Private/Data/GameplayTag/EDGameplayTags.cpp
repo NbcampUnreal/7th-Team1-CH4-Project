@@ -16,66 +16,103 @@ void FEDGameplayTags::InitializeNativeTags()
 	UGameplayTagsManager& Manager = UGameplayTagsManager::Get();
 	//Ability_Monster
 	Tags.Ability_Monster_Attack = Manager.AddNativeGameplayTag(
-		FName("Ability.Monster.Attack"), 
+		FName("Ability.Monster.Attack"),
 		FString("몬스터가 공격 중")
-		);
+	);
 	Tags.Ability_Monster_Skill = Manager.AddNativeGameplayTag(
-		FName("Ability.Monster.Skill"), 
+		FName("Ability.Monster.Skill"),
 		FString("몬스터가 스킬 사용 중")
-		);
-	//Ability_Player
-	Tags.Ability_Player_BasicAttack = Manager.AddNativeGameplayTag(
-		FName("Ability.Player.BasicAttack"), 
-		FString("플레이어가 기본 공격중")
-		);
-	Tags.Ability_Player_Skill = Manager.AddNativeGameplayTag(
-		FName("Ability.Player.Skill"), 
-		FString("플레이어가 스킬 사용중")
-		);
-	Tags.Ability_Player_Buff = Manager.AddNativeGameplayTag(
-		FName("Ability.Player.Buff"),
-		FString("플레이어가 버프 사용중")
-		);
+	);
+	//Player_BasicAttack
+	Tags.Player_BasicAttack_Hammer = Manager.AddNativeGameplayTag(
+		FName("Player.BasicAttack.Hammer"),
+		FString("해머 기본공격")
+	);
+	Tags.Player_BasicAttack_Sword = Manager.AddNativeGameplayTag(
+		FName("Player.BasicAttack.Sword"),
+		FString("검 기본공격")
+	);
+
+	Tags.Player_BasicAttack_Staff = Manager.AddNativeGameplayTag(
+		FName("Player.BasicAttack.Staff"),
+		FString("스태프 기본공격")
+	);
+
+	Tags.Player_BasicAttack_Bow = Manager.AddNativeGameplayTag(
+		FName("Player.BasicAttack.Bow"),
+		FString("활 기본공격")
+	);
+	
+	//Player_Evade
+	Tags.Player_Evade_Hammer = Manager.AddNativeGameplayTag(
+		FName("Player.Evade.Hammer"),
+		FString("해머 회피")
+	);
+
+	Tags.Player_Evade_Sword = Manager.AddNativeGameplayTag(
+		FName("Player.Evade.Sword"),
+		FString("검 회피")
+	);
+
+	Tags.Player_Evade_Staff = Manager.AddNativeGameplayTag(
+		FName("Player.Evade.Staff"),
+		FString("스태프 회피")
+	);
+
+	Tags.Player_Evade_Bow = Manager.AddNativeGameplayTag(
+		FName("Player.Evade.Bow"),
+		FString("활 회피")
+	);
+	
+	//Player_Skill
+	Tags.Player_Skill_Whirlwind = Manager.AddNativeGameplayTag(
+		FName("Player.Skill.Whirlwind"),
+		FString("스킬: 휠윈드")
+	);
 	//Effect_Debuff
 	Tags.Effect_Debuff_Slow = Manager.AddNativeGameplayTag(
-		FName("Effect.Debuff.Slow"), 
+		FName("Effect.Debuff.Slow"),
 		FString("슬로우 디버프 적용중")
-		);
+	);
 	Tags.Effect_Debuff_Stun = Manager.AddNativeGameplayTag(
-		FName("Effect.Debuff.Stun"), 
+		FName("Effect.Debuff.Stun"),
 		FString("기절 디버프 적용중")
-		);
+	);
 	Tags.Effect_Debuff_Poison = Manager.AddNativeGameplayTag(
 		FName("Effect.Debuff.Poison"),
 		FString("독 디버프 적용중")
-		);
+	);
 	//Effect_Buff
 	Tags.Effect_Buff_AttackUp = Manager.AddNativeGameplayTag(
-		FName("Effect.Buff.AttackUp"), 
+		FName("Effect.Buff.AttackUp"),
 		FString("공격력 상승 버프 적용중")
-		);
+	);
 	Tags.Effect_Buff_Shield = Manager.AddNativeGameplayTag(
 		FName("Effect.Buff.Shield"),
 		FString("방어력 상승 버프 적용중")
-		);
+	);
 	//State
 	Tags.State_Player_CannotCanceled = Manager.AddNativeGameplayTag(
 		FName("State.Player.CannotCanceled"),
 		FString("캔슬 불가 상태")
-		);
+	);
 	Tags.State_Player_Invincible = Manager.AddNativeGameplayTag(
 		FName("State.Player.Invincible"),
 		FString("무적 상태")
-		);
+	);
 	Tags.State_Player_Unstoppable = Manager.AddNativeGameplayTag(
 		FName("State.Player.Unstoppable"),
 		FString("저지 불가 상태")
-		);
-	
+	);
+	Tags.State_Player_Stop = Manager.AddNativeGameplayTag(
+	FName("State.Player.Stop"),
+	FString("이동 불가 상태")
+);
+
 	Tags.State_Player_RestrictedArea = Manager.AddNativeGameplayTag(
 		FName("State.Player.RestrictedArea"),
 		FString("금지구역 진입 상태")
-		);
+	);
 	Tags.State_Debuff_RestrictedArea = Manager.AddNativeGameplayTag(
 		FName("State.Debuff.RestrictedArea"),
 		FString("금지구역 상태")
@@ -86,39 +123,40 @@ void FEDGameplayTags::InitializeNativeTags()
 		FString("사망 상태")
 		);
 	
+	
 	//Phase
 	Tags.Phase_Day1_Day = Manager.AddNativeGameplayTag(
 		FName("Phase.Day1.Day"),
 		FString("1일차 낮")
-		);
+	);
 	Tags.Phase_Day1_Night = Manager.AddNativeGameplayTag(
 		FName("Phase.Day1.Night"),
 		FString("1일차 밤")
-		);
+	);
 	Tags.Phase_Day2_Day = Manager.AddNativeGameplayTag(
 		FName("Phase.Day2.Day"),
 		FString("2일차 낮")
-		);
+	);
 	Tags.Phase_Day2_Night = Manager.AddNativeGameplayTag(
 		FName("Phase.Day2.Night"),
 		FString("2일차 밤")
-		);
+	);
 	Tags.Phase_Day3_Day = Manager.AddNativeGameplayTag(
 		FName("Phase.Day3.Day"),
 		FString("3일차 낮")
-		);
+	);
 	Tags.Phase_Day3_Night = Manager.AddNativeGameplayTag(
 		FName("Phase.Day3.Night"),
 		FString("3일차 밤")
-		);
+	);
 	Tags.Phase_Day4_Day = Manager.AddNativeGameplayTag(
 		FName("Phase.Day4.Day"),
 		FString("4일차 낮")
-		);
+	);
 	Tags.Phase_Day4_Night = Manager.AddNativeGameplayTag(
 		FName("Phase.Day4.Night"),
 		FString("4일차 밤")
-		);
+	);
 
 	//Combat
 	Tags.Combat_Window_Combo = Manager.AddNativeGameplayTag(
@@ -134,9 +172,9 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("Data.Damage"),
 		FString("SetByCaller용 데미지 Tag")
 	);
-	Tags.Data_StaminaCost = Manager.AddNativeGameplayTag(
-		FName("Data.StaminaCost"),
-		FString("SetByCaller용 스태미너 코스트 Tag")
+	Tags.Data_StatMul = Manager.AddNativeGameplayTag(
+		FName("Data.StatMul"),
+		FString("SetByCaller용 스탯 % 증가 Tag")
 	);
 	
 	//Inventory-Item
@@ -178,5 +216,8 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("Item.Ingredient.Special"),
 		FString("재료 아이템 - 특수")
 	);
+	Tags.Data_StatAdd = Manager.AddNativeGameplayTag(
+	FName("Data.StatAdd"),
+	FString("SetByCaller용 스탯 + 증가 Tag")
+);
 }
-

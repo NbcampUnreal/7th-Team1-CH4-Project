@@ -85,6 +85,12 @@ public:
 	// 제작 실행 입력 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
 	TObjectPtr<UInputAction> CraftItemAction = nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
+	TObjectPtr<UInputAction> QSkillAction=nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
+	TObjectPtr<UInputAction> ESkillAction=nullptr;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
+	TObjectPtr<UInputAction> SpaceSkillAction=nullptr;
 #pragma endregion
 #pragma region Input Camera
 	//IMC_Camera
