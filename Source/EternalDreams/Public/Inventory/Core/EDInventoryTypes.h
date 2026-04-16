@@ -44,6 +44,21 @@ enum class EEDInventoryLootSpawnMode : uint8
     RollCountMax
 };
 
+UENUM(BlueprintType)
+enum class EEDInventorySplitMode : uint8
+{
+    SplitByCount,
+    SplitByType,
+    SplitByRarity
+};
+
+UENUM(BlueprintType)
+enum class EEDInventoryRaritySecondarySplitMode : uint8
+{
+    ByCount,
+    ByType
+};
+
 USTRUCT(BlueprintType)
 struct ETERNALDREAMS_API FEDInventorySlotData
 {
