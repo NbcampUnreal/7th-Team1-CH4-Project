@@ -8,6 +8,7 @@
 
 class UEDMonsterDataAsset;
 class AEDMonsterBase;
+class UEDMonsterSpawnSubsystem;
 
 UCLASS()
 class ETERNALDREAMS_API AEDMonsterSpawner : public AActor
@@ -37,9 +38,11 @@ private:
 	void SpawnMonster();
 	// 몬스터 사망 시 콜백
 	void OnMonsterDeath();
+	
 	// 현재 스폰된 몬스터
-	UPROPERTY()
-	TObjectPtr<AEDMonsterBase> SpawnedMonster;
+	TWeakObjectPtr<AEDMonsterBase> SpawnedMonster;
+	// WorldSubsystem 캐싱 - BeginPlay에서 한 번만 조회
+	TWeakObjectPtr<UEDMonsterSpawnSubsystem> CachedSubsystem;
 	
 	FTimerHandle RespawnTimerHandle;
 };
