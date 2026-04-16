@@ -133,6 +133,12 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RequestDropCountFromSlot(int32 FromSlotIndex, int32 DropCount);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Drop")
+    bool RequestPickupDroppedItem(AEDDroppedItemActor* DroppedItemActor);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Drop")
+    bool RequestPickupDroppedItemDetailed(AEDDroppedItemActor* DroppedItemActor, EEDInventoryActionFailure& OutFailure);
     
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
     bool RequestEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType);
@@ -238,6 +244,9 @@ protected:
 
     UFUNCTION(Server, Reliable)
     void ServerRequestDropCountFromSlot(int32 FromSlotIndex, int32 DropCount);
+
+    UFUNCTION(Server, Reliable)
+    void ServerRequestPickupDroppedItem(AEDDroppedItemActor* DroppedItemActor);
 
     UFUNCTION(Server, Reliable)
     void ServerRequestAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity);

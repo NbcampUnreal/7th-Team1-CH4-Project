@@ -753,6 +753,55 @@ bool UEDInventoryComponent::RequestDropCountFromSlot(int32 FromSlotIndex, int32 
     return true;
 }
 
+bool UEDInventoryComponent::RequestPickupDroppedItem(AEDDroppedItemActor* DroppedItemActor)
+{
+    EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+    return RequestPickupDroppedItemDetailed(DroppedItemActor, Failure);
+}
+
+bool UEDInventoryComponent::RequestPickupDroppedItemDetailed(AEDDroppedItemActor* DroppedItemActor, EEDInventoryActionFailure& OutFailure)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner())
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!IsValid(DroppedItemActor))
+    {
+        OutFailure = EEDInventoryActionFailure::MissingData;
+        return false;
+    }
+
+    if (!GetOwner()->HasAuthority())
+    {
+        ServerRequestPickupDroppedItem(DroppedItemActor);
+        return true;
+    }
+
+    const FPrimaryAssetId ItemId = DroppedItemActor->GetItemId();
+    const int32 Quantity = DroppedItemActor->GetQuantity();
+    if (!ItemId.IsValid() || Quantity <= 0)
+    {
+        OutFailure = EEDInventoryActionFailure::MissingData;
+        return false;
+    }
+
+    if (!RequestAddItemAutoDetailed(ItemId, Quantity, OutFailure))
+    {
+        return false;
+    }
+
+    if (IsValid(DroppedItemActor))
+    {
+        DroppedItemActor->Destroy();
+    }
+
+    return true;
+}
+
 bool UEDInventoryComponent::RequestEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType)
 {
     if (!GetOwner())
@@ -1348,6 +1397,12 @@ void UEDInventoryComponent::ServerRequestDropSingleFromSlot_Implementation(int32
 void UEDInventoryComponent::ServerRequestDropCountFromSlot_Implementation(int32 FromSlotIndex, int32 DropCount)
 {
     RequestDropCountFromSlot(FromSlotIndex, DropCount);
+}
+
+void UEDInventoryComponent::ServerRequestPickupDroppedItem_Implementation(AEDDroppedItemActor* DroppedItemActor)
+{
+    EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+    RequestPickupDroppedItemDetailed(DroppedItemActor, Failure);
 }
 
 void UEDInventoryComponent::ServerRequestEquipItemFromSlot_Implementation(int32 FromSlotIndex, EEDEquippableType TargetSlotType)
