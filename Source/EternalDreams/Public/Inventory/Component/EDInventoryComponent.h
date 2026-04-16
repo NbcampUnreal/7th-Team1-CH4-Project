@@ -68,10 +68,13 @@ public:
     bool bAutoDistributeInventoryOnBeginPlay = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Distribution")
-    EEDInventorySplitMode DistributionMode = EEDInventorySplitMode::SplitByCount;
+    EEDInventorySplitMode DistributionMode = EEDInventorySplitMode::ByCount;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Distribution", meta = (EditCondition = "DistributionMode == EEDInventorySplitMode::SplitByRarity", EditConditionHides))
-    EEDInventoryRaritySecondarySplitMode DistributionRaritySecondaryMode = EEDInventoryRaritySecondarySplitMode::ByCount;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Distribution")
+    EEDInventoryRaritySecondarySplitMode DistributionRaritySecondaryMode = EEDInventoryRaritySecondarySplitMode::NoRaritySorting;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Distribution")
+    EEDInventoryStackPolicy DistributionStackPolicy = EEDInventoryStackPolicy::Randomize;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Distribution")
     TArray<TObjectPtr<AActor>> DistributionTargetActors;
@@ -387,7 +390,6 @@ protected:
     bool ExecuteDistribution(const TArray<UEDInventoryComponent*>& ReadyTargets, EEDInventoryActionFailure& OutFailure);
     bool ExecuteDistributionByCount(const TArray<UEDInventoryComponent*>& ReadyTargets, FRandomStream& RandomStream);
     bool ExecuteDistributionByType(const TArray<UEDInventoryComponent*>& ReadyTargets, FRandomStream& RandomStream);
-    bool ExecuteDistributionByRarity(const TArray<UEDInventoryComponent*>& ReadyTargets, FRandomStream& RandomStream);
     static bool IsInventoryReadyForDistribution(const UEDInventoryComponent* InventoryComponent);
 
     FEDEquipmentSlotData* GetEquipmentSlotData(EEDEquippableType SlotType);

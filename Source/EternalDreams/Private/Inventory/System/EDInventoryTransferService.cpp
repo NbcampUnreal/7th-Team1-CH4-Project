@@ -44,6 +44,87 @@ void SetFailure_Transfer(EEDInventoryActionFailure* OutFailure, EEDInventoryActi
         *OutFailure = Failure;
     }
 }
+
+void ShuffleIndices_Transfer(TArray<int32>& Indices, FRandomStream& RandomStream)
+{
+    for (int32 Index = Indices.Num() - 1; Index > 0; --Index)
+    {
+        const int32 SwapIndex = RandomStream.RandRange(0, Index);
+        if (SwapIndex != Index)
+        {
+            Indices.Swap(Index, SwapIndex);
+        }
+    }
+}
+
+void BuildDestinationOrder_Transfer(
+    const UEDInventoryComponent* FromInventory,
+    const UEDInventoryComponent* ToInventory,
+    int32 FromSlotIndex,
+    const FPrimaryAssetId& SourceItemId,
+    EEDInventoryStackPolicy StackPolicy,
+    FRandomStream* InOutRandomStream,
+    TArray<int32>& OutOrderedIndices)
+{
+    OutOrderedIndices.Reset();
+    if (!ToInventory)
+    {
+        return;
+    }
+
+    TArray<int32> StackIndices;
+    TArray<int32> EmptyIndices;
+
+    for (int32 Index = 0; Index < ToInventory->InventorySlots.Num(); ++Index)
+    {
+        if (FromInventory == ToInventory && Index == FromSlotIndex)
+        {
+            continue;
+        }
+
+        const FEDInventorySlotData& DestinationSlot = ToInventory->InventorySlots[Index];
+        if (DestinationSlot.IsEmpty())
+        {
+            EmptyIndices.Add(Index);
+        }
+        else if (DestinationSlot.Item.ItemId == SourceItemId)
+        {
+            StackIndices.Add(Index);
+        }
+    }
+
+    switch (StackPolicy)
+    {
+    case EEDInventoryStackPolicy::SplitIfPossible:
+        OutOrderedIndices.Append(EmptyIndices);
+        OutOrderedIndices.Append(StackIndices);
+        break;
+
+    case EEDInventoryStackPolicy::UnionAsPossible:
+        OutOrderedIndices.Append(StackIndices);
+        OutOrderedIndices.Append(EmptyIndices);
+        break;
+
+    case EEDInventoryStackPolicy::Randomize:
+    default:
+        OutOrderedIndices.Append(StackIndices);
+        OutOrderedIndices.Append(EmptyIndices);
+        if (OutOrderedIndices.Num() > 1)
+        {
+            FRandomStream LocalRandom;
+            if (!InOutRandomStream)
+            {
+                LocalRandom.GenerateNewSeed();
+                ShuffleIndices_Transfer(OutOrderedIndices, LocalRandom);
+            }
+            else
+            {
+                ShuffleIndices_Transfer(OutOrderedIndices, *InOutRandomStream);
+            }
+        }
+        break;
+    }
+}
 }
 
 bool FEDInventoryTransferService::MoveOrSwap(UEDInventoryComponent* InventoryComponent, int32 FromSlotIndex, int32 ToSlotIndex)
@@ -70,6 +151,18 @@ bool FEDInventoryTransferService::MoveOrSwap(UEDInventoryComponent* InventoryCom
 }
 
 bool FEDInventoryTransferService::TransferAuto(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure* OutFailure)
+{
+    return TransferAuto(
+        FromInventory,
+        ToInventory,
+        FromSlotIndex,
+        Quantity,
+        OutFailure,
+        EEDInventoryStackPolicy::UnionAsPossible,
+        nullptr);
+}
+
+bool FEDInventoryTransferService::TransferAuto(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure* OutFailure, EEDInventoryStackPolicy StackPolicy, FRandomStream* InOutRandomStream)
 {
     SetFailure_Transfer(OutFailure, EEDInventoryActionFailure::None);
 
@@ -103,15 +196,30 @@ bool FEDInventoryTransferService::TransferAuto(UEDInventoryComponent* FromInvent
     const int32 MaxStack = GetItemMaxStack_Transfer(SourceItemId);
     int32 Remaining = MoveQuantity;
 
-    for (int32 Index = 0; Index < ToInventory->InventorySlots.Num() && Remaining > 0; ++Index)
+    TArray<int32> OrderedIndices;
+    BuildDestinationOrder_Transfer(FromInventory, ToInventory, FromSlotIndex, SourceItemId, StackPolicy, InOutRandomStream, OrderedIndices);
+
+    for (int32 DestinationIndex : OrderedIndices)
     {
-        if (FromInventory == ToInventory && Index == FromSlotIndex)
+        if (Remaining <= 0)
         {
+            break;
+        }
+
+        FEDInventorySlotData& DestinationSlot = ToInventory->InventorySlots[DestinationIndex];
+        if (DestinationSlot.IsEmpty())
+        {
+            const int32 AddAmount = FMath::Min(Remaining, MaxStack);
+            if (AddAmount > 0)
+            {
+                DestinationSlot.Item.ItemId = SourceItemId;
+                DestinationSlot.Item.Quantity = AddAmount;
+                Remaining -= AddAmount;
+            }
             continue;
         }
 
-        FEDInventorySlotData& DestinationSlot = ToInventory->InventorySlots[Index];
-        if (!DestinationSlot.IsEmpty() && DestinationSlot.Item.ItemId == SourceItemId)
+        if (DestinationSlot.Item.ItemId == SourceItemId)
         {
             const int32 SpaceLeft = FMath::Max(0, MaxStack - DestinationSlot.Item.Quantity);
             const int32 AddAmount = FMath::Min(Remaining, SpaceLeft);
@@ -120,23 +228,6 @@ bool FEDInventoryTransferService::TransferAuto(UEDInventoryComponent* FromInvent
                 DestinationSlot.Item.Quantity += AddAmount;
                 Remaining -= AddAmount;
             }
-        }
-    }
-
-    for (int32 Index = 0; Index < ToInventory->InventorySlots.Num() && Remaining > 0; ++Index)
-    {
-        if (FromInventory == ToInventory && Index == FromSlotIndex)
-        {
-            continue;
-        }
-
-        FEDInventorySlotData& DestinationSlot = ToInventory->InventorySlots[Index];
-        if (DestinationSlot.IsEmpty())
-        {
-            const int32 AddAmount = FMath::Min(Remaining, MaxStack);
-            DestinationSlot.Item.ItemId = SourceItemId;
-            DestinationSlot.Item.Quantity = AddAmount;
-            Remaining -= AddAmount;
         }
     }
 

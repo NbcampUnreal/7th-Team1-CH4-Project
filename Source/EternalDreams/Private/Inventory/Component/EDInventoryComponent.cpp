@@ -461,6 +461,119 @@ bool TryFindRecipeById_Component(const UEDInventoryComponent* InventoryComponent
 
     return false;
 }
+
+bool IsRaritySortingEnabled_Component(const UEDInventoryComponent* InventoryComponent)
+{
+    return InventoryComponent
+        && InventoryComponent->DistributionRaritySecondaryMode == EEDInventoryRaritySecondarySplitMode::RaritySorting;
+}
+
+int32 GetRarityLoadScore_Component(const UEDInventoryComponent* Target, EEDItemRarity Rarity, EEDInventorySplitMode SplitMode)
+{
+    if (!Target)
+    {
+        return TNumericLimits<int32>::Max();
+    }
+
+    if (SplitMode == EEDInventorySplitMode::ByType)
+    {
+        TSet<FPrimaryAssetId> UniqueItemIds;
+        for (const FEDInventorySlotData& Slot : Target->InventorySlots)
+        {
+            if (Slot.IsEmpty() || !Slot.Item.ItemId.IsValid())
+            {
+                continue;
+            }
+
+            if (ResolveItemRarity_Component(Slot.Item.ItemId) == Rarity)
+            {
+                UniqueItemIds.Add(Slot.Item.ItemId);
+            }
+        }
+        return UniqueItemIds.Num();
+    }
+
+    int32 TotalQuantity = 0;
+    for (const FEDInventorySlotData& Slot : Target->InventorySlots)
+    {
+        if (Slot.IsEmpty() || !Slot.Item.ItemId.IsValid())
+        {
+            continue;
+        }
+
+        if (ResolveItemRarity_Component(Slot.Item.ItemId) == Rarity)
+        {
+            TotalQuantity += FMath::Max(0, Slot.Item.Quantity);
+        }
+    }
+    return TotalQuantity;
+}
+
+UEDInventoryComponent* PickCandidateWithLowestRarityLoad_Component(
+    const TArray<UEDInventoryComponent*>& Candidates,
+    EEDItemRarity Rarity,
+    EEDInventorySplitMode SplitMode,
+    FRandomStream& RandomStream)
+{
+    if (Candidates.Num() == 0)
+    {
+        return nullptr;
+    }
+
+    int32 MinScore = TNumericLimits<int32>::Max();
+    TArray<UEDInventoryComponent*> BestCandidates;
+
+    for (UEDInventoryComponent* Candidate : Candidates)
+    {
+        if (!Candidate)
+        {
+            continue;
+        }
+
+        const int32 Score = GetRarityLoadScore_Component(Candidate, Rarity, SplitMode);
+        if (Score < MinScore)
+        {
+            MinScore = Score;
+            BestCandidates.Reset();
+            BestCandidates.Add(Candidate);
+        }
+        else if (Score == MinScore)
+        {
+            BestCandidates.Add(Candidate);
+        }
+    }
+
+    if (BestCandidates.Num() == 0)
+    {
+        return nullptr;
+    }
+
+    return BestCandidates[RandomStream.RandRange(0, BestCandidates.Num() - 1)];
+}
+
+int32 ResolveDistributionMoveQuantity_Component(
+    int32 AvailableQuantity,
+    int32 Capacity,
+    EEDInventoryStackPolicy StackPolicy,
+    FRandomStream& RandomStream)
+{
+    const int32 MaxMovable = FMath::Min(AvailableQuantity, Capacity);
+    if (MaxMovable <= 0)
+    {
+        return 0;
+    }
+
+    switch (StackPolicy)
+    {
+    case EEDInventoryStackPolicy::SplitIfPossible:
+        return 1;
+    case EEDInventoryStackPolicy::UnionAsPossible:
+        return MaxMovable;
+    case EEDInventoryStackPolicy::Randomize:
+    default:
+        return RandomStream.RandRange(1, MaxMovable);
+    }
+}
 }
 
 UEDInventoryComponent::UEDInventoryComponent()
@@ -2132,11 +2245,9 @@ bool UEDInventoryComponent::ExecuteDistribution(const TArray<UEDInventoryCompone
 
     switch (DistributionMode)
     {
-    case EEDInventorySplitMode::SplitByRarity:
-        return ExecuteDistributionByRarity(ReadyTargets, RandomStream);
-    case EEDInventorySplitMode::SplitByType:
+    case EEDInventorySplitMode::ByType:
         return ExecuteDistributionByType(ReadyTargets, RandomStream);
-    case EEDInventorySplitMode::SplitByCount:
+    case EEDInventorySplitMode::ByCount:
     default:
         return ExecuteDistributionByCount(ReadyTargets, RandomStream);
     }
@@ -2145,6 +2256,7 @@ bool UEDInventoryComponent::ExecuteDistribution(const TArray<UEDInventoryCompone
 bool UEDInventoryComponent::ExecuteDistributionByCount(const TArray<UEDInventoryComponent*>& ReadyTargets, FRandomStream& RandomStream)
 {
     bool bMovedAny = false;
+    const bool bUseRaritySorting = IsRaritySortingEnabled_Component(this);
 
     for (int32 SlotIndex = 0; SlotIndex < InventorySlots.Num(); ++SlotIndex)
     {
@@ -2170,16 +2282,37 @@ bool UEDInventoryComponent::ExecuteDistributionByCount(const TArray<UEDInventory
                 break;
             }
 
-            const int32 PickIndex = RandomStream.RandRange(0, Candidates.Num() - 1);
-            UEDInventoryComponent* PickedTarget = Candidates[PickIndex];
-            const int32 MoveQuantity = FMath::Min(InventorySlots[SlotIndex].Item.Quantity, GetReceivableCapacity_Component(PickedTarget, ItemId));
+            UEDInventoryComponent* PickedTarget = nullptr;
+            if (bUseRaritySorting)
+            {
+                PickedTarget = PickCandidateWithLowestRarityLoad_Component(
+                    Candidates,
+                    ResolveItemRarity_Component(ItemId),
+                    EEDInventorySplitMode::ByCount,
+                    RandomStream);
+            }
+            else
+            {
+                PickedTarget = Candidates[RandomStream.RandRange(0, Candidates.Num() - 1)];
+            }
+
+            if (!PickedTarget)
+            {
+                break;
+            }
+
+            const int32 MoveQuantity = ResolveDistributionMoveQuantity_Component(
+                InventorySlots[SlotIndex].Item.Quantity,
+                GetReceivableCapacity_Component(PickedTarget, ItemId),
+                DistributionStackPolicy,
+                RandomStream);
             if (MoveQuantity <= 0)
             {
                 break;
             }
 
             EEDInventoryActionFailure TransferFailure = EEDInventoryActionFailure::None;
-            if (!FEDInventoryTransferService::TransferAuto(this, PickedTarget, SlotIndex, MoveQuantity, &TransferFailure))
+            if (!FEDInventoryTransferService::TransferAuto(this, PickedTarget, SlotIndex, MoveQuantity, &TransferFailure, DistributionStackPolicy, &RandomStream))
             {
                 break;
             }
@@ -2206,6 +2339,7 @@ bool UEDInventoryComponent::ExecuteDistributionByCount(const TArray<UEDInventory
 bool UEDInventoryComponent::ExecuteDistributionByType(const TArray<UEDInventoryComponent*>& ReadyTargets, FRandomStream& RandomStream)
 {
     bool bMovedAny = false;
+    const bool bUseRaritySorting = IsRaritySortingEnabled_Component(this);
 
     TSet<FPrimaryAssetId> UniqueItemIds;
     for (const FEDInventorySlotData& Slot : InventorySlots)
@@ -2232,7 +2366,32 @@ bool UEDInventoryComponent::ExecuteDistributionByType(const TArray<UEDInventoryC
             continue;
         }
 
-        ShuffleArray_Component(OrderedTargets, RandomStream);
+        if (bUseRaritySorting)
+        {
+            TArray<UEDInventoryComponent*> RemainingTargets = OrderedTargets;
+            OrderedTargets.Reset();
+            const EEDItemRarity ItemRarity = ResolveItemRarity_Component(ItemId);
+
+            while (RemainingTargets.Num() > 0)
+            {
+                UEDInventoryComponent* Picked = PickCandidateWithLowestRarityLoad_Component(
+                    RemainingTargets,
+                    ItemRarity,
+                    EEDInventorySplitMode::ByType,
+                    RandomStream);
+                if (!Picked)
+                {
+                    break;
+                }
+
+                OrderedTargets.Add(Picked);
+                RemainingTargets.RemoveSingleSwap(Picked);
+            }
+        }
+        else
+        {
+            ShuffleArray_Component(OrderedTargets, RandomStream);
+        }
 
         for (int32 SlotIndex = 0; SlotIndex < InventorySlots.Num(); ++SlotIndex)
         {
@@ -2252,9 +2411,18 @@ bool UEDInventoryComponent::ExecuteDistributionByType(const TArray<UEDInventoryC
                         continue;
                     }
 
-                    const int32 MoveQuantity = FMath::Min(InventorySlots[SlotIndex].Item.Quantity, Capacity);
+                    const int32 MoveQuantity = ResolveDistributionMoveQuantity_Component(
+                        InventorySlots[SlotIndex].Item.Quantity,
+                        Capacity,
+                        DistributionStackPolicy,
+                        RandomStream);
+                    if (MoveQuantity <= 0)
+                    {
+                        continue;
+                    }
+
                     EEDInventoryActionFailure TransferFailure = EEDInventoryActionFailure::None;
-                    if (!FEDInventoryTransferService::TransferAuto(this, Target, SlotIndex, MoveQuantity, &TransferFailure))
+                    if (!FEDInventoryTransferService::TransferAuto(this, Target, SlotIndex, MoveQuantity, &TransferFailure, DistributionStackPolicy, &RandomStream))
                     {
                         continue;
                     }
@@ -2271,161 +2439,6 @@ bool UEDInventoryComponent::ExecuteDistributionByType(const TArray<UEDInventoryC
                 {
                     break;
                 }
-            }
-        }
-    }
-
-    if (bMovedAny)
-    {
-        for (UEDInventoryComponent* Target : ReadyTargets)
-        {
-            if (Target)
-            {
-                Target->OnInventoryChanged.Broadcast();
-            }
-        }
-        OnInventoryChanged.Broadcast();
-    }
-
-    return true;
-}
-
-bool UEDInventoryComponent::ExecuteDistributionByRarity(const TArray<UEDInventoryComponent*>& ReadyTargets, FRandomStream& RandomStream)
-{
-    bool bMovedAny = false;
-
-    // ?믪? ?ш??꾨???癒쇱? 遺꾨같?쒕떎.
-    static const EEDItemRarity RarityOrder[] =
-    {
-        EEDItemRarity::Unique,
-        EEDItemRarity::Legendary,
-        EEDItemRarity::Epic,
-        EEDItemRarity::Rare,
-        EEDItemRarity::Normal
-    };
-
-    for (const EEDItemRarity CurrentRarity : RarityOrder)
-    {
-        if (DistributionRaritySecondaryMode == EEDInventoryRaritySecondarySplitMode::ByType)
-        {
-            TSet<FPrimaryAssetId> UniqueItemIds;
-            for (const FEDInventorySlotData& Slot : InventorySlots)
-            {
-                if (Slot.IsEmpty() || !Slot.Item.ItemId.IsValid())
-                {
-                    continue;
-                }
-
-                if (ResolveItemRarity_Component(Slot.Item.ItemId) == CurrentRarity)
-                {
-                    UniqueItemIds.Add(Slot.Item.ItemId);
-                }
-            }
-
-            for (const FPrimaryAssetId& ItemId : UniqueItemIds)
-            {
-                TArray<UEDInventoryComponent*> OrderedTargets;
-                for (UEDInventoryComponent* Target : ReadyTargets)
-                {
-                    if (GetReceivableCapacity_Component(Target, ItemId) > 0)
-                    {
-                        OrderedTargets.Add(Target);
-                    }
-                }
-
-                if (OrderedTargets.Num() == 0)
-                {
-                    continue;
-                }
-
-                ShuffleArray_Component(OrderedTargets, RandomStream);
-
-                for (int32 SlotIndex = 0; SlotIndex < InventorySlots.Num(); ++SlotIndex)
-                {
-                    while (InventorySlots.IsValidIndex(SlotIndex)
-                        && !InventorySlots[SlotIndex].IsEmpty()
-                        && InventorySlots[SlotIndex].Item.ItemId == ItemId)
-                    {
-                        bool bTransferredThisStep = false;
-
-                        for (UEDInventoryComponent* Target : OrderedTargets)
-                        {
-                            if (!Target)
-                            {
-                                continue;
-                            }
-
-                            const int32 Capacity = GetReceivableCapacity_Component(Target, ItemId);
-                            if (Capacity <= 0)
-                            {
-                                continue;
-                            }
-
-                            const int32 MoveQuantity = FMath::Min(InventorySlots[SlotIndex].Item.Quantity, Capacity);
-                            EEDInventoryActionFailure TransferFailure = EEDInventoryActionFailure::None;
-                            if (!FEDInventoryTransferService::TransferAuto(this, Target, SlotIndex, MoveQuantity, &TransferFailure))
-                            {
-                                continue;
-                            }
-
-                            bMovedAny = true;
-                            bTransferredThisStep = true;
-                            if (InventorySlots[SlotIndex].IsEmpty())
-                            {
-                                break;
-                            }
-                        }
-
-                        if (!bTransferredThisStep)
-                        {
-                            break;
-                        }
-                    }
-                }
-            }
-            continue;
-        }
-
-        // Secondary = ByCount: 媛숈? ?ш???踰붿쐞 ?덉뿉???섎웾 ?⑥쐞 ?쒕뜡 遺꾨같
-        for (int32 SlotIndex = 0; SlotIndex < InventorySlots.Num(); ++SlotIndex)
-        {
-            while (InventorySlots.IsValidIndex(SlotIndex) && !InventorySlots[SlotIndex].IsEmpty())
-            {
-                const FPrimaryAssetId ItemId = InventorySlots[SlotIndex].Item.ItemId;
-                if (!ItemId.IsValid() || ResolveItemRarity_Component(ItemId) != CurrentRarity)
-                {
-                    break;
-                }
-
-                TArray<UEDInventoryComponent*> Candidates;
-                for (UEDInventoryComponent* Target : ReadyTargets)
-                {
-                    if (GetReceivableCapacity_Component(Target, ItemId) > 0)
-                    {
-                        Candidates.Add(Target);
-                    }
-                }
-
-                if (Candidates.Num() == 0)
-                {
-                    break;
-                }
-
-                const int32 PickIndex = RandomStream.RandRange(0, Candidates.Num() - 1);
-                UEDInventoryComponent* PickedTarget = Candidates[PickIndex];
-                const int32 MoveQuantity = FMath::Min(InventorySlots[SlotIndex].Item.Quantity, GetReceivableCapacity_Component(PickedTarget, ItemId));
-                if (MoveQuantity <= 0)
-                {
-                    break;
-                }
-
-                EEDInventoryActionFailure TransferFailure = EEDInventoryActionFailure::None;
-                if (!FEDInventoryTransferService::TransferAuto(this, PickedTarget, SlotIndex, MoveQuantity, &TransferFailure))
-                {
-                    break;
-                }
-
-                bMovedAny = true;
             }
         }
     }
@@ -2699,11 +2712,4 @@ void UEDInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
     DOREPLIFETIME(UEDInventoryComponent, TopArmorSlot);
     DOREPLIFETIME(UEDInventoryComponent, BottomArmorSlot);
 }
-
-
-
-
-
-
-
 
