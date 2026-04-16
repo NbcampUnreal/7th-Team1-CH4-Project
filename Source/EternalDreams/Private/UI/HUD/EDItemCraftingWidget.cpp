@@ -122,10 +122,14 @@ void UEDItemCraftingWidget::NativeTick(const FGeometry& MyGeometry, float InDelt
 		return;
 	}
 
+	// 연결선은 노드가 실제로 배치된 뒤의 좌표를 기준으로 다시 만들어야 함
+	// 매 Tick마다 "트리 영역 크기"와 "노드 배치 상태"가 바뀌었는지 확인
 	const FVector2D CurrentLineCanvasSize = CraftTreeLineCanvas->GetCachedGeometry().GetLocalSize();
 	const FVector2D CurrentTreeContentSize = CraftTreeContainer->GetCachedGeometry().GetLocalSize();
 	const uint32 CurrentLayoutHash = BuildCraftTreeLayoutHash();
 
+	// 단순히 창 크기만 바뀌는 경우도 있지만,
+	// 같은 크기 안에서 정렬 결과만 달라지는 경우도 있어서 둘 다 추적
 	const bool bCanvasSizeChanged = !CurrentLineCanvasSize.Equals(LastCraftTreeLineCanvasSize, 0.5f);
 	const bool bContentSizeChanged = !CurrentTreeContentSize.Equals(LastCraftTreeContentSize, 0.5f);
 	const bool bLayoutChanged = CurrentLayoutHash != LastCraftTreeLayoutHash;
@@ -521,6 +525,7 @@ void UEDItemCraftingWidget::RebuildCraftTreeLines()
 	const float ParentStemLength = 12.0f;
 	const float ChildStemLength = 12.0f;
 
+	// 각 FlatNode를 돌면서 "부모 -> 자식" 관계가 있는 노드 쌍만 연결선을 만듦
 	for (const FEDCraftTreeFlatNode& FlatNode : CachedFlatTreeNodes)
 	{
 		if (FlatNode.ParentNodeId < 0)
@@ -542,22 +547,29 @@ void UEDItemCraftingWidget::RebuildCraftTreeLines()
 			continue;
 		}
 
+		// 각 노드 위젯 안에서 "부모는 아래 중앙", "자식은 위 중앙" 지점을 연결 시작점으로 설정
+		// Geometry는 각 위젯 자신의 좌표계를 쓰므로, 먼저 절대 좌표로 변환
 		const FVector2D ParentBottomAbsolute = ParentGeometry.LocalToAbsolute(
 			FVector2D(ParentGeometry.GetLocalSize().X * 0.5f, ParentGeometry.GetLocalSize().Y - ParentBottomInset));
 		const FVector2D ChildTopAbsolute = ChildGeometry.LocalToAbsolute(
 			FVector2D(ChildGeometry.GetLocalSize().X * 0.5f, ChildTopInset));
 
+		// 선은 CraftTreeLineCanvas 위에 배치해야 하므로,
+		// 절대 좌표를 다시 "라인 캔버스 기준 로컬 좌표"로 변환
 		const FVector2D ParentBottomLocal = LineCanvasGeometry.AbsoluteToLocal(ParentBottomAbsolute);
 		const FVector2D ChildTopLocal = LineCanvasGeometry.AbsoluteToLocal(ChildTopAbsolute);
 		if (ChildTopLocal.Y <= ParentBottomLocal.Y)
 		{
 			continue;
 		}
-
+		
+		// MidY - 가로선이 지나갈 높이
 		float MidY = FMath::Min(
 			ParentBottomLocal.Y + ParentStemLength,
 			ChildTopLocal.Y - ChildStemLength);
 
+		// 두 노드 간 간격이 너무 좁으면
+		// 부모-자식 사이의 중간 높이를 써서 선이 뒤집히지 않게 막음
 		if (MidY <= ParentBottomLocal.Y || MidY >= ChildTopLocal.Y)
 		{
 			MidY = ParentBottomLocal.Y + ((ChildTopLocal.Y - ParentBottomLocal.Y) * 0.5f);
@@ -586,6 +598,8 @@ void UEDItemCraftingWidget::AddCraftTreeLineSegment(
 	FVector2D SegmentPosition = StartPoint;
 	FVector2D SegmentSize = FVector2D::ZeroVector;
 
+	// 선 위젯은 얇은 사각형 Border를 가로/세로로 배치해서 만듦
+	// 구간이 가로선인지 세로선인지 먼저 판단한 뒤, 캔버스에 올릴 위치와 크기를 계산
 	if (bIsHorizontal)
 	{
 		SegmentPosition.X = FMath::Min(StartPoint.X, EndPoint.X);
@@ -616,6 +630,7 @@ void UEDItemCraftingWidget::AddCraftTreeLineSegment(
 
 	if (UCanvasPanelSlot* LineSlot = CraftTreeLineCanvas->AddChildToCanvas(LineWidget))
 	{
+		// CanvasPanel 위에 직접 위치/크기를 지정해서 선을 고정
 		LineSlot->SetAutoSize(false);
 		LineSlot->SetPosition(SegmentPosition);
 		LineSlot->SetSize(SegmentSize);
@@ -651,6 +666,9 @@ uint32 UEDItemCraftingWidget::BuildCraftTreeLayoutHash() const
 
 	uint32 LayoutHash = 0;
 
+	// "노드가 어디에 배치됐는지"를 숫자 해시로 요약
+	// 창 크기는 그대로인데 정렬 결과만 달라져도 선을 다시 만들어야 하므로,
+	// 각 노드의 중심 좌표와 크기를 함께 해시에 넣음
 	for (const int32 NodeId : NodeIds)
 	{
 		const TObjectPtr<UEDCraftTreeNodeWidget>* NodeWidgetPtr = CraftTreeNodeWidgetMap.Find(NodeId);
@@ -669,6 +687,8 @@ uint32 UEDItemCraftingWidget::BuildCraftTreeLayoutHash() const
 		const FVector2D NodeCenterLocal = LineCanvasGeometry.AbsoluteToLocal(NodeCenterAbsolute);
 		const FVector2D NodeSize = NodeGeometry.GetLocalSize();
 
+		// 실수 좌표를 그대로 비교하면 미세한 흔들림에도 너무 자주 다시 그릴 수 있어서
+		// 적당히 반올림한 값으로만 비교
 		LayoutHash = HashCombineFast(LayoutHash, GetTypeHash(NodeId));
 		LayoutHash = HashCombineFast(LayoutHash, GetTypeHash(FMath::RoundToInt(NodeCenterLocal.X * 10.0f)));
 		LayoutHash = HashCombineFast(LayoutHash, GetTypeHash(FMath::RoundToInt(NodeCenterLocal.Y * 10.0f)));
