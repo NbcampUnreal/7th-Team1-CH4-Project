@@ -65,5 +65,7 @@ private:
 	FGenericTeamId MonsterTeamId;
 	FTimerHandle TeamReportTimerHandle;
 	TWeakObjectPtr<AActor> TeamReportTarget;
-	TSharedPtr<FStreamableHandle> BTLoadHandle;
+	
+	// 제거
+	// TSharedPtr<FStreamableHandle> BTLoadHandle;
 };
