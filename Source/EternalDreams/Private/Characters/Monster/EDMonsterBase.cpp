@@ -127,9 +127,9 @@ void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)
 	
 	TArray<FSoftObjectPath> AssetsToLoad;
 	
-	if (InDataAsset->GetMesh().IsValid())
+	if (InDataAsset->GetMesh().IsNull() == false)
 		AssetsToLoad.Add(InDataAsset->GetMesh().ToSoftObjectPath());
-	if (InDataAsset->GetAnimInstance().IsValid())
+	if (InDataAsset->GetAnimInstance().IsNull() == false)
 		AssetsToLoad.Add(InDataAsset->GetAnimInstance().ToSoftObjectPath());
 	
 	if (AssetsToLoad.IsEmpty())
