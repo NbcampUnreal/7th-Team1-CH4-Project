@@ -40,6 +40,12 @@ public:
 	FGameplayTag Player_Evade_Staff;
 	FGameplayTag Player_Evade_Bow;
 	FGameplayTag Player_Skill_Whirlwind;
+	//CoolDown
+	FGameplayTag CoolDown_Evade_Hammer;
+	FGameplayTag CoolDown_Evade_Sword;
+	FGameplayTag CoolDown_Evade_Staff;
+	FGameplayTag CoolDown_Evade_Bow;
+	FGameplayTag CoolDown_Skill_Whirlwind;
 	//Effect_Debuff
 	FGameplayTag Effect_Debuff_Slow;
 	FGameplayTag Effect_Debuff_Stun;
@@ -72,6 +78,7 @@ public:
 	//Data
 	FGameplayTag Data_Damage;
 	FGameplayTag Data_StaminaCost;
+	FGameplayTag Data_CoolTime;
 	
 	//Inventory-Item
 	FGameplayTag Item_Weapon_Sword;

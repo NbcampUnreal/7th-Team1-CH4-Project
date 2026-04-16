@@ -69,6 +69,34 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("Player.Skill.Whirlwind"),
 		FString("스킬: 휠윈드")
 	);
+	
+	//CoolDown
+	Tags.CoolDown_Evade_Hammer = Manager.AddNativeGameplayTag(
+		FName("CoolDown.Evade.Hammer"),
+	FString("쿨다운: 해머 회피")
+	);
+
+	Tags.CoolDown_Evade_Sword = Manager.AddNativeGameplayTag(
+		FName("CoolDown.Evade.Sword"),
+		FString("쿨다운: 소드 회피")
+	);
+
+	Tags.CoolDown_Evade_Staff = Manager.AddNativeGameplayTag(
+		FName("CoolDown.Evade.Staff"),
+		FString("쿨다운: 스태프 회피")
+	);
+
+	Tags.CoolDown_Evade_Bow = Manager.AddNativeGameplayTag(
+		FName("CoolDown.Evade.Bow"),
+		FString("쿨다운: 활 회피")
+	);
+
+	Tags.CoolDown_Skill_Whirlwind = Manager.AddNativeGameplayTag(
+		FName("CoolDown.Skill.Whirlwind"),
+		FString("쿨다운: 휠윈드")
+	);
+	
+	
 	//Effect_Debuff
 	Tags.Effect_Debuff_Slow = Manager.AddNativeGameplayTag(
 		FName("Effect.Debuff.Slow"),
@@ -176,6 +204,10 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("Data.StatMul"),
 		FString("SetByCaller용 스탯 % 증가 Tag")
 	);
+	Tags.Data_CoolTime = Manager.AddNativeGameplayTag(
+	FName("Data.CoolTime"),
+	FString("SetByCaller용 CoolTime 증가 Tag")
+	);
 	
 	//Inventory-Item
 	Tags.Item_Weapon_Sword = Manager.AddNativeGameplayTag(
@@ -219,5 +251,5 @@ void FEDGameplayTags::InitializeNativeTags()
 	Tags.Data_StatAdd = Manager.AddNativeGameplayTag(
 	FName("Data.StatAdd"),
 	FString("SetByCaller용 스탯 + 증가 Tag")
-);
+	);
 }
