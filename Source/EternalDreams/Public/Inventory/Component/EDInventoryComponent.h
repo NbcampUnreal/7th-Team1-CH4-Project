@@ -138,19 +138,19 @@ public:
     void RequestInitializeInventorySlots();
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool PredicateMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RequestMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Network")
-    bool PredicateTransferItemAuto(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateTransferItemAuto(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Network")
     bool RequestTransferItemAuto(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Network")
-    bool PredicateTransferItemToSlot(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateTransferItemToSlot(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Network")
     bool RequestTransferItemToSlot(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity);
@@ -162,25 +162,25 @@ public:
     bool RequestTransferItemToSlotDetailed(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool PredicateDropAllFromSlot(int32 FromSlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateDropAllFromSlot(int32 FromSlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RequestDropAllFromSlot(int32 FromSlotIndex);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool PredicateDropSingleFromSlot(int32 FromSlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateDropSingleFromSlot(int32 FromSlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RequestDropSingleFromSlot(int32 FromSlotIndex);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool PredicateDropCountFromSlot(int32 FromSlotIndex, int32 DropCount, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateDropCountFromSlot(int32 FromSlotIndex, int32 DropCount, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RequestDropCountFromSlot(int32 FromSlotIndex, int32 DropCount);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Drop")
-    bool PredicatePickupDroppedItem(AEDDroppedItemActor* DroppedItemActor, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicatePickupDroppedItem(AEDDroppedItemActor* DroppedItemActor, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Drop")
     bool RequestPickupDroppedItem(AEDDroppedItemActor* DroppedItemActor);
@@ -189,25 +189,25 @@ public:
     bool RequestPickupDroppedItemDetailed(AEDDroppedItemActor* DroppedItemActor, EEDInventoryActionFailure& OutFailure);
     
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
-    bool PredicateEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
     bool RequestEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
-    bool PredicateUnequipTopArmor(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateUnequipTopArmor(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
     bool RequestUnequipTopArmor();
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
-    bool PredicateUnequipBottomArmor(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateUnequipBottomArmor(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
     bool RequestUnequipBottomArmor();
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool PredicateAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RequestAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity);
@@ -216,7 +216,7 @@ public:
     bool RequestAddItemAutoDetailed(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
-    bool PredicateAddItemToSlot(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateAddItemToSlot(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RequestAddItemToSlot(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex);
@@ -225,7 +225,7 @@ public:
     bool RequestAddItemToSlotDetailed(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Loot")
-    bool PredicateInitializeRandomLoot(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateInitializeRandomLoot(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Loot")
     bool RequestInitializeRandomLoot();
@@ -234,7 +234,7 @@ public:
     bool RequestInitializeRandomLootDetailed(int32 RollCount, int32 MinLootIndex, int32 MaxLootIndex, int32 Seed, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Distribution")
-    bool PredicateDistributeInventoryToTargets(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateDistributeInventoryToTargets(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Distribution")
     bool RequestDistributeInventoryToTargets();
@@ -243,7 +243,7 @@ public:
     bool RequestDistributeInventoryToTargetsDetailed(EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Craft")
-    bool PredicateCraftItem(FName RecipeId, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateCraftItem(FName RecipeId, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Craft")
     bool RequestCraftItem(FName RecipeId);
@@ -270,7 +270,7 @@ public:
     bool RequestCraftFirstCachedRecipe();
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Consumable")
-    bool PredicateConsumeItemAtSlot(int32 SlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateConsumeItemAtSlot(int32 SlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Consumable")
     bool RequestConsumeItemAtSlot(int32 SlotIndex);
@@ -279,7 +279,7 @@ public:
     bool RequestConsumeItemAtSlotDetailed(int32 SlotIndex, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Init")
-    bool PredicateEnsureDefaultEquipment(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = false);
+    bool PredicateEnsureDefaultEquipment(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Init")
     bool RequestEnsureDefaultEquipment();
