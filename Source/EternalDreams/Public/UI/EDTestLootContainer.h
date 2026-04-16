@@ -7,7 +7,13 @@
 class UBoxComponent;
 class UStaticMeshComponent;
 class UEDInventoryComponent;
+class UEDLootTargetComponent;
 
+/**
+ * 구형 테스트 루팅 액터 호환용 래퍼
+ * 새 구조에서는 일반 액터에 InventoryComponent와 UEDLootTargetComponent를 붙여서 사용
+ * 기존 블루프린트 자산이 바로 깨지지 않도록 최소 구성만 유지
+ */
 UCLASS()
 class ETERNALDREAMS_API AEDTestLootContainer : public AActor
 {
@@ -21,26 +27,6 @@ public:
 	UEDInventoryComponent* GetInventoryComponent() const;
 
 protected:
-	virtual void BeginPlay() override;
-
-	// 플레이어가 루팅 가능 범위에 들어왔을 때 호출
-	UFUNCTION()
-	void HandleInteractionBeginOverlap(
-		UPrimitiveComponent* OverlappedComponent,
-		AActor* OtherActor,
-		UPrimitiveComponent* OtherComp,
-		int32 OtherBodyIndex,
-		bool bFromSweep,
-		const FHitResult& SweepResult);
-
-	// 플레이어가 루팅 가능 범위에서 벗어났을 때 호출
-	UFUNCTION()
-	void HandleInteractionEndOverlap(
-		UPrimitiveComponent* OverlappedComponent,
-		AActor* OtherActor,
-		UPrimitiveComponent* OtherComp,
-		int32 OtherBodyIndex);
-
 	// 시각용 메쉬
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
@@ -52,4 +38,8 @@ protected:
 	// 루팅 대상 인벤토리
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
 	TObjectPtr<UEDInventoryComponent> InventoryComponent;
+
+	// 루팅 대상 등록/해제를 담당하는 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<UEDLootTargetComponent> LootTargetComponent;
 };

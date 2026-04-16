@@ -1,12 +1,10 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/EDTestLootContainer.h"
 
-#include "Characters/Player/Component/EDLootInteractionComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/StaticMeshComponent.h"
-#include "GameFramework/PlayerController.h"
-#include "GameFramework/Pawn.h"
 #include "Inventory/Component/EDInventoryComponent.h"
+#include "Interaction/Component/EDLootTargetComponent.h"
 
 AEDTestLootContainer::AEDTestLootContainer()
 {
@@ -36,81 +34,15 @@ AEDTestLootContainer::AEDTestLootContainer()
 		InventoryComponent->bGiveDefaultWeaponOnBeginPlay = false;
 		InventoryComponent->MaxInventorySlots = 10;
 	}
+
+	LootTargetComponent = CreateDefaultSubobject<UEDLootTargetComponent>(TEXT("LootTargetComponent"));
+	if (LootTargetComponent)
+	{
+		LootTargetComponent->SetInteractionCollision(InteractionBox);
+	}
 }
 
 UEDInventoryComponent* AEDTestLootContainer::GetInventoryComponent() const
 {
 	return InventoryComponent;
-}
-
-void AEDTestLootContainer::BeginPlay()
-{
-	Super::BeginPlay();
-
-	if (InteractionBox)
-	{
-		InteractionBox->OnComponentBeginOverlap.AddDynamic(this, &AEDTestLootContainer::HandleInteractionBeginOverlap);
-		InteractionBox->OnComponentEndOverlap.AddDynamic(this, &AEDTestLootContainer::HandleInteractionEndOverlap);
-	}
-}
-
-void AEDTestLootContainer::HandleInteractionBeginOverlap(
-	UPrimitiveComponent* OverlappedComponent, 
-	AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, 
-	int32 OtherBodyIndex, 
-	bool bFromSweep,
-	const FHitResult& SweepResult)
-{
-	APawn* OverlapPawn = Cast<APawn>(OtherActor);
-	if (!OverlapPawn)
-	{
-		return;
-	}
-
-	APlayerController* PlayerController = Cast<APlayerController>(OverlapPawn->GetController());
-	if (!PlayerController)
-	{
-		return;
-	}
-
-	UEDLootInteractionComponent* LootInteractionComponent =
-		PlayerController->FindComponentByClass<UEDLootInteractionComponent>();
-	if (!LootInteractionComponent)
-	{
-		return;
-	}
-
-	// 플레이어가 범위 안에 들어오면 현재 루팅 대상으로 등록
-	LootInteractionComponent->SetCurrentLootTarget(this);
-}
-
-void AEDTestLootContainer::HandleInteractionEndOverlap(
-	UPrimitiveComponent* OverlappedComponent, 
-	AActor* OtherActor,
-	UPrimitiveComponent* 
-	OtherComp, 
-	int32 OtherBodyIndex)
-{
-	APawn* OverlapPawn = Cast<APawn>(OtherActor);
-	if (!OverlapPawn)
-	{
-		return;
-	}
-
-	APlayerController* PlayerController = Cast<APlayerController>(OverlapPawn->GetController());
-	if (!PlayerController)
-	{
-		return;
-	}
-
-	UEDLootInteractionComponent* LootInteractionComponent =
-		PlayerController->FindComponentByClass<UEDLootInteractionComponent>();
-	if (!LootInteractionComponent)
-	{
-		return;
-	}
-
-	// 이 컨테이너가 현재 루팅 대상일 때만 해제
-	LootInteractionComponent->ClearCurrentLootTarget(this);
 }
