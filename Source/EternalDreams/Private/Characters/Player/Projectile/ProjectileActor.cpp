@@ -14,6 +14,10 @@
 // Sets default values
 AProjectileActor::AProjectileActor()
 {
+	//레플리케이트
+	bReplicates = true;
+	SetReplicateMovement(true);
+	
 	//루트 스피어 컴포넌트로 충돌 판정을 진행
 	SphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
 	SetRootComponent(SphereComponent);
@@ -125,7 +129,7 @@ void AProjectileActor::OnProjectileHit(UPrimitiveComponent* HitComponent, AActor
 			AttackerASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 		}
 	}
-	UE_LOG(LogTemp,Warning,TEXT("Collision Destroy"));
+	UE_LOG(LogTemp,Warning,TEXT("%s Collision Destroy"),*OtherActor->GetName());
 	Destroy();
 }
 

@@ -31,7 +31,7 @@ protected:
 	float TraceRadius=50.0f;
 	
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Enemy|Attack")
-	bool bShowDebug;
+	bool bShowDebug=false;
 	
 	//XY방향으로 날리는 힘
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Enemy|Attack")
@@ -45,39 +45,9 @@ protected:
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
 	
 private:
-	FVector PresentAttackSocketLocation=FVector::ZeroVector;
-	FVector CurrentAttackSocketLocation=FVector::ZeroVector;
-	//공격을 진행하는 액터
-	UPROPERTY()
-	TObjectPtr<AActor> Owner;
-	
-	
-	//Weapon Actor
-	UPROPERTY()
-	TObjectPtr<AEDWeapon> Weapon=nullptr;
-	//Weapon Actor
-	UPROPERTY()
-	TObjectPtr<UStaticMeshComponent> WeaponMesh;
-	//맞은 액터
-	UPROPERTY()
-	TObjectPtr<AActor> HittedActor;
-	//형변환 캐싱
-	UPROPERTY()
-	TObjectPtr<AEDPlayerCharacter> HittedPlayer;
-	//Weapon을 가져오기 위한 Array
-	UPROPERTY()
-	TArray<AActor*> AttachedActors;
-	//중복 타격 방지를 위해 TArray에 저장
-	UPROPERTY()	
-	TArray<AActor*> HittedCharacterArray;
-	
+
 	//소켓이름
 	FName SocketName=FName("Socket");
-	//공격자 ASI 캐싱
-	IAbilitySystemInterface* AttackerASI;
-	//공격자 ASC 캐싱
-	UPROPERTY()
-	TObjectPtr<UAbilitySystemComponent> AttackerASC;
 
 	
 	

@@ -9,12 +9,12 @@ void UANS_AttackMove::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenc
                                   const FAnimNotifyEventReference& EventReference)
 {
 	Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
-	Owner = MeshComp->GetOwner();
+	AActor* Owner = MeshComp->GetOwner();
 	if (Owner == nullptr)
 	{
 		return;
 	}
-	Player = Cast<AEDPlayerCharacter>(Owner);
+	AEDPlayerCharacter* Player = Cast<AEDPlayerCharacter>(Owner);
 	if (Player == nullptr)
 	{
 		return;
@@ -29,6 +29,8 @@ void UANS_AttackMove::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceB
 	const FAnimNotifyEventReference& EventReference)
 {
 	Super::NotifyEnd(MeshComp, Animation, EventReference);
+	AActor* Owner = MeshComp->GetOwner();
+	AEDPlayerCharacter* Player = Cast<AEDPlayerCharacter>(Owner);
 	if (Player == nullptr)
 	{
 		return;

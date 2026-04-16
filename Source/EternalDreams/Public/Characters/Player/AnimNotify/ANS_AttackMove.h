@@ -30,17 +30,5 @@ protected:
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Direction")
 	bool bIsZDirection=false;
 	
-	UPROPERTY()
-	FVector MoveVector;
-	
-
-	
-private:
-	UPROPERTY()
-	TObjectPtr<AActor> Owner;
-	//Player 형변환 후 캐싱
-	UPROPERTY()
-	TObjectPtr<AEDPlayerCharacter> Player;
-
 	
 };

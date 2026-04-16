@@ -7,6 +7,7 @@
 #include "AttributeSet.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayEffectTypes.h"
+#include "Weapon/EDWeapon.h"
 #include "EDPlayerCharacter.generated.h"
 
 class UGameplayAbility;
@@ -139,5 +140,27 @@ protected:
 	FVector MoveVector=FVector::ZeroVector;
 	UPROPERTY()
 	FHitResult Hit;
+	
+	//Anim Notify Used
+public:
+	UPROPERTY()
+	FVector PresentAttackSocketLocation=FVector::ZeroVector;
+	UPROPERTY()
+	FVector CurrentAttackSocketLocation=FVector::ZeroVector;
+	
+	UPROPERTY()
+	FTransform SpawnTransform;
+	
+	UPROPERTY()
+	FVector SocketLocation;
+	
+	UPROPERTY()
+	FVector SocketDirection;
+	
+	UPROPERTY()
+	TArray<AActor*> HittedCharacterArray;
+	
+	FORCEINLINE UStaticMeshComponent* GetWeaponMeshComp()
+	{if (LWeaponActor!=nullptr&&RWeaponActor!=nullptr) return RWeaponActor->GetStaticMesh()!=nullptr ? RWeaponActor->GetStaticMeshComp():LWeaponActor->GetStaticMeshComp(); else return nullptr;};
 	
 };

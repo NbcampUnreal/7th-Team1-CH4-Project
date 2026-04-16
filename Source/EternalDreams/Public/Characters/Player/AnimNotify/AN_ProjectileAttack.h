@@ -22,12 +22,6 @@ public:
 protected:
 	FName SocketName=FName("Socket");
 	
-	
-	
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<AProjectileActor> ProjectileClass;
-	
-	TObjectPtr<AProjectileActor> Projectile;
-	
-	TArray<AActor*> AttachedActors;
 };

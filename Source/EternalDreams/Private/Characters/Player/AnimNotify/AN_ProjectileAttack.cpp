@@ -14,42 +14,33 @@ void UAN_ProjectileAttack::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenc
 	const FAnimNotifyEventReference& EventReference)
 {
 	Super::Notify(MeshComp, Animation, EventReference);
+	
 	if (MeshComp==nullptr||MeshComp->GetWorld()==nullptr)
 	{
 		return;
 	}
-
-	
-	MeshComp->GetOwner()->GetAttachedActors(AttachedActors);
-	AEDWeapon* Weapon=nullptr;
-	if (!AttachedActors.IsEmpty())
-	{
-		for (AActor* Actor:AttachedActors)
-		{
-			AEDWeapon* WeaponActor=Cast<AEDWeapon>(Actor);
-			if (!IsValid(WeaponActor))
-			{
-				continue;
-			}
-			if (WeaponActor->GetStaticMesh()!=nullptr)
-			{
-				Weapon = WeaponActor;
-				break;
-			}
-		}
-	}
-	if (Weapon == nullptr)
+	if (MeshComp->GetOwner()->HasAuthority()==false)
 	{
 		return;
 	}
-	UStaticMeshComponent* WeaponMesh=Weapon->GetComponentByClass<UStaticMeshComponent>();
+	
+	AEDPlayerCharacter* Player=Cast<AEDPlayerCharacter>(MeshComp->GetOwner());
+	if (Player==nullptr)
+	{
+		return;
+	}
+	
+	if (Player->GetMesh()!=MeshComp)
+	{
+		return;
+	}
+	
+	
+	UStaticMeshComponent* WeaponMesh=Player->GetWeaponMeshComp();
 	if (WeaponMesh==nullptr)
 	{
 		return;
 	}
-	
-	
-	
 	
 	//발사체의 위치와 방향을 세팅합니다.
 	FVector SpawnLocation = WeaponMesh->GetSocketTransform(SocketName, RTS_World).GetLocation()+MeshComp->GetOwner()->GetActorForwardVector()*50.f;
@@ -59,14 +50,11 @@ void UAN_ProjectileAttack::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenc
 
 	//TODO: StaticMesh를 Set
 	
-	if (MeshComp->GetOwner()->HasAuthority()==false)
-	{
-		return;
-	}
+	
 	FTransform SpawnTransform;
 	SpawnTransform.SetLocation(SpawnLocation);
 	SpawnTransform.SetRotation(SpawnRotation.Quaternion());
-	Projectile=MeshComp->GetWorld()->SpawnActorDeferred<AProjectileActor>(ProjectileClass,SpawnTransform);
+	AActor* Projectile=MeshComp->GetWorld()->SpawnActorDeferred<AProjectileActor>(ProjectileClass,SpawnTransform);
 	
 	if (IsValid(Projectile))
 	{
@@ -74,5 +62,4 @@ void UAN_ProjectileAttack::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenc
 		Projectile->FinishSpawning(SpawnTransform);
 	}
 	
-	Projectile->SetOwner(MeshComp->GetOwner());
 }

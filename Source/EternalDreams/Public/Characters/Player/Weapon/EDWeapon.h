@@ -23,14 +23,12 @@ public:
 	UFUNCTION()
 	void OnRep_WeaponStaticMesh();
 	
-	
 	UFUNCTION()
 	FORCEINLINE UStaticMesh* GetStaticMesh() {return WeaponStaticMeshComp->GetStaticMesh();};
 	
+	FORCEINLINE UStaticMeshComponent* GetStaticMeshComp() {return WeaponStaticMeshComp;};
 
-	
 
-	
 	
 protected:
 	UPROPERTY()

@@ -31,7 +31,7 @@ protected:
 	TSubclassOf<AActor> FinalShootActorClass=nullptr;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
-	float AttackDistance;
+	float AttackDistance=1000.f;
 	
 	//적용할 Damage Effect 클래스
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
@@ -44,30 +44,11 @@ protected:
 	bool bShowDebug=false;
 	
 private:
-
-	//공격을 진행하는 액터
-	UPROPERTY()
-	TObjectPtr<AActor> Owner;
-	
-	//Weapon Actor
-	UPROPERTY()
-	TObjectPtr<AEDWeapon> Weapon=nullptr;
-	//Weapon Actor
-	UPROPERTY()
-	TObjectPtr<UStaticMeshComponent> WeaponMesh;
 	
 	//소켓이름
 	FName SocketName=FName("Socket");
-	//공격자 ASI 캐싱
-	IAbilitySystemInterface* AttackerASI;
-	//공격자 ASC 캐싱
-	UPROPERTY()
-	TObjectPtr<UAbilitySystemComponent> AttackerASC;
+
 	
-	FVector SocketLocation=FVector::ZeroVector;
-	FVector SocketDirection=FVector::ZeroVector;
-	
-	FTransform SpawnTransform;
 	
 	
 };
