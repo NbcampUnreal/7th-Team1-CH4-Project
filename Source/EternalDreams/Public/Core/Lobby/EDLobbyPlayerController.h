@@ -35,6 +35,9 @@ protected:
 	TSubclassOf<UUserWidget> LobbyWidgetClass;
 
 private:
+	UFUNCTION()
+	void HandleDirectZoneSelection(int32 ZoneId);
+
 	UPROPERTY()
 	TObjectPtr<UUserWidget> LobbyWidget;
 };

@@ -20,15 +20,9 @@ AEDGameMode::AEDGameMode()
 	bUseSeamlessTravel = true;
 }
 
-// ============================================================
-//  UE 오버라이드
-// ============================================================
-
 void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 {
 	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
-
-
 	// ============================================================
 	// [IOCP 전환 시 활성화] 토큰 검증 & PendingToken 저장
 	// ============================================================
@@ -77,17 +71,13 @@ void AEDGameMode::PostLogin(APlayerController* NewPlayer)
 	// TryStartPhaseSequence();
 }
 
+// 로비에서의 Pawn 제거 후 게임 맵에서 Panw 생성
 void AEDGameMode::HandleSeamlessTravelPlayer(AController*& C)
 {
-	// BeginPlay보다 먼저 호출될 수 있으므로 캐시가 비어있으면 선행 초기화
 	if (ZonePlayerStartMap.Num() == 0)
 	{
 		CacheZonePlayerStarts();
 	}
-
-	AEDPlayerState* PS = C ? C->GetPlayerState<AEDPlayerState>() : nullptr;
-	UE_LOG(LogEDCore, Warning, TEXT("[Spawn] SeamlessTravel — Player: %s, DesiredZoneId: %d"),
-		PS ? *PS->GetPlayerName() : TEXT("null"), PS ? PS->DesiredZoneId : -1);
 
 	if (C && C->GetPawn())
 	{
@@ -104,22 +94,10 @@ void AEDGameMode::BeginPlay()
 
 	CacheZonePlayerStarts();
 	InitRestrictedZones();
-
-	// ============================================================
-	// [비동기로드] 게임 에셋 로드 시작 위치
-	// ============================================================
-	// 향후 EDGameDataSubsystem를 활용하여 게임 에셋(UI, Item, Monster)을
-	// 비동기로 로드하는 로직을 여기에 추가한다.
-	//
-	// 구현 예시:
-	//   if (UEDGameDataSubsystem* DataSub = UEDGameDataSubsystem::Get(this))
-	//   {
-	//       DataSub->InitializeGameData();
-	//   }
-	// ============================================================
-
+	
 	// 구형 로비 호환: BeginPlay에서 바로 Phase 시작 (테스트용)
 	// [IOCP 전환 시] 아래 블록을 제거하고, PostLogin의 TryStartPhaseSequence()를 활성화
+	// IOCP에서는 기존 맵이 존재 하지 않기 때문에 Phase 시작전 비동기 로드 필요 
 	if (PhaseSequence.Num() > 0)
 	{
 		StartPhaseSequence();
@@ -347,7 +325,6 @@ void AEDGameMode::OnDay3_DayStarted()
 {
 	// [몬스터] 위클라이너(보스) 스폰 — S2 담당
 	// [아이템] 전설 등급 재료 등장 — S4 담당
-	// [부활] 골드 환급 방식으로 변경 — S6 담당
 }
 
 void AEDGameMode::OnDay3_NightStarted()
@@ -371,8 +348,6 @@ void AEDGameMode::OnDay4_DayStarted()
 		ActivateRestrictedZone(RestrictedZoneOrder[2]);
 	}
 	// RestrictedZoneOrder[3]이 최종 안전구역으로 남음
-
-	// [부활] 부활 불가 — S6 담당
 }
 
 void AEDGameMode::OnDay4_NightStarted()
@@ -469,6 +444,7 @@ void AEDGameMode::EnterSpectator(AController* Victim)
 	}
 }
 
+// 
 void AEDGameMode::SchedulePlayerRespawn(AController* Victim)
 {
 	if (!Victim) return;
@@ -490,6 +466,7 @@ void AEDGameMode::SchedulePlayerRespawn(AController* Victim)
 	}, RespawnZoneSelectDelay, false);
 }
 
+// 스폰 처리
 void AEDGameMode::HandleRespawnRequest(AController* Victim, int32 SelectedZoneId)
 {
 	if (!HasAuthority() || !Victim) return;
@@ -528,6 +505,7 @@ void AEDGameMode::HandleRespawnRequest(AController* Victim, int32 SelectedZoneId
 		*PS->GetPlayerName(), SelectedZoneId, PS->RemainingRevives);
 }
 
+// 탈락 처리
 void AEDGameMode::EliminatePlayer(AController* Victim)
 {
 	if (!Victim) return;
@@ -541,6 +519,7 @@ void AEDGameMode::EliminatePlayer(AController* Victim)
 	CheckTeamElimination();
 }
 
+// 팀 탈락 처리
 void AEDGameMode::CheckTeamElimination()
 {
 	AEDGameState* GS = GetGameState<AEDGameState>();

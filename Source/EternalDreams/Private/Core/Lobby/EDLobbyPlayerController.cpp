@@ -5,6 +5,7 @@
 #include "Core/EDPlayerState.h"
 #include "Core/Lobby/EDLobbyGameMode.h"
 #include "Core/Lobby/EDLobbyGameState.h"
+#include "Core/Lobby/UI/EDZoneSelectWidget.h"
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -30,8 +31,41 @@ void AEDLobbyPlayerController::BeginPlay()
 		if (LobbyWidget)
 		{
 			LobbyWidget->AddToViewport();
+
+			if (UEDZoneSelectWidget* DirectZoneWidget = Cast<UEDZoneSelectWidget>(LobbyWidget))
+			{
+				DirectZoneWidget->OnZoneSelectionChanged.RemoveDynamic(this, &AEDLobbyPlayerController::HandleDirectZoneSelection);
+				DirectZoneWidget->OnZoneSelectionChanged.AddDynamic(this, &AEDLobbyPlayerController::HandleDirectZoneSelection);
+
+				const AEDPlayerState* EDPlayerState = GetPlayerState<AEDPlayerState>();
+				const int32 InitialZoneId = (EDPlayerState && EDPlayerState->DesiredZoneId >= 1 && EDPlayerState->DesiredZoneId <= 4)
+					? EDPlayerState->DesiredZoneId
+					: 1;
+
+				DirectZoneWidget->SetSelectedZone(InitialZoneId, false);
+
+				if (!EDPlayerState || EDPlayerState->DesiredZoneId < 1 || EDPlayerState->DesiredZoneId > 4)
+				{
+					HandleDirectZoneSelection(InitialZoneId);
+				}
+			}
 		}
 	}
+}
+
+void AEDLobbyPlayerController::HandleDirectZoneSelection(int32 ZoneId)
+{
+	if (ZoneId < 1 || ZoneId > 4)
+	{
+		return;
+	}
+
+	if (AEDPlayerState* EDPlayerState = GetPlayerState<AEDPlayerState>())
+	{
+		EDPlayerState->DesiredZoneId = ZoneId;
+	}
+
+	Server_SelectZone(ZoneId);
 }
 
 void AEDLobbyPlayerController::Server_SetReady_Implementation()

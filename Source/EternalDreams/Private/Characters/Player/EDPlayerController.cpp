@@ -296,6 +296,16 @@ void AEDPlayerController::Server_RequestSkipPhase_Implementation()
 	GM->SkipToNextPhase();
 }
 
+void AEDPlayerController::ClientOnPlayerDied_Implementation(float CountdownSeconds, bool bCanRespawn)
+{
+	BP_OnPlayerDied(CountdownSeconds, bCanRespawn);
+}
+
+void AEDPlayerController::ClientOpenZoneSelectWidget_Implementation()
+{
+	BP_OpenZoneSelectWidget();
+}
+
 void AEDPlayerController::Server_RequestRespawn_Implementation(int32 SelectedZoneId)
 {
 	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
