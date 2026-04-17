@@ -44,10 +44,13 @@ void AEDMonsterBase::BeginPlay()
 	
 	OriginLocation = GetActorLocation();
 	
+	CachedDataSubsystem = UEDGameDataSubsystem::Get(this);
+	
 	UEDMonsterDataAsset* DataAsset = GetDataAsset();
 	if (IsValid(DataAsset) == false)
 		return;
 	LoadVisuals(DataAsset);
+	
 	//InitializeFromDataAsset(DataAsset);
 	
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetHealthAttribute())
@@ -71,14 +74,14 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	
 	MonsterDataId = InDataAsset->GetPrimaryAssetId();
 	
-	UEDGameDataSubsystem* DataSubsystem = UEDGameDataSubsystem::Get(this);
+	UEDGameDataSubsystem* DataSubsystem = CachedDataSubsystem.Get();
 	if (!DataSubsystem) return;
 	
 	if (DataSubsystem->IsDataReady())
 	{
 		if (USkeletalMesh* SkelMesh = InDataAsset->GetMesh().Get())
 		{
-			GetMesh()->SetSkeletalMesh(SkelMesh);
+			GetMesh()->SetSkeletalMeshAsset(SkelMesh);
 		}
         
 		if (UClass* AnimClass = InDataAsset->GetAnimInstance().Get())
@@ -140,6 +143,14 @@ void AEDMonsterBase::OnRep_MonsterState()
 void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)
 {
 	if (!InDataAsset) return;
+	
+	UEDGameDataSubsystem* DataSubsystem = CachedDataSubsystem.Get();
+	if (DataSubsystem && DataSubsystem->IsDataReady())
+	{
+		OnVisualsLoaded();
+		return;
+	}
+	
 	// 이전 로드가 진행 중이면 취소
 	if (VisualLoadHandle.IsValid())
 	{
@@ -147,6 +158,7 @@ void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)
 		VisualLoadHandle.Reset();
 	}
 	
+	// 캐시 미스면 아래 비동기로드 수행
 	TArray<FSoftObjectPath> AssetsToLoad;
 	
 	if (InDataAsset->GetMesh().IsNull() == false)
