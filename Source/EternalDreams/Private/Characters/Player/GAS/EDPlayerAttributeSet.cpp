@@ -2,6 +2,7 @@
 
 
 #include "Characters/Player/GAS/EDPlayerAttributeSet.h"
+#include "Characters/Player/EDPlayerCharacter.h"
 #include "Net/UnrealNetwork.h"
 #include"GameplayEffect.h"
 #include"GameplayEffectExtension.h"
@@ -126,8 +127,12 @@ void UEDPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCa
 				{
 					GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Red, TEXT("생존 시간이 0이 되었습니다! 플레이어 사망!"));
 				}
-               
-				// TODO: 추후 Character->Die() 같은 사망 함수를 한 번만 호출
+
+				// 금지구역 사망 — 환경 데미지이므로 Killer 없음
+				if (AEDPlayerCharacter* Player = Cast<AEDPlayerCharacter>(Data.Target.GetAvatarActor()))
+				{
+					Player->HandleDeath(nullptr);
+				}
 			}
 		}
 	}

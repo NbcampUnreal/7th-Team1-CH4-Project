@@ -1,8 +1,7 @@
 // Copyright Eternal Dreams Team. All Rights Reserved.
 
 #include "Core/Lobby/UI/EDZoneSelectWidget.h"
-#include "Core/EDPlayerState.h"
-#include "Core/Lobby/EDLobbyPlayerController.h"
+
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
 
@@ -12,64 +11,121 @@ void UEDZoneSelectWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (ZoneButton1) ZoneButton1->OnClicked.AddDynamic(this, &UEDZoneSelectWidget::OnZone1Clicked);
-	if (ZoneButton2) ZoneButton2->OnClicked.AddDynamic(this, &UEDZoneSelectWidget::OnZone2Clicked);
-	if (ZoneButton3) ZoneButton3->OnClicked.AddDynamic(this, &UEDZoneSelectWidget::OnZone3Clicked);
-	if (ZoneButton4) ZoneButton4->OnClicked.AddDynamic(this, &UEDZoneSelectWidget::OnZone4Clicked);
+	if (ZoneButton1)
+	{
+		ZoneButton1->OnClicked.RemoveDynamic(this, &UEDZoneSelectWidget::OnZone1Clicked);
+		ZoneButton1->OnClicked.AddDynamic(this, &UEDZoneSelectWidget::OnZone1Clicked);
+	}
 
-	SelectZone(1);
+	if (ZoneButton2)
+	{
+		ZoneButton2->OnClicked.RemoveDynamic(this, &UEDZoneSelectWidget::OnZone2Clicked);
+		ZoneButton2->OnClicked.AddDynamic(this, &UEDZoneSelectWidget::OnZone2Clicked);
+	}
+
+	if (ZoneButton3)
+	{
+		ZoneButton3->OnClicked.RemoveDynamic(this, &UEDZoneSelectWidget::OnZone3Clicked);
+		ZoneButton3->OnClicked.AddDynamic(this, &UEDZoneSelectWidget::OnZone3Clicked);
+	}
+
+	if (ZoneButton4)
+	{
+		ZoneButton4->OnClicked.RemoveDynamic(this, &UEDZoneSelectWidget::OnZone4Clicked);
+		ZoneButton4->OnClicked.AddDynamic(this, &UEDZoneSelectWidget::OnZone4Clicked);
+	}
+
+	RefreshVisuals();
 }
 
 void UEDZoneSelectWidget::SelectZone(int32 ZoneId)
 {
-	if (ZoneId < 1 || ZoneId > 4) return;
+	SetSelectedZone(ZoneId, true);
+}
 
-	APlayerController* PC = GetOwningPlayer();
-	if (!PC) return;
-
-	AEDPlayerState* PS = PC->GetPlayerState<AEDPlayerState>();
-	if (!PS) return;
-
-	PS->DesiredZoneId = ZoneId;
-
-	if (AEDLobbyPlayerController* LobbyPC = Cast<AEDLobbyPlayerController>(PC))
+void UEDZoneSelectWidget::SetSelectedZone(int32 ZoneId, bool bBroadcastSelection)
+{
+	if (!IsValidZoneId(ZoneId))
 	{
-		LobbyPC->Server_SelectZone(ZoneId);
+		return;
 	}
 
-	UpdateButtonVisuals(ZoneId);
-	OnZoneSelected(ZoneId);
-}
-
-int32 UEDZoneSelectWidget::GetSelectedZoneId() const
-{
-	APlayerController* PC = GetOwningPlayer();
-	if (!PC) return 0;
-
-	const AEDPlayerState* PS = PC->GetPlayerState<AEDPlayerState>();
-	return PS ? PS->DesiredZoneId : 0;
-}
-
-void UEDZoneSelectWidget::UpdateButtonVisuals(int32 SelectedZoneId)
-{
-	for (int32 i = 1; i <= 4; ++i)
+	if (UButton* Button = GetButtonByZoneId(ZoneId))
 	{
-		if (UButton* Btn = GetButtonByZoneId(i))
+		if (!Button->GetIsEnabled())
 		{
-			Btn->SetBackgroundColor((i == SelectedZoneId) ? SelectedColor : NormalColor);
+			return;
 		}
 	}
 
-	if (ZoneLabel)
+	SelectedZoneId = ZoneId;
+	UpdateButtonVisuals();
+
+	if (bBroadcastSelection)
 	{
-		if (SelectedZoneId >= 1 && SelectedZoneId <= 4)
+		OnZoneSelectionChanged.Broadcast(ZoneId);
+		OnZoneSelected(ZoneId);
+	}
+}
+
+void UEDZoneSelectWidget::SetZoneEnabled(int32 ZoneId, bool bEnabled)
+{
+	if (UButton* Button = GetButtonByZoneId(ZoneId))
+	{
+		Button->SetIsEnabled(bEnabled);
+		UpdateButtonVisuals();
+	}
+}
+
+void UEDZoneSelectWidget::SetAllZonesEnabled(bool bEnabled)
+{
+	for (int32 ZoneId = 1; ZoneId <= 4; ++ZoneId)
+	{
+		if (UButton* Button = GetButtonByZoneId(ZoneId))
 		{
-			ZoneLabel->SetText(FText::FromString(ZoneNames[SelectedZoneId - 1]));
+			Button->SetIsEnabled(bEnabled);
 		}
-		else
+	}
+
+	UpdateButtonVisuals();
+}
+
+void UEDZoneSelectWidget::RefreshVisuals()
+{
+	UpdateButtonVisuals();
+}
+
+void UEDZoneSelectWidget::ClearSelection()
+{
+	SelectedZoneId = 0;
+	UpdateButtonVisuals();
+}
+
+void UEDZoneSelectWidget::UpdateButtonVisuals() const
+{
+	for (int32 ZoneId = 1; ZoneId <= 4; ++ZoneId)
+	{
+		if (UButton* Button = GetButtonByZoneId(ZoneId))
 		{
-			ZoneLabel->SetText(FText::FromString(TEXT("Select Zone")));
+			const FLinearColor TargetColor = !Button->GetIsEnabled()
+				? DisabledColor
+				: (ZoneId == SelectedZoneId ? SelectedColor : NormalColor);
+			Button->SetBackgroundColor(TargetColor);
 		}
+	}
+
+	if (!ZoneLabel)
+	{
+		return;
+	}
+
+	if (SelectedZoneId >= 1 && SelectedZoneId <= 4)
+	{
+		ZoneLabel->SetText(FText::FromString(ZoneNames[SelectedZoneId - 1]));
+	}
+	else
+	{
+		ZoneLabel->SetText(FText::FromString(TEXT("Select Zone")));
 	}
 }
 
@@ -83,4 +139,29 @@ UButton* UEDZoneSelectWidget::GetButtonByZoneId(int32 ZoneId) const
 	case 4: return ZoneButton4;
 	default: return nullptr;
 	}
+}
+
+bool UEDZoneSelectWidget::IsValidZoneId(int32 ZoneId) const
+{
+	return ZoneId >= 1 && ZoneId <= 4;
+}
+
+void UEDZoneSelectWidget::OnZone1Clicked()
+{
+	SelectZone(1);
+}
+
+void UEDZoneSelectWidget::OnZone2Clicked()
+{
+	SelectZone(2);
+}
+
+void UEDZoneSelectWidget::OnZone3Clicked()
+{
+	SelectZone(3);
+}
+
+void UEDZoneSelectWidget::OnZone4Clicked()
+{
+	SelectZone(4);
 }

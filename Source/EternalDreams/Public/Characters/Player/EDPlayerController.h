@@ -69,6 +69,32 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_RequestSkipPhase();
 
+	// -------------------------------------------------------
+	// 사망 / 부활 RPC
+	// -------------------------------------------------------
+
+	/**
+	 * [서버→클라이언트] 사망 직후 호출.
+	 * 사망 오버레이를 뷰포트에 띄우고 카운트다운 시작.
+	 * bCanRespawn=false면 Eliminated 표시로 전환.
+	 */
+	UFUNCTION(Client, Reliable, Category = "ED|Death")
+	void ClientOnPlayerDied(float CountdownSeconds, bool bCanRespawn);
+
+	/**
+	 * [서버→클라이언트] 사망 후 카운트다운 경과 시 호출.
+	 * RespawnZoneSelect 위젯을 뷰포트에 띄운다. 유저가 구역 선택 전까지 계속 관전.
+	 */
+	UFUNCTION(Client, Reliable, Category = "ED|Death")
+	void ClientOpenZoneSelectWidget();
+
+	/**
+	 * [클라이언트→서버] 유저가 ZoneSelectWidget에서 구역 선택 후 호출.
+	 * 서버가 DesiredZoneId 갱신 후 RestartPlayer를 실행한다.
+	 */
+	UFUNCTION(Server, Reliable, Category = "ED|Death")
+	void Server_RequestRespawn(int32 SelectedZoneId);
+
 public:
 #pragma region Input Player
 	//IMC_Player

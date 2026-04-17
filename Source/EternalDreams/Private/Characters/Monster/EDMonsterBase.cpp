@@ -11,6 +11,8 @@
 #include "Engine/AssetManager.h"
 #include "AIController.h"
 #include "Components/CapsuleComponent.h"
+#include "Core/EDGameDataSubsystem.h"
+#include "Core/EDAssetManager.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
 
 // Sets default values
@@ -42,9 +44,13 @@ void AEDMonsterBase::BeginPlay()
 	
 	OriginLocation = GetActorLocation();
 	
+	CachedDataSubsystem = UEDGameDataSubsystem::Get(this);
+	
+	UEDMonsterDataAsset* DataAsset = GetDataAsset();
 	if (IsValid(DataAsset) == false)
 		return;
 	LoadVisuals(DataAsset);
+	
 	//InitializeFromDataAsset(DataAsset);
 	
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetHealthAttribute())
@@ -65,10 +71,29 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 {
 	if (InDataAsset == nullptr)
 		return;
-	DataAsset = InDataAsset;
 	
-	// Mesh/AnimInstance 비동기 로드(임시) - 서버/클라이언트 공통이라 HasAuthority체크 이전
-	LoadVisuals(InDataAsset);
+	MonsterDataId = InDataAsset->GetPrimaryAssetId();
+	
+	UEDGameDataSubsystem* DataSubsystem = CachedDataSubsystem.Get();
+	if (!DataSubsystem) return;
+	
+	if (DataSubsystem->IsDataReady())
+	{
+		if (USkeletalMesh* SkelMesh = InDataAsset->GetMesh().Get())
+		{
+			GetMesh()->SetSkeletalMeshAsset(SkelMesh);
+		}
+        
+		if (UClass* AnimClass = InDataAsset->GetAnimInstance().Get())
+		{
+			GetMesh()->SetAnimInstanceClass(AnimClass);
+		}
+	}
+	else
+	{
+		// Mesh/AnimInstance 비동기 로드(임시) - 서버/클라이언트 공통이라 HasAuthority체크 이전 
+		LoadVisuals(InDataAsset);
+	}
 	
 	if (HasAuthority() == false)
 		return;
@@ -90,7 +115,6 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	MoveComp->MaxWalkSpeed = Stat.MoveSpeed;
 	MoveComp->bOrientRotationToMovement = true;
 	bUseControllerRotationYaw = false;
-
 }
 
 void AEDMonsterBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -118,6 +142,15 @@ void AEDMonsterBase::OnRep_MonsterState()
 
 void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)
 {
+	if (!InDataAsset) return;
+	
+	UEDGameDataSubsystem* DataSubsystem = CachedDataSubsystem.Get();
+	if (DataSubsystem && DataSubsystem->IsDataReady())
+	{
+		OnVisualsLoaded();
+		return;
+	}
+	
 	// 이전 로드가 진행 중이면 취소
 	if (VisualLoadHandle.IsValid())
 	{
@@ -125,6 +158,7 @@ void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)
 		VisualLoadHandle.Reset();
 	}
 	
+	// 캐시 미스면 아래 비동기로드 수행
 	TArray<FSoftObjectPath> AssetsToLoad;
 	
 	if (InDataAsset->GetMesh().IsNull() == false)
@@ -135,23 +169,24 @@ void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)
 	if (AssetsToLoad.IsEmpty())
 		return;
 	
-	FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
-	VisualLoadHandle = Streamable.RequestAsyncLoad(
+	VisualLoadHandle = UEDAssetManager::Get().LoadAssetsAsync(
 		AssetsToLoad,
 		FStreamableDelegate::CreateUObject(this, &AEDMonsterBase::OnVisualsLoaded)
-		);
-	
+	);
 }
 
 void AEDMonsterBase::OnVisualsLoaded()
 {
-	if (IsValid(DataAsset) == false)
-		return;
+	if (VisualLoadHandle.IsValid()) VisualLoadHandle.Reset();
+
+	UEDMonsterDataAsset* DataAsset = GetDataAsset();
+	if (IsValid(DataAsset) == false) return;
+
 	USkeletalMesh* SkelMesh = DataAsset->GetMesh().Get();
 	if (IsValid(SkelMesh) == false)
 		return;
-	GetMesh()->SetSkeletalMesh(SkelMesh);
-	
+	// GetMesh()->SetSkeletalMesh(SkelMesh);
+	GetMesh()->SetSkeletalMeshAsset(SkelMesh);
 	UClass* AnimInstance = DataAsset->GetAnimInstance().Get();
 	if (IsValid(AnimInstance) == false)
 		return;

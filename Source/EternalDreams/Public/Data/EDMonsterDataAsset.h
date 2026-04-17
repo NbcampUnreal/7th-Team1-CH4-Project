@@ -59,13 +59,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
 	FMonsterStatRow StatData;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data", meta = (AssetBundles = "MonsterData"))
 	TSoftObjectPtr<USkeletalMesh> Mesh;
 	// 임시 -> 추후 EDMonsterAnimInstance로 교체 예정
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data", meta = (AssetBundles = "MonsterData"))
 	TSoftClassPtr<UAnimInstance> AnimInstance;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data", meta = (AssetBundles = "MonsterData"))
 	TSoftObjectPtr<UBehaviorTree> BehaviorTree;
 	// TODO
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
