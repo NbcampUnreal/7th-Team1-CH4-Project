@@ -17,9 +17,15 @@
 #include "Characters/Player/Weapon/EDWeapon.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Core/EDAssetManager.h"
+#include "Core/EDGameDataSubsystem.h"
+#include "Data/EDWeaponDataAsset.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
+#include "Engine/AssetManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Inventory/Component/EDInventoryComponent.h"
+#include "Item/Data/EDInventoryItemDataAsset.h"
 
 
 // Sets default values
@@ -109,6 +115,13 @@ void AEDPlayerCharacter::BeginPlay()
 	}
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(BaseAttributeSet->GetWalkSpeedAttribute())
 	.AddUObject(this, &AEDPlayerCharacter::OnWalkSpeedChanged);
+	
+	if (IsValid(InventoryComponent))
+	{
+		InventoryComponent->OnInventoryChanged.AddDynamic(this,&AEDPlayerCharacter::OnWeaponChanged);
+	}
+	
+	
 }
 
 void AEDPlayerCharacter::Tick(float DeltaSeconds)
@@ -205,6 +218,102 @@ void AEDPlayerCharacter::StopAnimMove()
 void AEDPlayerCharacter::OnWalkSpeedChanged(const FOnAttributeChangeData& Data)
 {
 	GetCharacterMovement()->MaxWalkSpeed=Data.NewValue;
+}
+
+void AEDPlayerCharacter::OnEquipChanged(FGameplayTag& AttributeDataTag, float Value)
+{
+	if (!EquipEffect||!AbilitySystemComponent)
+	{
+		return;
+	}
+	
+	//EffectContext 생성
+	FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+	Context.AddSourceObject(this);
+
+	//EffectSpec 생성
+	FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(
+		EquipEffect, 1.0f, Context);
+
+	if (Spec.IsValid())
+	{
+		Spec.Data.Get()->SetSetByCallerMagnitude(AttributeDataTag, Value);
+		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+	}
+	
+}
+
+void AEDPlayerCharacter::OnWeaponChanged()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	
+	if (!IsValid(InventoryComponent)||
+		!IsValid(AbilitySystemComponent)||
+		!IsValid(PlayerSkillComponent))
+	{
+		return;
+	}
+	
+	const FEDGameplayTags& EDGameplayTags=FEDGameplayTags::Get();
+	const UEDGameDataSubsystem* EDGameplayDataSubsystem=UEDGameDataSubsystem::Get(GetWorld());
+	if (!EDGameplayDataSubsystem)
+	{
+		return;
+	}
+	
+	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Bow))
+	{
+		UEDWeaponDataAsset* Bow = 
+			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(TEXT("WeaponData"), TEXT("DA_Bow")));
+		
+		LWeaponActor->SetServerStaticMesh(Bow->WeaponStaticMesh.Get());
+		RWeaponActor->SetServerStaticMesh(nullptr);
+		
+		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Bow);
+		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Bow);
+		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Bow);
+	}
+	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Hammer))
+	{
+		UEDWeaponDataAsset* Hammer = 
+			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(TEXT("WeaponData"), TEXT("DA_Hammer")));
+		
+		LWeaponActor->SetServerStaticMesh(nullptr);
+		RWeaponActor->SetServerStaticMesh(Hammer->WeaponStaticMesh.Get());
+		
+		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Hammer);
+		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Hammer);
+		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Hammer);
+	}
+	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Staff))
+	{
+		UEDWeaponDataAsset* Staff = 
+			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(TEXT("WeaponData"), TEXT("DA_Staff")));
+		
+		LWeaponActor->SetServerStaticMesh(nullptr);
+		RWeaponActor->SetServerStaticMesh(Staff->WeaponStaticMesh.Get());
+		
+		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Staff);
+		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Staff);
+		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Staff);
+	}
+	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Sword))
+	{
+		UEDWeaponDataAsset* Sword = 
+			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(TEXT("WeaponData"), TEXT("DA_Sword")));
+		
+		LWeaponActor->SetServerStaticMesh(nullptr);
+		RWeaponActor->SetServerStaticMesh(Sword->WeaponStaticMesh.Get());
+		
+		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Sword);
+		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Sword);
+		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Sword);	
+	}
+	
+
 }
 
 float AEDPlayerCharacter::GetHealth() const

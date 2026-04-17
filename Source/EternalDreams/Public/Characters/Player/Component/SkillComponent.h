@@ -26,9 +26,15 @@ protected:
 	UPROPERTY(EditAnyWhere)
 	FGameplayTag QSkillTag=FGameplayTag::EmptyTag;
 	UPROPERTY(EditAnyWhere)
+	FGameplayTag QSkillCoolTimeTag=FGameplayTag::EmptyTag;
+	UPROPERTY(EditAnyWhere)
 	FGameplayTag ESkillTag=FGameplayTag::EmptyTag;
 	UPROPERTY(EditAnyWhere)
+	FGameplayTag ESkillCoolTimeTag=FGameplayTag::EmptyTag;
+	UPROPERTY(EditAnyWhere)
 	FGameplayTag SpaceSkillTag=FGameplayTag::EmptyTag;
+	UPROPERTY(EditAnyWhere)
+	FGameplayTag SpaceSkillCoolTimeTag=FGameplayTag::EmptyTag;
 	
 	//Caching
 protected:
@@ -49,14 +55,30 @@ public:
 	FORCEINLINE FGameplayTag& GetQSkillTag() {return QSkillTag;}
 	
 	UFUNCTION(BlueprintCallable)
+	FORCEINLINE void SetQSkillCoolTimeTag(const FGameplayTag Tag) {QSkillCoolTimeTag=Tag;};
+	UFUNCTION()
+	FORCEINLINE FGameplayTag& GetQSkillCoolTimeTag() {return QSkillCoolTimeTag;}
+	
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE void SetESkillTag(const FGameplayTag Tag) {ESkillTag=Tag;};
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetSetESkillTag() {return ESkillTag;};
 	
 	UFUNCTION(BlueprintCallable)
+	FORCEINLINE void SetESkillCoolTimeTag(const FGameplayTag Tag) {ESkillCoolTimeTag=Tag;};
+	UFUNCTION()
+	FORCEINLINE FGameplayTag& GetSetESkillCoolTimeTag() {return ESkillCoolTimeTag;};
+	
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE void SetSpaceSkillTag(const FGameplayTag Tag) {SpaceSkillTag=Tag;};
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetSpaceSkillTag() {return SpaceSkillTag;};
+	
+	UFUNCTION(BlueprintCallable)
+	FORCEINLINE void SetSpaceSkillCoolTimeTag(const FGameplayTag Tag) {SpaceSkillCoolTimeTag=Tag;};
+	UFUNCTION()
+	FORCEINLINE FGameplayTag& GetSpaceSkillCoolTimeTag() {return SpaceSkillCoolTimeTag;};
+	
 #pragma endregion
 
 	//Activate Skill

@@ -31,7 +31,7 @@ void UGA_Base::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 	UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 	this,
 	NAME_None,
-	AttackMontage,
+	AnimMontage,
 	1.0f
 	);
 	if (!PlayMontageTask)
@@ -39,12 +39,28 @@ void UGA_Base::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
+	
 	//Bind Delegate
 	PlayMontageTask->OnCompleted.AddDynamic(this, &UGA_Base::OnMontageCompleted);
 	PlayMontageTask->OnCancelled.AddDynamic(this, &UGA_Base::OnMontageCancelled);
 	PlayMontageTask->OnInterrupted.AddDynamic(this, &UGA_Base::OnMontageCancelled);
 	// Task 활성화
 	PlayMontageTask->ReadyForActivation();
+	
+	//GE_CoolDown 적용
+	if (CoolTimeEffectClass==nullptr||CoolTime==0.f)
+	{
+		return;
+	}
+	FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(CoolTimeEffectClass, GetAbilityLevel());
+	if (SpecHandle.IsValid())
+	{
+		SpecHandle.Data.Get()->SetSetByCallerMagnitude(FEDGameplayTags::Get().Data_CoolTime, CoolTime);
+		
+		SpecHandle.Data.Get()->DynamicGrantedTags.AddTag(CoolTimeTag);
+		
+		ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
+	}
 	
 }
 

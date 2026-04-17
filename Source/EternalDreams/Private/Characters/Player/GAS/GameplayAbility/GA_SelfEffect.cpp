@@ -21,6 +21,23 @@ void UGA_SelfEffect::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 		return;
 	}
 	ApplyEffect();
+	
+	//GE_CoolDown 적용
+	if (CoolTimeEffectClass==nullptr||CoolTime==0.f)
+	{
+		return;
+	}
+	FGameplayEffectSpecHandle SpecHandle = MakeOutgoingGameplayEffectSpec(CoolTimeEffectClass, GetAbilityLevel());
+	if (SpecHandle.IsValid())
+	{
+		SpecHandle.Data.Get()->SetSetByCallerMagnitude(FEDGameplayTags::Get().Data_CoolTime, CoolTime);
+		
+		SpecHandle.Data.Get()->DynamicGrantedTags.AddTag(CoolTimeTag);
+		
+		ApplyGameplayEffectSpecToOwner(Handle, ActorInfo, ActivationInfo, SpecHandle);
+	}
+	
+	
 	EndAbility(Handle,ActorInfo,ActivationInfo,true,false);
 }
 

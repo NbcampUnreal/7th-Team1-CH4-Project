@@ -58,11 +58,6 @@ void UEDBaseAttributeSet::OnRep_MaxDefensive(const FGameplayAttributeData& OldMa
 void UEDBaseAttributeSet::OnRep_WalkSpeed(const FGameplayAttributeData& OldWalkSpeed)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDBaseAttributeSet,WalkSpeed, OldWalkSpeed);
-	
-	if (ACharacter* CharacterBase = Cast<ACharacter>(GetOwningActor()))
-	{
-		CharacterBase->GetCharacterMovement()->MaxWalkSpeed = GetWalkSpeed();
-	}
 }
 
 void UEDBaseAttributeSet::OnRep_MaxWalkSpeed(const FGameplayAttributeData& OldMaxWalkSpeed)
@@ -136,13 +131,6 @@ void UEDBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 	{
 		// WalkSpeed가 변경되었을 때
 		SetWalkSpeed(FMath::Clamp(GetWalkSpeed(), 0.0f, MaxAttributeValue));
-		
-		AActor* TargetActor = Data.Target.GetAvatarActor();
-		if (ACharacter* CharacterBase = Cast<ACharacter>(TargetActor))
-		{
-			CharacterBase->GetCharacterMovement()->MaxWalkSpeed = GetWalkSpeed();
-		}
-		
 	}
 }
 
