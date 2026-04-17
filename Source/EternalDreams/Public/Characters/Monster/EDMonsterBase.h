@@ -90,5 +90,6 @@ private:
 	FVector OriginLocation;
 	TSharedPtr<FStreamableHandle> VisualLoadHandle;
 	
+	TWeakObjectPtr<UEDGameDataSubsystem> CachedDataSubsystem;
 	FTimerHandle DestroyMeshTimerHandle;
 };
