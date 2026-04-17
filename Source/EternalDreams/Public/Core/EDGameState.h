@@ -49,6 +49,22 @@ public:
 	void SetPhaseRemainingTime(float NewTime);
 
 	// -------------------------------------------------------
+	// 매치 결과
+	// -------------------------------------------------------
+
+	/** 최종 승리팀 ID (EDTeam::None = 미결정). 서버에서만 세팅 */
+	void SetWinnerTeamId(int32 NewTeamId);
+
+	UFUNCTION(BlueprintCallable, Category = "ED|Match")
+	int32 GetWinnerTeamId() const { return WinnerTeamId; }
+
+	/** 탈락한 팀 ID 목록. 서버에서만 추가 */
+	void AddEliminatedTeam(int32 TeamId);
+
+	UFUNCTION(BlueprintCallable, Category = "ED|Match")
+	const TArray<int32>& GetEliminatedTeams() const { return EliminatedTeams; }
+
+	// -------------------------------------------------------
 	// 델리게이트
 	// -------------------------------------------------------
 
@@ -62,6 +78,12 @@ protected:
 
 	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "ED|Phase")
 	float PhaseRemainingTime = 0.f;
+
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "ED|Match")
+	int32 WinnerTeamId = -1;
+
+	UPROPERTY(Replicated, VisibleAnywhere, BlueprintReadOnly, Category = "ED|Match")
+	TArray<int32> EliminatedTeams;
 
 	UFUNCTION()
 	void OnRep_CurrentPhase(const FGameplayTag& OldPhase);

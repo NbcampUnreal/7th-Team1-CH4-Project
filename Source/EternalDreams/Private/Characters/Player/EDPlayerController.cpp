@@ -11,11 +11,15 @@
 #include "Engine/LocalPlayer.h"
 #include "InputAction.h"
 #include "UI/Subsystem/EDUIManageSubsystem.h"
+#include "UI/HUD/EDDeathOverlayWidget.h"
+#include "UI/HUD/EDRespawnZoneSelectWidget.h"
+#include "UI/Types/EDUIWidgetIds.h"
 #include "Misc/CoreDelegates.h"
 #include "Core/EDGameMode.h"
 #include "Core/EDPlayerState.h"
 #include "InputMappingContext.h"
 #include "Kismet/GameplayStatics.h"
+#include "CommonActivatableWidget.h"
 
 AEDPlayerController::AEDPlayerController()
 {
@@ -294,4 +298,52 @@ void AEDPlayerController::Server_RequestSkipPhase_Implementation()
 	if (!GM) return;
 
 	GM->SkipToNextPhase();
+}
+
+void AEDPlayerController::ClientOnPlayerDied_Implementation(float CountdownSeconds, bool bCanRespawn)
+{
+	ULocalPlayer* LP = GetLocalPlayer();
+	if (!LP)
+	{
+		return;
+	}
+
+	UEDUIManageSubsystem* UIMgr = LP->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIMgr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIManageSubsystem을 찾을 수 없습니다."));
+		return;
+	}
+
+	UCommonActivatableWidget* Panel = UIMgr->OpenPanel(EDUIWidgetIds::Panel_DeathOverlay);
+	if (UEDDeathOverlayWidget* Overlay = Cast<UEDDeathOverlayWidget>(Panel))
+	{
+		Overlay->StartCountdown(CountdownSeconds, bCanRespawn);
+	}
+}
+
+void AEDPlayerController::ClientOpenZoneSelectWidget_Implementation()
+{
+	ULocalPlayer* LP = GetLocalPlayer();
+	if (!LP)
+	{
+		return;
+	}
+
+	UEDUIManageSubsystem* UIMgr = LP->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIMgr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIManageSubsystem을 찾을 수 없습니다."));
+		return;
+	}
+
+	UIMgr->OpenPanel(EDUIWidgetIds::Panel_RespawnZoneSelect);
+}
+
+void AEDPlayerController::Server_RequestRespawn_Implementation(int32 SelectedZoneId)
+{
+	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (!GM) return;
+
+	GM->HandleRespawnRequest(this, SelectedZoneId);
 }

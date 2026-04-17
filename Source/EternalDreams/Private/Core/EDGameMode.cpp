@@ -20,15 +20,9 @@ AEDGameMode::AEDGameMode()
 	bUseSeamlessTravel = true;
 }
 
-// ============================================================
-//  UE 오버라이드
-// ============================================================
-
 void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 {
 	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
-
-
 	// ============================================================
 	// [IOCP 전환 시 활성화] 토큰 검증 & PendingToken 저장
 	// ============================================================
@@ -77,17 +71,13 @@ void AEDGameMode::PostLogin(APlayerController* NewPlayer)
 	// TryStartPhaseSequence();
 }
 
+// 로비에서의 Pawn 제거 후 게임 맵에서 Panw 생성
 void AEDGameMode::HandleSeamlessTravelPlayer(AController*& C)
 {
-	// BeginPlay보다 먼저 호출될 수 있으므로 캐시가 비어있으면 선행 초기화
 	if (ZonePlayerStartMap.Num() == 0)
 	{
 		CacheZonePlayerStarts();
 	}
-
-	AEDPlayerState* PS = C ? C->GetPlayerState<AEDPlayerState>() : nullptr;
-	UE_LOG(LogEDCore, Warning, TEXT("[Spawn] SeamlessTravel — Player: %s, DesiredZoneId: %d"),
-		PS ? *PS->GetPlayerName() : TEXT("null"), PS ? PS->DesiredZoneId : -1);
 
 	if (C && C->GetPawn())
 	{
@@ -104,22 +94,10 @@ void AEDGameMode::BeginPlay()
 
 	CacheZonePlayerStarts();
 	InitRestrictedZones();
-
-	// ============================================================
-	// [비동기로드] 게임 에셋 로드 시작 위치
-	// ============================================================
-	// 향후 EDGameDataSubsystem를 활용하여 게임 에셋(UI, Item, Monster)을
-	// 비동기로 로드하는 로직을 여기에 추가한다.
-	//
-	// 구현 예시:
-	//   if (UEDGameDataSubsystem* DataSub = UEDGameDataSubsystem::Get(this))
-	//   {
-	//       DataSub->InitializeGameData();
-	//   }
-	// ============================================================
-
+	
 	// 구형 로비 호환: BeginPlay에서 바로 Phase 시작 (테스트용)
 	// [IOCP 전환 시] 아래 블록을 제거하고, PostLogin의 TryStartPhaseSequence()를 활성화
+	// IOCP에서는 기존 맵이 존재 하지 않기 때문에 Phase 시작전 비동기 로드 필요 
 	if (PhaseSequence.Num() > 0)
 	{
 		StartPhaseSequence();
@@ -347,7 +325,6 @@ void AEDGameMode::OnDay3_DayStarted()
 {
 	// [몬스터] 위클라이너(보스) 스폰 — S2 담당
 	// [아이템] 전설 등급 재료 등장 — S4 담당
-	// [부활] 골드 환급 방식으로 변경 — S6 담당
 }
 
 void AEDGameMode::OnDay3_NightStarted()
@@ -371,8 +348,6 @@ void AEDGameMode::OnDay4_DayStarted()
 		ActivateRestrictedZone(RestrictedZoneOrder[2]);
 	}
 	// RestrictedZoneOrder[3]이 최종 안전구역으로 남음
-
-	// [부활] 부활 불가 — S6 담당
 }
 
 void AEDGameMode::OnDay4_NightStarted()
@@ -391,6 +366,241 @@ void AEDGameMode::OnMatchFinished()
 {
 	// [승패] 최종 승패 판정 & 결과 UI 표시 — S3/S6 담당
 	// [세션] 로비 복귀 또는 세션 정리 — S6 담당
+}
+
+// ============================================================
+//  사망 / 부활 / 승패
+// ============================================================
+
+void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
+{
+	if (!HasAuthority() || !Victim) return;
+
+	AEDPlayerState* VictimPS = Victim->GetPlayerState<AEDPlayerState>();
+	if (!VictimPS) return;
+
+	// 이미 사망 처리된 경우 중복 방지
+	if (VictimPS->bIsDead) return;
+
+	VictimPS->bIsDead = true;
+	VictimPS->Deaths++;
+
+	if (Killer && Killer != Victim)
+	{
+		if (AEDPlayerState* KillerPS = Killer->GetPlayerState<AEDPlayerState>())
+		{
+			KillerPS->Kills++;
+		}
+	}
+
+	UE_LOG(LogEDCore, Warning, TEXT("[Death] %s 사망 (Day %d, Revives %d)"),
+		*VictimPS->GetPlayerName(), GetCurrentDay(), VictimPS->RemainingRevives);
+
+	EnterSpectator(Victim);
+
+	const int32 Day = GetCurrentDay();
+	const bool bCanRevive = (Day >= 1 && Day <= 2) && VictimPS->RemainingRevives > 0;
+
+	// 클라에 사망 UI 트리거 (오버레이 + 카운트다운)
+	if (AEDPlayerController* PC = Cast<AEDPlayerController>(Victim))
+	{
+		PC->ClientOnPlayerDied(bCanRevive ? RespawnZoneSelectDelay : 0.f, bCanRevive);
+	}
+
+	if (bCanRevive)
+	{
+		SchedulePlayerRespawn(Victim);
+	}
+	else
+	{
+		EliminatePlayer(Victim);
+	}
+}
+
+void AEDGameMode::EnterSpectator(AController* Victim)
+{
+	if (!Victim) return;
+
+	// 기존 Pawn 제거
+	if (APawn* OldPawn = Victim->GetPawn())
+	{
+		Victim->UnPossess();
+		OldPawn->SetLifeSpan(10.f);
+	}
+
+	APlayerController* PC = Cast<APlayerController>(Victim);
+	if (!PC) return;
+
+	PC->ChangeState(NAME_Spectating);
+	PC->ClientGotoState(NAME_Spectating);
+
+	// 살아있는 팀원 시점으로 전환
+	if (AController* Teammate = FindLivingTeammate(Victim))
+	{
+		if (APawn* TeammatePawn = Teammate->GetPawn())
+		{
+			PC->SetViewTargetWithBlend(TeammatePawn, 0.5f);
+		}
+	}
+}
+
+// 
+void AEDGameMode::SchedulePlayerRespawn(AController* Victim)
+{
+	if (!Victim) return;
+
+	FTimerHandle& Handle = RespawnTimers.FindOrAdd(Victim);
+	GetWorldTimerManager().ClearTimer(Handle);
+
+	TWeakObjectPtr<AController> WeakVictim(Victim);
+	GetWorldTimerManager().SetTimer(Handle, [this, WeakVictim]()
+	{
+		AController* C = WeakVictim.Get();
+		if (!C) return;
+		if (AEDPlayerController* PC = Cast<AEDPlayerController>(C))
+		{
+			PC->ClientOpenZoneSelectWidget();
+			UE_LOG(LogEDCore, Warning, TEXT("[Death] ZoneSelectWidget 오픈 RPC → %s"),
+				*PC->GetName());
+		}
+	}, RespawnZoneSelectDelay, false);
+}
+
+// 스폰 처리
+void AEDGameMode::HandleRespawnRequest(AController* Victim, int32 SelectedZoneId)
+{
+	if (!HasAuthority() || !Victim) return;
+
+	AEDPlayerState* PS = Victim->GetPlayerState<AEDPlayerState>();
+	if (!PS || !PS->bIsDead || PS->bEliminated) return;
+	if (PS->RemainingRevives <= 0) return;
+
+	// Zone 유효성 검증
+	if (!ZonePlayerStartMap.Contains(SelectedZoneId))
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[Respawn] 잘못된 ZoneId: %d"), SelectedZoneId);
+		return;
+	}
+
+	PS->DesiredZoneId = SelectedZoneId;
+	PS->RemainingRevives--;
+	PS->bIsDead = false;
+
+	// 관전 해제 및 새 Pawn 스폰
+	if (APlayerController* PC = Cast<APlayerController>(Victim))
+	{
+		PC->ChangeState(NAME_Playing);
+		PC->ClientGotoState(NAME_Playing);
+	}
+	RestartPlayer(Victim);
+
+	// 타이머 정리
+	if (FTimerHandle* Handle = RespawnTimers.Find(Victim))
+	{
+		GetWorldTimerManager().ClearTimer(*Handle);
+		RespawnTimers.Remove(Victim);
+	}
+
+	UE_LOG(LogEDCore, Warning, TEXT("[Respawn] %s → Zone %d (남은 부활 %d)"),
+		*PS->GetPlayerName(), SelectedZoneId, PS->RemainingRevives);
+}
+
+// 탈락 처리
+void AEDGameMode::EliminatePlayer(AController* Victim)
+{
+	if (!Victim) return;
+
+	AEDPlayerState* PS = Victim->GetPlayerState<AEDPlayerState>();
+	if (!PS) return;
+
+	PS->bEliminated = true;
+	UE_LOG(LogEDCore, Warning, TEXT("[Eliminate] %s 영구 탈락"), *PS->GetPlayerName());
+
+	CheckTeamElimination();
+}
+
+// 팀 탈락 처리
+void AEDGameMode::CheckTeamElimination()
+{
+	AEDGameState* GS = GetGameState<AEDGameState>();
+	if (!GS) return;
+
+	// 팀별 생존/탈락 집계
+	TMap<int32, int32> TeamAliveCount;   // 살아있음(Eliminated == false)
+	TMap<int32, int32> TeamTotalCount;
+
+	for (APlayerState* APS : GS->PlayerArray)
+	{
+		AEDPlayerState* PS = Cast<AEDPlayerState>(APS);
+		if (!PS || !EDTeam::IsPlayerTeam(PS->TeamId)) continue;
+
+		TeamTotalCount.FindOrAdd(PS->TeamId)++;
+		if (!PS->bEliminated)
+		{
+			TeamAliveCount.FindOrAdd(PS->TeamId)++;
+		}
+	}
+
+	// 전원 Eliminated인 팀을 EliminatedTeams에 추가
+	for (const auto& Pair : TeamTotalCount)
+	{
+		const int32 TeamId = Pair.Key;
+		const int32 AliveCount = TeamAliveCount.FindRef(TeamId);
+		if (AliveCount == 0 && !GS->GetEliminatedTeams().Contains(TeamId))
+		{
+			GS->AddEliminatedTeam(TeamId);
+			UE_LOG(LogEDCore, Warning, TEXT("[Team] %s 탈락"), EDTeam::GetTeamName(TeamId));
+		}
+	}
+
+	// 남은 팀 수 집계 → 1개 이하면 승리 확정
+	TArray<int32> SurvivingTeams;
+	for (const auto& Pair : TeamTotalCount)
+	{
+		if (!GS->GetEliminatedTeams().Contains(Pair.Key))
+		{
+			SurvivingTeams.Add(Pair.Key);
+		}
+	}
+
+	if (SurvivingTeams.Num() <= 1)
+	{
+		const int32 WinnerId = SurvivingTeams.Num() == 1 ? SurvivingTeams[0] : EDTeam::None;
+		GS->SetWinnerTeamId(WinnerId);
+		UE_LOG(LogEDCore, Warning, TEXT("[Match] 승리팀: %s"), EDTeam::GetTeamName(WinnerId));
+
+		bPhaseSequenceActive = false;
+		OnMatchFinished();
+	}
+}
+
+AController* AEDGameMode::FindLivingTeammate(AController* Victim) const
+{
+	if (!Victim) return nullptr;
+
+	AEDPlayerState* VictimPS = Victim->GetPlayerState<AEDPlayerState>();
+	if (!VictimPS) return nullptr;
+
+	const AEDGameState* GS = GetGameState<AEDGameState>();
+	if (!GS) return nullptr;
+
+	for (APlayerState* APS : GS->PlayerArray)
+	{
+		AEDPlayerState* PS = Cast<AEDPlayerState>(APS);
+		if (!PS || PS == VictimPS) continue;
+		if (PS->TeamId != VictimPS->TeamId) continue;
+		if (PS->bIsDead || PS->bEliminated) continue;
+
+		if (AController* C = Cast<AController>(PS->GetOwner()))
+		{
+			if (C->GetPawn())
+			{
+				return C;
+			}
+		}
+	}
+
+	return nullptr;
 }
 
 // ============================================================
@@ -444,6 +654,19 @@ AActor* AEDGameMode::ChoosePlayerStart_Implementation(AController* Player)
 		{
 			AEDPlayerStart* Chosen = Available[FMath::RandRange(0, Available.Num() - 1)];
 			OccupiedPlayerStarts.Add(Chosen);
+
+			// 리스폰 시 같은 지점 재사용 가능하도록 N초 후 점유 해제
+			FTimerHandle& ReleaseHandle = PlayerStartReleaseTimers.FindOrAdd(Chosen);
+			GetWorldTimerManager().ClearTimer(ReleaseHandle);
+			TWeakObjectPtr<AEDPlayerStart> WeakChosen(Chosen);
+			GetWorldTimerManager().SetTimer(ReleaseHandle, [this, WeakChosen]()
+			{
+				if (AEDPlayerStart* Start = WeakChosen.Get())
+				{
+					OccupiedPlayerStarts.Remove(Start);
+					PlayerStartReleaseTimers.Remove(Start);
+				}
+			}, PlayerStartOccupyDuration, false);
 
 			UE_LOG(LogEDCore, Warning, TEXT("[Spawn] %s → Zone %d, 사용가능 %d/%d, 선택: %s"),
 				PS ? *PS->GetPlayerName() : TEXT("?"), ZoneId,

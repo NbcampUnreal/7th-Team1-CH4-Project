@@ -47,7 +47,8 @@ public:
 	}
 	
 	FVector GetOriginLocation() const { return OriginLocation;}
-	
+	void HandleDeath();
+
 	FOnMonsterDeath OnMonsterDeath;
 	FOnAttackFinished OnAttackFinished;
 protected:
@@ -78,7 +79,6 @@ private:
 	void OnVisualsLoaded();
 	
 	// Health 가 0 이하가 됐을때 호출
-	void HandleDeath();
 	void OnHealthChanged(const FOnAttributeChangeData& Data);
 	
 	UPROPERTY(ReplicatedUsing = OnRep_MonsterState)

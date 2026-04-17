@@ -23,7 +23,7 @@ void AEDLobbyPlayerController::BeginPlay()
 	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 	SetInputMode(InputMode);
 
-	// 로비 위젯 생성
+	// 로비 위젯 생성 (UEDLobbyZoneSelectWidget 등 래퍼가 내부에서 존 선택 처리)
 	if (LobbyWidgetClass)
 	{
 		LobbyWidget = CreateWidget<UUserWidget>(this, LobbyWidgetClass);

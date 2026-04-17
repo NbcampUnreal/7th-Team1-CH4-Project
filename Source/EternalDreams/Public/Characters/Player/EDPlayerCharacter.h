@@ -106,6 +106,25 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
 	float GetMaxHealth() const;
+
+	// -------------------------------------------------------
+	// Death
+	// -------------------------------------------------------
+
+	/**
+	 * 플레이어 사망 처리 진입점. 서버에서만 호출.
+	 * HP 0 또는 SurvivalTime 0 감지 시 AttributeSet에서 호출된다.
+	 * GA_Death 몽타주 발동 + GameMode에 사망 전달 (관전/부활/탈락 분기)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ED|Death")
+	void HandleDeath(AController* Killer);
+
+	UFUNCTION(BlueprintCallable, Category = "ED|Death")
+	bool IsDead() const { return bIsDead; }
+
+protected:
+	/** 중복 HandleDeath 호출 방지용 서버 전용 플래그 */
+	bool bIsDead = false;
 	
 	//Initialize AS
 	virtual void InitializeAbilitySystem();

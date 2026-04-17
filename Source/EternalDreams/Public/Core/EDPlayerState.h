@@ -64,5 +64,29 @@ public:
 	/** 희망 스폰 구역 ID (1~4). UI에서 선택 후 설정 */
 	UPROPERTY(Replicated, BlueprintReadWrite, Category = "ED|Player")
 	int32 DesiredZoneId = 0;
+
+	// -------------------------------------------------------
+	// 사망 / 부활 / 전적
+	// -------------------------------------------------------
+
+	/** 현재 사망 상태 (부활 대기 또는 영구사망 포함) */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "ED|Death")
+	bool bIsDead = false;
+
+	/** 영구 사망 여부. true면 더 이상 부활 불가 (게임 탈락) */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "ED|Death")
+	bool bEliminated = false;
+
+	/** 남은 부활 횟수. Day1~2에서만 소모. 기본 2회 */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "ED|Death")
+	int32 RemainingRevives = 2;
+
+	/** 킬 수 */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "ED|Score")
+	int32 Kills = 0;
+
+	/** 데스 수 */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "ED|Score")
+	int32 Deaths = 0;
 };
 
