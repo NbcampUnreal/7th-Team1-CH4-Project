@@ -425,7 +425,7 @@ void AEDGameMode::EnterSpectator(AController* Victim)
 	if (APawn* OldPawn = Victim->GetPawn())
 	{
 		Victim->UnPossess();
-		OldPawn->Destroy();
+		OldPawn->SetLifeSpan(10.f);
 	}
 
 	APlayerController* PC = Cast<APlayerController>(Victim);
