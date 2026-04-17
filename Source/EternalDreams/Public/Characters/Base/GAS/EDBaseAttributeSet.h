@@ -35,7 +35,8 @@ public:
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Attributes")
 	float MaxWalkSpeedFloat=680.f;
 	
-	
+protected:
+	float MaxAttributeValue=9999.f;
 	
 	//속성
 public:
@@ -95,6 +96,7 @@ public:
 
 	// Attribute 변경 후 호출
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
+	
 	
 	
 };

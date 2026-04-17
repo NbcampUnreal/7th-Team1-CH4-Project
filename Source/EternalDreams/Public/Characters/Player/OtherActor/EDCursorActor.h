@@ -34,8 +34,11 @@ protected:
 	TObjectPtr<USceneComponent> Scene;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="UI")
-	TObjectPtr<UWidgetComponent> CursorWidget;
+	//TObjectPtr<UWidgetComponent> CursorWidget;
+	TObjectPtr<UUserWidget> CursorWidget;
 	
 	UPROPERTY()
 	TObjectPtr<APlayerController> PlayerController;
+	
+	
 };

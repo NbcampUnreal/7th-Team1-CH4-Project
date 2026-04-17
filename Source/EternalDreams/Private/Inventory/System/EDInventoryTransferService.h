@@ -10,5 +10,6 @@ class FEDInventoryTransferService
 public:
     static bool MoveOrSwap(UEDInventoryComponent* InventoryComponent, int32 FromSlotIndex, int32 ToSlotIndex);
     static bool TransferAuto(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure* OutFailure = nullptr);
+    static bool TransferAuto(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure* OutFailure, EEDInventoryStackPolicy StackPolicy, FRandomStream* InOutRandomStream);
     static bool TransferToSlot(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure* OutFailure = nullptr);
 };

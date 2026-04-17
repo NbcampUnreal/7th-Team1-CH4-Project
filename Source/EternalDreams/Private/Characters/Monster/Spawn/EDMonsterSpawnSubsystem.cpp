@@ -4,7 +4,6 @@
 #include "Characters/Monster/Spawn/EDMonsterSpawnSubsystem.h"
 #include "Characters/Monster/EDMonsterBase.h"
 #include "Characters/Monster/Spawn/EDMonsterSpawner.h"
-#include "Data/EDMonsterDataAsset.h"
 
 void UEDMonsterSpawnSubsystem::RegisterMonster(AEDMonsterBase* Monster)
 {
@@ -19,32 +18,30 @@ void UEDMonsterSpawnSubsystem::RegisterMonster(AEDMonsterBase* Monster)
 	ActiveMonsters.Add(Monster);
 }
 
-void UEDMonsterSpawnSubsystem::RegisterSpawner(AEDMonsterSpawner* Spawner)
+void UEDMonsterSpawnSubsystem::RegisterSpawner(AEDMonsterSpawner* Spawner, EMonsterGrade Grade)
 {
 	if (IsValid(Spawner) == false)
 		return;
-	
 	// 중복 등록 방지
-	for (const TWeakObjectPtr<AEDMonsterSpawner>& Existing : ActiveSpawners)
+	TArray<TWeakObjectPtr<AEDMonsterSpawner>>& List = SpawnersByGrade.FindOrAdd(Grade);
+	for (const TWeakObjectPtr<AEDMonsterSpawner>& Existing : List)
 	{
 		if (Existing.Get() == Spawner)
 			return;
 	}
-	ActiveSpawners.Add(Spawner);
+	
+	List.Add(Spawner);
 }
 
 void UEDMonsterSpawnSubsystem::TriggerSpawnByGrade(EMonsterGrade Grade)
 {
-	for (const TWeakObjectPtr<AEDMonsterSpawner>& Weak : ActiveSpawners)
+	TArray<TWeakObjectPtr<AEDMonsterSpawner>>* List = SpawnersByGrade.Find(Grade);
+	if (List == nullptr)
+		return;
+	for (const TWeakObjectPtr<AEDMonsterSpawner>& Weak : *List)
 	{
-		AEDMonsterSpawner* Spawner = Weak.Get();
-		if (IsValid(Spawner) == false) continue;
-		UEDMonsterDataAsset* DataAsset = Spawner->GetMonsterDataAsset();
-		// 해당 Grade의 스포너만 트리거
-		if (IsValid(DataAsset) && Spawner->GetMonsterDataAsset()->GetGrade() == Grade)
-		{
+		if (AEDMonsterSpawner* Spawner = Weak.Get())
 			Spawner->TriggerSpawn();
-		}
 	}
 }
 

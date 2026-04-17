@@ -75,3 +75,13 @@ void AEDLobbyPlayerController::Server_ChangeTeam_Implementation(int32 NewTeamId)
 		LobbyGS->UpdateTeamCounts();
 	}
 }
+
+void AEDLobbyPlayerController::Server_SelectZone_Implementation(int32 ZoneId)
+{
+	if (ZoneId < 1 || ZoneId > 4) return;
+
+	AEDPlayerState* PS = GetPlayerState<AEDPlayerState>();
+	if (!PS) return;
+
+	PS->DesiredZoneId = ZoneId;
+}

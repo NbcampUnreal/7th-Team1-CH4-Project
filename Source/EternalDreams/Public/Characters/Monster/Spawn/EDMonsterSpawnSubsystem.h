@@ -22,7 +22,7 @@ public:
 	// 몬스터 등록 - Spawner에서 스폰 시 호출
 	void RegisterMonster(AEDMonsterBase* Monster);
 	// 스포너 등록
-	void RegisterSpawner(AEDMonsterSpawner* Spawner);
+	void RegisterSpawner(AEDMonsterSpawner* Spawner, EMonsterGrade Grade);
 	//  Grade별 스폰 트리거 - GameState/GameMode에서 호출(Elite/Boss용)
 	UFUNCTION(BlueprintCallable)
 	void TriggerSpawnByGrade(EMonsterGrade Grade);
@@ -37,6 +37,6 @@ private:
 	void UnregisterMonster(AEDMonsterBase* Monster);
 	// 활성 몬스터 목록
 	TArray<TWeakObjectPtr<AEDMonsterBase>> ActiveMonsters;
-	// 레벨에 배치된 스포너 목록
-	TArray<TWeakObjectPtr<AEDMonsterSpawner>> ActiveSpawners;
+	// Grade 기준으로 분류된 스포너 목록
+	TMap<EMonsterGrade, TArray<TWeakObjectPtr<AEDMonsterSpawner>>> SpawnersByGrade;
 };

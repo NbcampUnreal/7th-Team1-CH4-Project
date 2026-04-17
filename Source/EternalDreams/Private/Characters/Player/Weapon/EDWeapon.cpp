@@ -3,14 +3,43 @@
 
 #include "Characters/Player/Weapon/EDWeapon.h"
 
+#include "Net/UnrealNetwork.h"
+
 
 // Sets default values
 AEDWeapon::AEDWeapon()
 {
+	bReplicates=true;
+	
 	Scene=CreateDefaultSubobject<USceneComponent>("Scene");
 	SetRootComponent(Scene);
-	WeaponStaticMesh=CreateDefaultSubobject<UStaticMeshComponent>("StaticMesh");
-	WeaponStaticMesh->SetupAttachment(Scene);
-	WeaponStaticMesh->SetCollisionProfileName(TEXT("NoCollision"));
+	WeaponStaticMeshComp=CreateDefaultSubobject<UStaticMeshComponent>("StaticMesh");
+	WeaponStaticMeshComp->SetupAttachment(Scene);
+	WeaponStaticMeshComp->SetCollisionProfileName(TEXT("NoCollision"));
+}
+
+
+void AEDWeapon::OnRep_WeaponStaticMesh()
+{
+	WeaponStaticMeshComp->SetStaticMesh(WeaponStaticMesh);
+	UE_LOG(LogTemp,Warning,TEXT("Rep"));
+}
+
+void AEDWeapon::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(AEDWeapon,WeaponStaticMesh);
+}
+
+void AEDWeapon::SetStaticMesh_Implementation(UStaticMesh* StaticMesh)
+{
+	if (HasAuthority())
+	{
+		UE_LOG(LogTemp,Warning,TEXT("Authority"));
+		WeaponStaticMesh = StaticMesh;
+		
+		OnRep_WeaponStaticMesh(); 
+	}
 }
 

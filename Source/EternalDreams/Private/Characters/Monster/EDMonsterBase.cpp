@@ -8,9 +8,9 @@
 #include "Data/EDMonsterDataAsset.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Engine/AssetManager.h"
 #include "AIController.h"
-#include "Core/EDAssetManager.h"
-#include "Core/EDGameDataSubsystem.h"
+#include "Components/CapsuleComponent.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
 
 // Sets default values
@@ -52,8 +52,6 @@ void AEDMonsterBase::BeginPlay()
 	
 	if (HasAuthority() == false)
 		return;
-	
-	if (!IsValid(DataAsset)) return;
 	
 	for (const TSubclassOf<UGameplayAbility>& AbilityClass : DataAsset->GetDefaultAbilities())
 	{
@@ -99,13 +97,18 @@ void AEDMonsterBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>&
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AEDMonsterBase, MonsterState);
-	DOREPLIFETIME(AEDMonsterBase, DataAsset);
 }
 
 void AEDMonsterBase::OnRep_MonsterState()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[%s] Monster State: %d"), *GetName(), (int32)MonsterState);
-	// TODO: AnimInstance에 전달
+	
+	if (MonsterState == EMonsterState::Dead)
+	{
+		// 캡슐 콜리전 비활성화
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	}
+
 	UEDMonsterAnimInstance* Anim = Cast<UEDMonsterAnimInstance>(GetMesh()->GetAnimInstance());
 	if (IsValid(Anim) == false)
 		return;
@@ -113,45 +116,31 @@ void AEDMonsterBase::OnRep_MonsterState()
 	Anim->SetMonsterState(MonsterState);
 }
 
-void AEDMonsterBase::OnRep_DataAsset()
-{
-	if (IsValid(DataAsset) == false)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] OnRep_DataAsset: DataAsset null"), *GetName());
-		return;
-	}
-	LoadVisuals(DataAsset);
-}
-
 void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)
 {
 	// 이전 로드가 진행 중이면 취소
-	if (!IsValid(DataAsset)) return;
-
-	/**
-	 * EDGameDataSubsystem에서 이미 해당 데이터들을 로드했으므로 
-	 * .Get()을 통해 동기적으로 가져옴 (이미 메모리에 있어서)
-	 */
-	if (USkeletalMesh* SkelMesh = DataAsset->GetMesh().Get())
+	if (VisualLoadHandle.IsValid())
 	{
-		GetMesh()->SetSkeletalMesh(SkelMesh);
-	}
-	else
-	{
-		// 만약에 대비해 동기 로드 시도
-		USkeletalMesh* LoadedMesh = UEDAssetManager::Get().LoadAssetSync<USkeletalMesh>(DataAsset->GetMesh().ToSoftObjectPath());
-		if (LoadedMesh) GetMesh()->SetSkeletalMesh(LoadedMesh);
+		VisualLoadHandle->CancelHandle();
+		VisualLoadHandle.Reset();
 	}
 	
-	if (UClass* AnimClass = DataAsset->GetAnimInstance().Get())
-	{
-		GetMesh()->SetAnimInstanceClass(AnimClass);
-	} else
-	{
-		// 만약에 대비해 동기 로드 시도
-		UClass* LoadedAnim = UEDAssetManager::Get().LoadAssetSync<UClass>(InDataAsset->GetAnimInstance().ToSoftObjectPath());
-		if (LoadedAnim) GetMesh()->SetAnimInstanceClass(LoadedAnim);
-	}
+	TArray<FSoftObjectPath> AssetsToLoad;
+	
+	if (InDataAsset->GetMesh().IsNull() == false)
+		AssetsToLoad.Add(InDataAsset->GetMesh().ToSoftObjectPath());
+	if (InDataAsset->GetAnimInstance().IsNull() == false)
+		AssetsToLoad.Add(InDataAsset->GetAnimInstance().ToSoftObjectPath());
+	
+	if (AssetsToLoad.IsEmpty())
+		return;
+	
+	FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
+	VisualLoadHandle = Streamable.RequestAsyncLoad(
+		AssetsToLoad,
+		FStreamableDelegate::CreateUObject(this, &AEDMonsterBase::OnVisualsLoaded)
+		);
+	
 }
 
 void AEDMonsterBase::OnVisualsLoaded()
@@ -175,12 +164,18 @@ void AEDMonsterBase::HandleDeath()
 {
 	// Dead 상태로 전환 (OnRep_MonsterState로 클라이언트에 복제)
 	MonsterState = EMonsterState::Dead;
+	OnRep_MonsterState();
 	// AIController BT 중단 및 Focus 해제
 	AAIController* AIController = Cast<AAIController>(GetController());
 	if (IsValid(AIController) == false)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] HandleDeath - AIController 없음"), *GetName());
 		return;
+	}
+	
 	if (IsValid(AIController->BrainComponent) == false)
 		return;
+	
 	// 현재 Target 포커스 해제
 	AIController->ClearFocus(EAIFocusPriority::Gameplay);
 	// 이동 중지
@@ -192,7 +187,17 @@ void AEDMonsterBase::HandleDeath()
 	FGameplayTagContainer DeathTag;
 	DeathTag.AddTag(FEDGameplayTags::Get().State_Dead);
 	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
-	
+	// MonsterDeath 브로드 캐스트
+	OnMonsterDeath.Broadcast();
+	// 20초 뒤에 몬스터 시체 처리 
+	// TODO: 아이템 루팅 기능 부착(예정)
+	GetWorldTimerManager().SetTimer(
+		DestroyMeshTimerHandle,
+		FTimerDelegate::CreateWeakLambda(this,[this]()
+		{
+			Destroy();
+		}),
+		20.f, false);
 }
 
 void AEDMonsterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
@@ -203,7 +208,6 @@ void AEDMonsterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 	
 	if (Data.NewValue <= 0.f)
 		HandleDeath();
+	
+	// TODO: 히트 리액션 추가(필요시)
 }
-
-
-

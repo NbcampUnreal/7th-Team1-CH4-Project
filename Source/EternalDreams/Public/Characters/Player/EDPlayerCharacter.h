@@ -4,7 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "AttributeSet.h"
 #include "AbilitySystemInterface.h"
+#include "GameplayEffectTypes.h"
+#include "Weapon/EDWeapon.h"
 #include "EDPlayerCharacter.generated.h"
 
 class UGameplayAbility;
@@ -16,6 +19,9 @@ class UEDPlayerAttributeSet;
 class UIMCComponent;
 class UZoneDetectorComponent;
 class UEDInventoryComponent;
+class USkillComponent;
+struct FOnAttributeChangeData;
+
 
 /*
  * 플레이어 캐릭터 클래스
@@ -32,15 +38,17 @@ public:
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
+	virtual void Tick( float DeltaSeconds ) override;
 
 public:
 
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	
-	
+	virtual void PostInitializeComponents() override;
 	
 public:
+	//GAS Getter	
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
 	UEDPlayerAttributeSet* GetPlayerAttributeSet() const { return PlayerAttributeSet; }
 	
@@ -61,6 +69,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UZoneDetectorComponent> ZoneDetector;
 	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
+	TObjectPtr<USkillComponent> PlayerSkillComponent;
+	
 	UPROPERTY()
 	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComp;
 	
@@ -80,9 +91,13 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
 	TSubclassOf<AEDWeapon> WeaponClass;
 	UPROPERTY()
-	TObjectPtr<AEDWeapon> WeaponMesh;
+	TObjectPtr<AEDWeapon> RWeaponActor;
 	UPROPERTY()
-	FName WeaponSocketName=FName("handslot_r");
+	TObjectPtr<AEDWeapon> LWeaponActor;
+	UPROPERTY()
+	FName RWeaponSocketName=FName("handslot_r");
+	UPROPERTY()
+	FName LWeaponSocketName=FName("handslot_l");
 	
 	//Get Attribute
 public:
@@ -100,5 +115,52 @@ public:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
 	TObjectPtr<UEDInventoryComponent> InventoryComponent;
+	
+	//Get Animation Movement Input
+public:
+	UFUNCTION()
+	void StartAnimMove(float InDashSpeed, bool InbIsForward, bool InbIsZ );
+	UFUNCTION()
+	void StopAnimMove();
+	
+	//Callback
+	void OnWalkSpeedChanged(const struct FOnAttributeChangeData& Data);
+	
+	
+protected:
+	UPROPERTY()
+	bool bIsAnimMoving=false;
+	UPROPERTY()
+	float DashSpeed=0.f;
+	UPROPERTY()
+	bool bIsForward=false;
+	UPROPERTY()
+	bool bIsZ=false;
+	UPROPERTY()
+	FVector MoveVector=FVector::ZeroVector;
+	UPROPERTY()
+	FHitResult Hit;
+	
+	//Anim Notify Used
+public:
+	UPROPERTY()
+	FVector PresentAttackSocketLocation=FVector::ZeroVector;
+	UPROPERTY()
+	FVector CurrentAttackSocketLocation=FVector::ZeroVector;
+	
+	UPROPERTY()
+	FTransform SpawnTransform;
+	
+	UPROPERTY()
+	FVector SocketLocation;
+	
+	UPROPERTY()
+	FVector SocketDirection;
+	
+	UPROPERTY()
+	TArray<AActor*> HittedCharacterArray;
+	
+	FORCEINLINE UStaticMeshComponent* GetWeaponMeshComp()
+	{if (LWeaponActor!=nullptr&&RWeaponActor!=nullptr) return RWeaponActor->GetStaticMesh()!=nullptr ? RWeaponActor->GetStaticMeshComp():LWeaponActor->GetStaticMeshComp(); else return nullptr;};
 	
 };

@@ -4,6 +4,7 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Characters/Player/Component/EDCraftingInteractionComponent.h"
 #include "Characters/Player/Component/EDLootInteractionComponent.h"
 #include "Characters/Player/OtherActor/EDCameraActor.h"
 #include "Characters/Player/OtherActor/EDCursorActor.h"
@@ -18,6 +19,7 @@
 
 AEDPlayerController::AEDPlayerController()
 {
+	CraftingInteractionComponent = CreateDefaultSubobject<UEDCraftingInteractionComponent>(TEXT("CraftingInteractionComponent"));
 	LootInteractionComponent = CreateDefaultSubobject<UEDLootInteractionComponent>(TEXT("LootInteractionComponent"));
 }
 
@@ -146,6 +148,18 @@ void AEDPlayerController::SetupInputComponent()
 		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIBackAction이 설정되지 않았습니다."));
 	}
 
+	if (CraftItemAction)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: CraftItemAction 바인딩을 완료했습니다. 이름 = %s"),
+		       *CraftItemAction->GetName());
+		EnhancedInputComponent->BindAction(CraftItemAction, ETriggerEvent::Started, this,
+		                                   &AEDPlayerController::HandleCraftItem);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: CraftItemAction이 설정되지 않았습니다."));
+	}
+
 
 	EnhancedInputComponent->BindAction(
 		WheelAction,
@@ -192,6 +206,19 @@ void AEDPlayerController::HandleUIBack()
 
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: ESC 입력을 처리합니다."));
 	UIManageSubsystem->HandleEscapeAction();
+}
+
+void AEDPlayerController::HandleCraftItem()
+{
+	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 제작 입력을 처리합니다."));
+
+	if (!CraftingInteractionComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: CraftingInteractionComponent가 없어 제작 입력을 처리할 수 없습니다."));
+		return;
+	}
+
+	CraftingInteractionComponent->HandleCraftInput();
 }
 
 void AEDPlayerController::HandleApplicationReactivated()

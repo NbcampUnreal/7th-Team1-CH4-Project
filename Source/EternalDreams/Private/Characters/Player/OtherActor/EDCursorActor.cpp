@@ -14,22 +14,33 @@ AEDCursorActor::AEDCursorActor()
 	PrimaryActorTick.bCanEverTick = true;
 	Scene=CreateDefaultSubobject<USceneComponent>("SceneComponent");
 	SetRootComponent(Scene);
-	CursorWidget=CreateDefaultSubobject<UWidgetComponent>(TEXT("CursorWidget"));
+	/*CursorWidget=CreateDefaultSubobject<UWidgetComponent>(TEXT("CursorWidget"));
 	CursorWidget->SetupAttachment(Scene);
 	CursorWidget->SetWidgetSpace(EWidgetSpace::Screen);
+	*/
+	
 }
 
 // Called when the game starts or when spawned
 void AEDCursorActor::BeginPlay()
 {
 	Super::BeginPlay();
-	
+	if (CursorWidget!=nullptr)
+	{
+		CursorWidget->AddToViewport();
+	}
+
 }
 
 // Called every frame
 void AEDCursorActor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
+	
+	if (CursorWidget==nullptr)
+	{
+		return;
+	}
 	
 	if (!IsValid(PlayerController))
 	{
@@ -42,7 +53,7 @@ void AEDCursorActor::Tick(float DeltaTime)
 			return;
 		}
 	}
-	
+	/*
 	//위치 변경
 	FHitResult HitResult;
 	if (PlayerController->GetHitResultUnderCursor(ECC_Visibility,false, HitResult))
@@ -52,5 +63,12 @@ void AEDCursorActor::Tick(float DeltaTime)
 			CursorWidget->SetWorldLocation(HitResult.ImpactPoint);
 		}
 	}
+	*/
+	float MouseX, MouseY;
+	PlayerController->GetMousePosition(MouseX,MouseY);
+	FVector2D MousePos=FVector2D(MouseX,MouseY);
+
+	CursorWidget->SetPositionInViewport(MousePos,true);
+	
 }
 
