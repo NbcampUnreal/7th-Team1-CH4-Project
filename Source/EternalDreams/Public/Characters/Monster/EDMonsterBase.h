@@ -38,7 +38,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Data")
 	UEDMonsterDataAsset* GetDataAsset() const 
 	{
-		// 이미 만들어두신 GetData 템플릿을 활용합니다.
+		// 캐싱 사용
 		if (UEDGameDataSubsystem* Subsystem = UEDGameDataSubsystem::Get(this))
 		{
 			return Subsystem->GetData<UEDMonsterDataAsset>(MonsterDataId);
