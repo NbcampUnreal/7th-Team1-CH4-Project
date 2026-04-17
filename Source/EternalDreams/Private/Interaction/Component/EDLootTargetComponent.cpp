@@ -2,7 +2,9 @@
 #include "Interaction/Component/EDLootTargetComponent.h"
 
 #include "Characters/Player/Component/EDLootInteractionComponent.h"
-#include "Components/PrimitiveComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/SceneComponent.h"
+#include "GameFramework/Actor.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
 
@@ -11,22 +13,11 @@ UEDLootTargetComponent::UEDLootTargetComponent()
 	PrimaryComponentTick.bCanEverTick = false;
 }
 
-void UEDLootTargetComponent::SetInteractionCollision(UPrimitiveComponent* InInteractionCollision)
-{
-	if (InteractionCollision == InInteractionCollision)
-	{
-		return;
-	}
-
-	UnbindInteractionCollision();
-	InteractionCollision = InInteractionCollision;
-	BindInteractionCollision();
-}
-
 void UEDLootTargetComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
+	CreateInteractionBox();
 	BindInteractionCollision();
 }
 
@@ -95,46 +86,61 @@ void UEDLootTargetComponent::HandleInteractionEndOverlap(
 	LootInteractionComponent->ClearCurrentLootTarget(GetOwner());
 }
 
-void UEDLootTargetComponent::BindInteractionCollision()
+void UEDLootTargetComponent::CreateInteractionBox()
 {
-	UPrimitiveComponent* CollisionComponent = ResolveInteractionCollision();
-	if (!CollisionComponent)
+	if (InteractionBox || !GetOwner())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDLootTargetComponent: 바인딩할 충돌 컴포넌트를 찾지 못했습니다. Owner=%s"),
-			GetOwner() ? *GetOwner()->GetName() : TEXT("None"));
+		return;
+	}
+	
+	InteractionBox = NewObject<UBoxComponent>(GetOwner(), TEXT("LootTargetInteractionBox"));
+	if (!InteractionBox)
+	{
 		return;
 	}
 
-	CollisionComponent->OnComponentBeginOverlap.RemoveDynamic(this, &UEDLootTargetComponent::HandleInteractionBeginOverlap);
-	CollisionComponent->OnComponentBeginOverlap.AddDynamic(this, &UEDLootTargetComponent::HandleInteractionBeginOverlap);
+	GetOwner()->AddInstanceComponent(InteractionBox);
 
-	CollisionComponent->OnComponentEndOverlap.RemoveDynamic(this, &UEDLootTargetComponent::HandleInteractionEndOverlap);
-	CollisionComponent->OnComponentEndOverlap.AddDynamic(this, &UEDLootTargetComponent::HandleInteractionEndOverlap);
+	if (USceneComponent* RootComponent = GetOwner()->GetRootComponent())
+	{
+		InteractionBox->SetupAttachment(RootComponent);
+	}
+
+	InteractionBox->SetRelativeLocation(TriggerRelativeLocation);
+	InteractionBox->SetBoxExtent(TriggerBoxExtent);
+	InteractionBox->SetGenerateOverlapEvents(true);
+	InteractionBox->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	InteractionBox->SetCollisionResponseToAllChannels(ECR_Ignore);
+	InteractionBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	InteractionBox->RegisterComponent();
+
+	if (!GetOwner()->GetRootComponent())
+	{
+		GetOwner()->SetRootComponent(InteractionBox);
+	}
+}
+
+void UEDLootTargetComponent::BindInteractionCollision()
+{
+	if (!InteractionBox)
+	{
+		return;
+	}
+
+	InteractionBox->OnComponentBeginOverlap.RemoveDynamic(this, &UEDLootTargetComponent::HandleInteractionBeginOverlap);
+	InteractionBox->OnComponentBeginOverlap.AddDynamic(this, &UEDLootTargetComponent::HandleInteractionBeginOverlap);
+
+	InteractionBox->OnComponentEndOverlap.RemoveDynamic(this, &UEDLootTargetComponent::HandleInteractionEndOverlap);
+	InteractionBox->OnComponentEndOverlap.AddDynamic(this, &UEDLootTargetComponent::HandleInteractionEndOverlap);
 }
 
 void UEDLootTargetComponent::UnbindInteractionCollision()
 {
-	UPrimitiveComponent* CollisionComponent = ResolveInteractionCollision();
-	if (!CollisionComponent)
+	if (!InteractionBox)
 	{
 		return;
 	}
 
-	CollisionComponent->OnComponentBeginOverlap.RemoveDynamic(this, &UEDLootTargetComponent::HandleInteractionBeginOverlap);
-	CollisionComponent->OnComponentEndOverlap.RemoveDynamic(this, &UEDLootTargetComponent::HandleInteractionEndOverlap);
-}
-
-UPrimitiveComponent* UEDLootTargetComponent::ResolveInteractionCollision() const
-{
-	if (InteractionCollision)
-	{
-		return InteractionCollision;
-	}
-
-	if (!bUseOwnerRootPrimitiveWhenEmpty || !GetOwner())
-	{
-		return nullptr;
-	}
-
-	return Cast<UPrimitiveComponent>(GetOwner()->GetRootComponent());
+	InteractionBox->OnComponentBeginOverlap.RemoveDynamic(this, &UEDLootTargetComponent::HandleInteractionBeginOverlap);
+	InteractionBox->OnComponentEndOverlap.RemoveDynamic(this, &UEDLootTargetComponent::HandleInteractionEndOverlap);
 }
