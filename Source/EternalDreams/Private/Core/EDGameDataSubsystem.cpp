@@ -4,7 +4,6 @@
 #include "Kismet/GameplayStatics.h"
 
 const FPrimaryAssetType UEDGameDataSubsystem::LobbyAssetType = FPrimaryAssetType(TEXT("LobbyData"));
-
 const FPrimaryAssetType UEDGameDataSubsystem::UIAssetType = FPrimaryAssetType(TEXT("UIData"));
 const FPrimaryAssetType UEDGameDataSubsystem::ItemAssetType = FPrimaryAssetType(TEXT("InventoryItem"));
 const FPrimaryAssetType UEDGameDataSubsystem::MonsterAssetType = FPrimaryAssetType(TEXT("MonsterData"));
@@ -109,11 +108,11 @@ void UEDGameDataSubsystem::LoadPhase_Lobby()
 	
 	TSharedPtr<FStreamableHandle> Handle = AM.LoadPrimaryAssetsAsync(
 		Ids,
-		{TEXT("Lobby")},
+		{LobbyAssetType.GetName()},
 		FStreamableDelegate::CreateUObject(this, &UEDGameDataSubsystem::OnLobbyDataLoaded)
 	);
 	
-	PhaseHandles.Add(TEXT("Lobby"), Handle);
+	PhaseHandles.Add(LobbyAssetType.GetName(), Handle);
 }
 
 void UEDGameDataSubsystem::LoadPhase_UI()
@@ -130,10 +129,10 @@ void UEDGameDataSubsystem::LoadPhase_UI()
 	
 	TSharedPtr<FStreamableHandle> Handle = AM.LoadPrimaryAssetsAsync(
 		Ids,
-		{TEXT("UI")},
+		{UIAssetType.GetName()},
 		FStreamableDelegate::CreateUObject(this, &UEDGameDataSubsystem::OnUIDataLoaded)
 	);
-	PhaseHandles.Add(TEXT("UI"), Handle);
+	PhaseHandles.Add(UIAssetType.GetName(), Handle);
 }
 
 void UEDGameDataSubsystem::LoadPhase_Item()
@@ -150,10 +149,10 @@ void UEDGameDataSubsystem::LoadPhase_Item()
 	
 	TSharedPtr<FStreamableHandle> Handle = AM.LoadPrimaryAssetsAsync(
 		Ids,
-		{TEXT("ITEM")},
+		{ItemAssetType.GetName()},
 		FStreamableDelegate::CreateUObject(this, &UEDGameDataSubsystem::OnItemDataLoaded)
 	);
-	PhaseHandles.Add(TEXT("Item"), Handle);
+	PhaseHandles.Add(ItemAssetType.GetName(), Handle);
 }
 
 void UEDGameDataSubsystem::LoadPhase_Monster()
@@ -209,7 +208,7 @@ void UEDGameDataSubsystem::OnMonsterDataLoaded()
 {
 	CacheLoadedAssets(MonsterAssetType);
 	SetPhase(EDataLoadPhase::Completed);
-	
+	UE_LOG(LogTemp, Log, TEXT("몬스터 정보 로드 완료"));
 	// 완료 신호
 	OnAllDataLoaded.Broadcast();
 }
