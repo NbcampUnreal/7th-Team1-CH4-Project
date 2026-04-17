@@ -14,6 +14,8 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Engine/AssetManager.h"
 #include "Core/EDPlayerState.h"
+#include "Core/EDAssetManager.h"
+#include "Core/EDGameDataSubsystem.h"
 #include "Chaos/Deformable/ChaosDeformableSolverProxy.h"
 
 
@@ -125,30 +127,27 @@ void AEDMonsterAIController::OnPossess(APawn* InPawn)
 	HearingConfig->HearingRange = DetectRange * 0.8f;
 	AIPerceptionComp->ConfigureSense(*SightConfig);
 	AIPerceptionComp->ConfigureSense(*HearingConfig);
-	// BT 비동기 로드(임시)
-	if (DA->GetBehaviorTree().IsNull())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] BehaviorTree 레퍼런스 없음"), *GetName());
-		return;
-	}
 	
-	FStreamableManager& Streamable = UAssetManager::GetStreamableManager();
-	BTLoadHandle = Streamable.RequestAsyncLoad(
-		DA->GetBehaviorTree().ToSoftObjectPath(),
-		FStreamableDelegate::CreateUObject(this, &AEDMonsterAIController::OnBTLoaded)
+	UBehaviorTree* BT = DA->GetBehaviorTree().Get();
+
+	if (IsValid(BT))
+	{
+		bool bResult = RunBehaviorTree(BT);
+		UE_LOG(LogTemp, Log, TEXT("[AICtrl][%s] RunBehaviorTree 즉시 실행: %s"), 
+			*GetName(), bResult ? TEXT("성공") : TEXT("실패"));
+	} else
+	{
+		BTLoadHandle = UEDAssetManager::Get().LoadAssetAsync(
+			DA->GetBehaviorTree().ToSoftObjectPath(),
+			FStreamableDelegate::CreateUObject(this, &AEDMonsterAIController::OnBTLoaded)
 		);
+	}
 }
 
 void AEDMonsterAIController::OnUnPossess()
 {
 	Super::OnUnPossess();
 	GetWorldTimerManager().ClearTimer(TeamReportTimerHandle);
-	
-	if (BTLoadHandle.IsValid())
-	{
-		BTLoadHandle->CancelHandle();
-		BTLoadHandle.Reset();
-	}
 }
 
 void AEDMonsterAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedActors)
@@ -265,6 +264,11 @@ void AEDMonsterAIController::StartTeamReport(AActor* Target)
 
 void AEDMonsterAIController::OnBTLoaded()
 {
+	if (BTLoadHandle.IsValid())
+	{
+		BTLoadHandle.Reset();
+	}
+	
 	AEDMonsterBase* Monster = Cast<AEDMonsterBase>(GetPawn());
 	if (IsValid(Monster) == false || IsValid(Monster->GetDataAsset()) == false)
 	{
@@ -278,7 +282,6 @@ void AEDMonsterAIController::OnBTLoaded()
 		UE_LOG(LogTemp, Warning, TEXT("[AICtrl][%s] OnBTLoaded: BT 유효하지 않음"), *GetName());
 		return;
 	}
-	
 
 	if (IsValid(this) == false || IsValid(GetPawn()) == false)
 		return;

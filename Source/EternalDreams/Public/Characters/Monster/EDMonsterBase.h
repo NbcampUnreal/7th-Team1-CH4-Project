@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
 #include "Characters/Base/GAS/EDBaseAttributeSet.h"
+#include "Core/EDGameDataSubsystem.h"
 #include "Data/Types/EDMonsterTypes.h"
 #include "EDMonsterBase.generated.h"
 
@@ -30,8 +31,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Data")
 	void InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset);
 	
-	UFUNCTION(BlueprintCallable, Category= "Data")
-	UEDMonsterDataAsset* GetDataAsset() const { return DataAsset; }
+	// 수정 전
+	// UFUNCTION(BlueprintCallable, Category= "Data")
+	// UEDMonsterDataAsset* GetDataAsset() const { return DataAsset; }
+	// 수정 후
+	UFUNCTION(BlueprintCallable, Category = "Data")
+	UEDMonsterDataAsset* GetDataAsset() const 
+	{
+		// 캐싱 사용
+		if (UEDGameDataSubsystem* Subsystem = UEDGameDataSubsystem::Get(this))
+		{
+			return Subsystem->GetData<UEDMonsterDataAsset>(MonsterDataId);
+		}
+		return nullptr;
+	}
 	
 	FVector GetOriginLocation() const { return OriginLocation;}
 	
@@ -52,8 +65,12 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 	
+	// 수정 전
+	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
+	// TObjectPtr<UEDMonsterDataAsset> DataAsset;
+	// 수정 후
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
-	TObjectPtr<UEDMonsterDataAsset> DataAsset;
+	FPrimaryAssetId MonsterDataId;
 private:
 	// 비동기 로드(임시)
 	void LoadVisuals(UEDMonsterDataAsset* InDataAsset);
