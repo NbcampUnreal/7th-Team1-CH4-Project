@@ -4,8 +4,11 @@
 
 #include "Components/TextBlock.h"
 #include "Components/Widget.h"
+#include "Engine/LocalPlayer.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
+#include "UI/Subsystem/EDUIManageSubsystem.h"
+#include "UI/Types/EDUIWidgetIds.h"
 
 void UEDDeathOverlayWidget::StartCountdown(float Seconds, bool bCanRespawn)
 {
@@ -48,13 +51,13 @@ void UEDDeathOverlayWidget::StartCountdown(float Seconds, bool bCanRespawn)
 	}
 }
 
-void UEDDeathOverlayWidget::NativeDestruct()
+void UEDDeathOverlayWidget::NativeOnDeactivated()
 {
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(CountdownTimerHandle);
 	}
-	Super::NativeDestruct();
+	Super::NativeOnDeactivated();
 }
 
 void UEDDeathOverlayWidget::TickCountdown()
@@ -68,7 +71,7 @@ void UEDDeathOverlayWidget::TickCountdown()
 		{
 			World->GetTimerManager().ClearTimer(CountdownTimerHandle);
 		}
-		RemoveFromParent();
+		CloseSelfPanel();
 	}
 }
 
@@ -78,5 +81,19 @@ void UEDDeathOverlayWidget::UpdateCountdownText() const
 	{
 		const int32 WholeSeconds = FMath::CeilToInt(RemainingSeconds);
 		CountdownText->SetText(FText::AsNumber(WholeSeconds));
+	}
+}
+
+void UEDDeathOverlayWidget::CloseSelfPanel()
+{
+	ULocalPlayer* LP = GetOwningLocalPlayer();
+	if (!LP)
+	{
+		return;
+	}
+
+	if (UEDUIManageSubsystem* UIMgr = LP->GetSubsystem<UEDUIManageSubsystem>())
+	{
+		UIMgr->ClosePanel(EDUIWidgetIds::Panel_DeathOverlay);
 	}
 }

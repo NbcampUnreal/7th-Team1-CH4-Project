@@ -6,6 +6,9 @@
 #include "Components/Button.h"
 #include "Core/EDPlayerState.h"
 #include "Core/Lobby/UI/EDZoneSelectWidget.h"
+#include "Engine/LocalPlayer.h"
+#include "UI/Subsystem/EDUIManageSubsystem.h"
+#include "UI/Types/EDUIWidgetIds.h"
 
 namespace
 {
@@ -30,9 +33,6 @@ void UEDRespawnZoneSelectWidget::NativeConstruct()
 		ConfirmButton->OnClicked.RemoveDynamic(this, &UEDRespawnZoneSelectWidget::HandleConfirmClicked);
 		ConfirmButton->OnClicked.AddDynamic(this, &UEDRespawnZoneSelectWidget::HandleConfirmClicked);
 	}
-
-	InitializeSelection();
-	UpdateConfirmButtonState();
 }
 
 void UEDRespawnZoneSelectWidget::NativeDestruct()
@@ -48,6 +48,15 @@ void UEDRespawnZoneSelectWidget::NativeDestruct()
 	}
 
 	Super::NativeDestruct();
+}
+
+void UEDRespawnZoneSelectWidget::NativeOnActivated()
+{
+	Super::NativeOnActivated();
+
+	// UIManager는 패널 인스턴스를 재사용하므로, 활성화 시점마다 선택 상태 초기화
+	InitializeSelection();
+	UpdateConfirmButtonState();
 }
 
 void UEDRespawnZoneSelectWidget::SetAvailableZones(const TArray<int32>& AvailableZoneIds)
@@ -95,6 +104,7 @@ void UEDRespawnZoneSelectWidget::SubmitSelectedZone()
 	if (AEDPlayerController* PlayerController = Cast<AEDPlayerController>(GetOwningPlayer()))
 	{
 		PlayerController->Server_RequestRespawn(PendingZoneId);
+		CloseSelfPanel();
 	}
 }
 
@@ -122,6 +132,8 @@ void UEDRespawnZoneSelectWidget::InitializeSelection()
 	}
 
 	ZoneSelectorPanel->SetAllZonesEnabled(true);
+	PendingZoneId = 0;
+	ZoneSelectorPanel->ClearSelection();
 
 	if (AEDPlayerState* PlayerState = GetOwningPlayerState<AEDPlayerState>())
 	{
@@ -149,4 +161,18 @@ bool UEDRespawnZoneSelectWidget::IsZoneAvailable(int32 ZoneId) const
 	}
 
 	return CachedAvailableZones.Num() == 0 || CachedAvailableZones.Contains(ZoneId);
+}
+
+void UEDRespawnZoneSelectWidget::CloseSelfPanel()
+{
+	ULocalPlayer* LP = GetOwningLocalPlayer();
+	if (!LP)
+	{
+		return;
+	}
+
+	if (UEDUIManageSubsystem* UIMgr = LP->GetSubsystem<UEDUIManageSubsystem>())
+	{
+		UIMgr->ClosePanel(EDUIWidgetIds::Panel_RespawnZoneSelect);
+	}
 }

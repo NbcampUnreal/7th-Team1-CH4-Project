@@ -15,8 +15,6 @@ class UInputMappingContext;
 class UInputAction;
 class UEDCraftingInteractionComponent;
 class UEDLootInteractionComponent;
-class UEDDeathOverlayWidget;
-class UEDRespawnZoneSelectWidget;
 
 DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
 
@@ -96,19 +94,6 @@ public:
 	 */
 	UFUNCTION(Server, Reliable, Category = "ED|Death")
 	void Server_RequestRespawn(int32 SelectedZoneId);
-
-	UPROPERTY(EditDefaultsOnly, Category = "ED|Death|UI")
-	TSubclassOf<UEDDeathOverlayWidget> DeathOverlayWidgetClass;
-
-	UPROPERTY(EditDefaultsOnly, Category = "ED|Death|UI")
-	TSubclassOf<UEDRespawnZoneSelectWidget> RespawnZoneSelectWidgetClass;
-
-protected:
-	UPROPERTY()
-	TObjectPtr<UEDDeathOverlayWidget> DeathOverlayWidget;
-
-	UPROPERTY()
-	TObjectPtr<UEDRespawnZoneSelectWidget> RespawnZoneSelectWidget;
 
 public:
 #pragma region Input Player
