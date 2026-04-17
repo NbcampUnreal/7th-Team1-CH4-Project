@@ -21,6 +21,11 @@ public:
 	void SetStaticMesh(UStaticMesh* StaticMesh);
 	
 	UFUNCTION()
+	FORCEINLINE void SetServerStaticMesh(UStaticMesh* StaticMesh){WeaponStaticMeshComp->SetStaticMesh(StaticMesh);};
+	
+	
+	
+	UFUNCTION()
 	void OnRep_WeaponStaticMesh();
 	
 	UFUNCTION()

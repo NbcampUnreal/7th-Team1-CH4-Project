@@ -10,6 +10,8 @@
 #include "Weapon/EDWeapon.h"
 #include "EDPlayerCharacter.generated.h"
 
+class UPlayerAssetComponent;
+class UGameplayEffect;
 class UGameplayAbility;
 class AEDWeapon;
 class AEDPlayerController;
@@ -72,6 +74,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
 	TObjectPtr<USkillComponent> PlayerSkillComponent;
 	
+	
 	UPROPERTY()
 	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComp;
 	
@@ -126,6 +129,9 @@ protected:
 	/** 중복 HandleDeath 호출 방지용 서버 전용 플래그 */
 	bool bIsDead = false;
 	
+	UPROPERTY(EditDefaultsOnly, Category = "EquipEffect")
+	TSubclassOf<UGameplayEffect> EquipEffect;
+	
 	//Initialize AS
 	virtual void InitializeAbilitySystem();
 
@@ -135,17 +141,17 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
 	TObjectPtr<UEDInventoryComponent> InventoryComponent;
 	
-	//Get Animation Movement Input
-public:
-	UFUNCTION()
-	void StartAnimMove(float InDashSpeed, bool InbIsForward, bool InbIsZ );
-	UFUNCTION()
-	void StopAnimMove();
 	
 	//Callback
 	void OnWalkSpeedChanged(const struct FOnAttributeChangeData& Data);
+	UFUNCTION()
+	void OnEquipChanged(FGameplayTag& AttributeDataTag, float Value);
+	UFUNCTION(BlueprintCallable)
+	void OnWeaponChanged();
 	
-	
+	//Anim Move
+#pragma region Animation Movement
+	//Caching
 protected:
 	UPROPERTY()
 	bool bIsAnimMoving=false;
@@ -160,7 +166,15 @@ protected:
 	UPROPERTY()
 	FHitResult Hit;
 	
+	//Get Animation Movement Input
+public:
+	UFUNCTION()
+	void StartAnimMove(float InDashSpeed, bool InbIsForward, bool InbIsZ );
+	UFUNCTION()
+	void StopAnimMove();
+#pragma endregion
 	//Anim Notify Used
+#pragma region AnimNotifyUsed
 public:
 	UPROPERTY()
 	FVector PresentAttackSocketLocation=FVector::ZeroVector;
@@ -181,5 +195,5 @@ public:
 	
 	FORCEINLINE UStaticMeshComponent* GetWeaponMeshComp()
 	{if (LWeaponActor!=nullptr&&RWeaponActor!=nullptr) return RWeaponActor->GetStaticMesh()!=nullptr ? RWeaponActor->GetStaticMeshComp():LWeaponActor->GetStaticMeshComp(); else return nullptr;};
-	
+#pragma endregion
 };

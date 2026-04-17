@@ -85,6 +85,12 @@ public:
 	FGameplayTag Data_Damage;
 	FGameplayTag Data_StaminaCost;
 	FGameplayTag Data_CoolTime;
+	FGameplayTag Data_StatAdd;
+	FGameplayTag Data_StatAdd_Strength;
+	FGameplayTag Data_StatAdd_Dexterity;
+	FGameplayTag Data_StatAdd_Intelligence;
+	FGameplayTag Data_StatMul;
+	
 	
 	//Inventory-Item
 	FGameplayTag Item_Weapon_Sword;
@@ -98,8 +104,7 @@ public:
 	FGameplayTag Item_Consumable;
 	FGameplayTag Item_Ingredient_Base;
 	FGameplayTag Item_Ingredient_Special;
-	FGameplayTag Data_StatAdd;
-	FGameplayTag Data_StatMul;
+
 
 private:
 	// Singleton 인스턴스

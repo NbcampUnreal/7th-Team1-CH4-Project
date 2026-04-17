@@ -217,6 +217,24 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("Data.Damage"),
 		FString("SetByCaller용 데미지 Tag")
 	);
+	Tags.Data_StatAdd = Manager.AddNativeGameplayTag(
+		FName("Data.StatAdd"),
+FString("SetByCaller용 스탯 + 증가 Tag")
+	);
+	Tags.Data_StatAdd_Strength = Manager.AddNativeGameplayTag(
+	FName("Data.StatAdd.Strength"),
+FString("SetByCaller용 Strength + 증가 Tag")
+);
+	Tags.Data_StatAdd_Dexterity = Manager.AddNativeGameplayTag(
+	FName("Data.StatAdd.Dexterity"),
+FString("SetByCaller용 Dexterity + 증가 Tag")
+);
+	Tags.Data_StatAdd_Intelligence = Manager.AddNativeGameplayTag(
+	FName("Data.StatAdd.Intelligence"),
+FString("SetByCaller용 Intelligence + 증가 Tag")
+);
+	
+	
 	Tags.Data_StatMul = Manager.AddNativeGameplayTag(
 		FName("Data.StatMul"),
 		FString("SetByCaller용 스탯 % 증가 Tag")
@@ -225,6 +243,8 @@ void FEDGameplayTags::InitializeNativeTags()
 	FName("Data.CoolTime"),
 	FString("SetByCaller용 CoolTime 증가 Tag")
 	);
+	
+	
 	
 	//Inventory-Item
 	Tags.Item_Weapon_Sword = Manager.AddNativeGameplayTag(
@@ -265,8 +285,5 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("Item.Ingredient.Special"),
 		FString("재료 아이템 - 특수")
 	);
-	Tags.Data_StatAdd = Manager.AddNativeGameplayTag(
-	FName("Data.StatAdd"),
-	FString("SetByCaller용 스탯 + 증가 Tag")
-	);
+
 }
