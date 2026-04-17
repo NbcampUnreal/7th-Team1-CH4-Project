@@ -18,6 +18,20 @@ void AEDGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLife
 
 	DOREPLIFETIME(AEDGameState, CurrentPhase);
 	DOREPLIFETIME(AEDGameState, PhaseRemainingTime);
+	DOREPLIFETIME(AEDGameState, WinnerTeamId);
+	DOREPLIFETIME(AEDGameState, EliminatedTeams);
+}
+
+void AEDGameState::SetWinnerTeamId(int32 NewTeamId)
+{
+	if (!HasAuthority()) return;
+	WinnerTeamId = NewTeamId;
+}
+
+void AEDGameState::AddEliminatedTeam(int32 TeamId)
+{
+	if (!HasAuthority()) return;
+	EliminatedTeams.AddUnique(TeamId);
 }
 
 void AEDGameState::Tick(float DeltaSeconds)

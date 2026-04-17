@@ -60,6 +60,26 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ED|Phase")
 	bool IsNight() const;
 
+	// -------------------------------------------------------
+	// 사망 / 부활 / 승패
+	// -------------------------------------------------------
+
+	/**
+	 * 플레이어 사망 진입점. (S1이 EDPlayerCharacter에서 HP 0 또는 SurvivalTime 0 감지 시 호출)
+	 * Day 판정:
+	 *   Day1~2 & RemainingRevives > 0 → SchedulePlayerRespawn
+	 *   그 외 → EliminatePlayer
+	 * 사망 직후 관전 상태로 전환한다.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ED|Death")
+	void HandlePlayerDeath(AController* Victim, AController* Killer);
+
+	/**
+	 * 유저가 ZoneSelectWidget에서 구역을 선택하면 PlayerController의
+	 * Server_RequestRespawn이 이 함수를 호출한다. DesiredZoneId 갱신 후 RestartPlayer.
+	 */
+	void HandleRespawnRequest(AController* Victim, int32 SelectedZoneId);
+
 protected:
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
@@ -113,6 +133,25 @@ protected:
 	virtual void OnMatchFinished();
 
 	// -------------------------------------------------------
+	// 사망 / 부활 내부 단계
+	// -------------------------------------------------------
+
+	/** 관전 전환: 기존 Pawn 파괴 + Spectating 상태 + 살아있는 팀원으로 ViewTarget 전환 */
+	virtual void EnterSpectator(AController* Victim);
+
+	/** 부활 가능: 10초 관전 후 ZoneSelectWidget 오픈 RPC. RestartPlayer는 HandleRespawnRequest에서 */
+	virtual void SchedulePlayerRespawn(AController* Victim);
+
+	/** 영구 사망: bEliminated=true, 관전 유지. CheckTeamElimination 호출 */
+	virtual void EliminatePlayer(AController* Victim);
+
+	/** 팀 전원 Eliminated 체크 → 탈락팀 처리. 남은 팀 1개면 승리 확정 */
+	virtual void CheckTeamElimination();
+
+	/** 팀원 중 살아있는 컨트롤러 반환 (없으면 nullptr). 관전 ViewTarget 후보 */
+	AController* FindLivingTeammate(AController* Victim) const;
+
+	// -------------------------------------------------------
 	// 금지구역 제어
 	// -------------------------------------------------------
 
@@ -153,8 +192,22 @@ private:
 	/** ZoneId → 해당 구역의 PlayerStart 배열 */
 	TMap<int32, TArray<AEDPlayerStart*>> ZonePlayerStartMap;
 
-	/** 이미 배정된 스폰 포인트 (중복 스폰 방지) */
+	/** 이미 배정된 스폰 포인트 (중복 스폰 방지). 10초 후 자동 해제 */
 	TSet<AEDPlayerStart*> OccupiedPlayerStarts;
+
+	/** PlayerStart 점유 해제 타이머 핸들 (포인트별) */
+	TMap<AEDPlayerStart*, FTimerHandle> PlayerStartReleaseTimers;
+
+	/** 점유 유지 시간(초). 리스폰 시 같은 지점 재사용 가능하게 해제 */
+	UPROPERTY(EditDefaultsOnly, Category = "ED|Spawn")
+	float PlayerStartOccupyDuration = 10.f;
+
+	/** 사망 후 ZoneSelectWidget이 열리기까지 대기 시간(초) */
+	UPROPERTY(EditDefaultsOnly, Category = "ED|Death")
+	float RespawnZoneSelectDelay = 10.f;
+
+	/** 사망한 플레이어의 ZoneSelect 오픈 타이머 핸들 */
+	TMap<TWeakObjectPtr<AController>, FTimerHandle> RespawnTimers;
 
 	/**
 	 * [IOCP 전용] 전원 접속 시 Phase 시작.

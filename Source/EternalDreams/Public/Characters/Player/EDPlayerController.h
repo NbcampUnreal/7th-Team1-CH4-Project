@@ -69,6 +69,25 @@ public:
 	UFUNCTION(Server, Reliable)
 	void Server_RequestSkipPhase();
 
+	// -------------------------------------------------------
+	// 사망 / 부활 RPC
+	// -------------------------------------------------------
+
+	/**
+	 * [서버→클라이언트] 사망 후 10초 경과 시 호출.
+	 * BP에서 구현하여 EDZoneSelectWidget을 오픈한다.
+	 * 유저가 구역 선택 전까지 계속 관전.
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Client, Reliable, Category = "ED|Death")
+	void ClientOpenZoneSelectWidget();
+
+	/**
+	 * [클라이언트→서버] 유저가 ZoneSelectWidget에서 구역 선택 후 호출.
+	 * 서버가 DesiredZoneId 갱신 후 RestartPlayer를 실행한다.
+	 */
+	UFUNCTION(Server, Reliable, Category = "ED|Death")
+	void Server_RequestRespawn(int32 SelectedZoneId);
+
 public:
 #pragma region Input Player
 	//IMC_Player

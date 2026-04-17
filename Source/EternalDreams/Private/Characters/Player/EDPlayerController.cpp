@@ -295,3 +295,11 @@ void AEDPlayerController::Server_RequestSkipPhase_Implementation()
 
 	GM->SkipToNextPhase();
 }
+
+void AEDPlayerController::Server_RequestRespawn_Implementation(int32 SelectedZoneId)
+{
+	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
+	if (!GM) return;
+
+	GM->HandleRespawnRequest(this, SelectedZoneId);
+}
