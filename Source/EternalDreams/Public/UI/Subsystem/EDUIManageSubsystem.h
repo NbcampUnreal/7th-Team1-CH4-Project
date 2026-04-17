@@ -5,7 +5,6 @@
 #include "UI/Types/EDUITypes.h"
 #include "EDUIManageSubsystem.generated.h"
 
-class AEDPlayerController;
 class UEDHUDLayout;
 class UCommonActivatableWidget;
 
@@ -91,17 +90,7 @@ protected:
 	UPROPERTY(Transient)
 	TMap<FName, EEDUILayer> RegisteredPanelLayers;
 
-	// 현재 델리게이트를 바인딩한 플레이어 컨트롤러
-	UPROPERTY(Transient)
-	TObjectPtr<AEDPlayerController> BoundPlayerController;
-
 private:
-	// 로컬 플레이어 컨트롤러 입력 델리게이트 구독
-	void BindPlayerControllerDelegates();
-
-	// 아이템 제작 패널 토글 요청을 처리
-	void HandleToggleCraftPanelRequested();
-
 	// HUD 인스턴스가 이미 생성되어 있는지 확인
 	bool IsHUDCreated() const;
 

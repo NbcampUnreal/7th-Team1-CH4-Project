@@ -23,13 +23,7 @@ void UEDCraftRecipeEntryWidget::SetRecipeEntryData(const FEDCraftRecipeEntryDisp
 
 	if (CraftStateText)
 	{
-		CraftStateText->SetText(InDisplayData.bCanCraft
-			? FText::FromString(TEXT("제작 가능"))
-			: FText::FromString(TEXT("제작 불가")));
-		CraftStateText->SetColorAndOpacity(
-			InDisplayData.bCanCraft
-				? FSlateColor(FLinearColor(0.20f, 0.85f, 0.35f, 1.00f))
-				: FSlateColor(FLinearColor(0.80f, 0.80f, 0.80f, 1.00f)));
+		CraftStateText->SetText(FText::GetEmpty());
 	}
 
 	if (RarityAccent)

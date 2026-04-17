@@ -17,7 +17,6 @@ class UEDCraftingInteractionComponent;
 class UEDLootInteractionComponent;
 
 DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
-DECLARE_MULTICAST_DELEGATE(FOnToggleCraftPanelRequested);
 
 /**
  * 플레이어 컨트롤러 클래스
@@ -60,9 +59,6 @@ public:
 	// ESC 입력 처리용 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
 	TObjectPtr<UInputAction> UIBackAction = nullptr;
-	
-	// 아이템 제작 패널 토글 요청 델리게이트
-	FOnToggleCraftPanelRequested OnToggleCraftPanelRequested;
 #pragma endregion 김동주
 	
 	// -------------------------------------------------------

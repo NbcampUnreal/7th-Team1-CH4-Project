@@ -207,7 +207,22 @@ void AEDPlayerController::HandleToggleInventory()
 void AEDPlayerController::HandleToggleCraftPanel()
 {
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 아이템 제작 패널 토글 입력을 처리합니다."));
-	OnToggleCraftPanelRequested.Broadcast();
+
+	ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	if (!LocalPlayer)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: LocalPlayer가 없어 제작 패널 입력을 처리할 수 없습니다."));
+		return;
+	}
+
+	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIManageSubsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIManageSubsystem이 없어 제작 패널 입력을 처리할 수 없습니다."));
+		return;
+	}
+
+	UIManageSubsystem->TogglePanel(EDUIWidgetIds::Panel_ItemCrafting);
 }
 
 void AEDPlayerController::HandleUIBack()

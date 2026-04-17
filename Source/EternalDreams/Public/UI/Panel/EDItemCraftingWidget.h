@@ -14,6 +14,7 @@ class UTextBlock;
 class UEDCraftRecipeEntryWidget;
 class UEDCraftTreeNodeWidget;
 class UEDInventoryComponent;
+class UDataTable;
 class FPaintArgs;
 class FSlateRect;
 class FSlateWindowElementList;
@@ -29,12 +30,9 @@ class ETERNALDREAMS_API UEDItemCraftingWidget : public UCommonActivatableWidget
 	GENERATED_BODY()
 
 public:
-	UEDItemCraftingWidget();
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
-	virtual void NativeOnActivated() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
-	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual int32 NativePaint(
 		const FPaintArgs& Args,
 		const FGeometry& AllottedGeometry,
@@ -113,8 +111,14 @@ private:
 	// 현재 카테고리를 기준으로 제작 가능한 레시피 목록을 새로 구성
 	void RefreshCraftRecipes();
 
+	// 제작 테이블 전체를 읽어 표시용 레시피 목록을 구성
+	void GatherAllRecipeEntries(TArray<FEDCraftableRecipeEntry>& OutRecipeEntries) const;
+
 	// 현재 선택된 카테고리에 포함되는 레시피인지 확인
 	bool IsRecipeInSelectedCategory(const FEDCraftableRecipeEntry& InRecipeData) const;
+
+	// 결과 아이템 데이터에서 장비 카테고리를 추출
+	EEDEquippableType ResolveRecipeCategory(const FEDCraftableRecipeEntry& InRecipeData) const;
 
 	// 레시피 카드 목록을 다시 생성
 	void RebuildRecipeEntries();
@@ -137,23 +141,33 @@ private:
 	// 상단 요약 패널을 현재 첫 번째 제작 가능 아이템 기준으로 갱신
 	void RefreshSelectedRecipeSummary();
 
+	// 현재 패널에서 상세 보기 대상으로 사용할 레시피를 가져옴
+	bool TryGetDisplayedRecipeEntry(FEDCraftableRecipeEntry& OutRecipeData) const;
+
 	// 현재 캐시된 제작 가능 레시피 중 첫 번째 엔트리를 가져옴
 	bool TryGetFirstCraftableRecipeEntry(FEDCraftableRecipeEntry& OutRecipeData) const;
 
 	// 레시피 카드와 요약 UI에 필요한 결과 아이템 표시 정보를 꺼냄
 	bool ResolveRecipeDisplayData(const FEDCraftableRecipeEntry& InRecipeData, UTexture2D*& OutIconTexture, FPrimaryAssetId& OutResultItemId) const;
 
+	// 무기 카테고리 버튼 클릭 이벤트 처리
 	UFUNCTION()
 	void HandleWeaponCategoryClicked();
 
+	// 상의 카테고리 버튼 클릭 이벤트 처리
 	UFUNCTION()
 	void HandleTopArmorCategoryClicked();
 
+	// 하의 카테고리 버튼 클릭 이벤트 처리
 	UFUNCTION()
 	void HandleBottomArmorCategoryClicked();
 
+	// 인벤토리 변경 발생 시 갱신 처리
 	UFUNCTION()
 	void HandleInventoryChanged();
+
+	// 레시피 카드 클릭 시 상세 보기 대상을 변경
+	void HandleRecipeEntryClicked(FName InRecipeRowId);
 
 private:
 	// 제작 가능 여부 계산과 제작 요청에 사용하는 플레이어 인벤토리 컴포넌트
@@ -186,6 +200,9 @@ private:
 
 	// 현재 선택된 제작 카테고리
 	EEDEquippableType SelectedCraftCategory = EEDEquippableType::Weapon;
+
+	// 현재 패널에서 상세 보기 중인 레시피 RowId
+	FName DisplayedRecipeRowId = NAME_None;
 
 	// 연결선을 다시 계산해야 하는지 여부
 	bool bCraftTreeLinesDirty = true;

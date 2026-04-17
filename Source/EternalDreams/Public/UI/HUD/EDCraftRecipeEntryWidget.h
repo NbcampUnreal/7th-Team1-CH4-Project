@@ -12,18 +12,17 @@ class UTexture2D;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDCraftRecipeEntryClicked, FName);
 
-// 레시피 카드 위젯이 화면에 그리기 위해 사용하는 표시 데이터
+// 레시피 카드 위젯이 화면에 그릴 때 사용하는 표시 데이터
 struct FEDCraftRecipeEntryDisplayData
 {
 	FName RowId = NAME_None;
 	FText ResultItemName;
 	EEDItemRarity ResultRarity = EEDItemRarity::Normal;
 	TObjectPtr<UTexture2D> ResultIconTexture = nullptr;
-	bool bCanCraft = false;
 };
 
 /**
- * 제작 가능한 아이템 목록에서 레시피 카드 한 칸을 표시하는 위젯
+ * 제작 패널의 레시피 목록에서 아이템 카드 한 칸을 표시하는 위젯
  */
 UCLASS()
 class ETERNALDREAMS_API UEDCraftRecipeEntryWidget : public UCommonUserWidget
@@ -37,7 +36,7 @@ public:
 	// 현재 카드가 선택된 상태인지 시각적으로 표시
 	void SetSelectedState(bool bSelected);
 
-	// 이 카드가 가리키는 레시피 Row 이름을 반환
+	// 이 카드가 가리키는 레시피 Row 이름 반환
 	FName GetRecipeRowId() const { return RecipeRowId; }
 
 	// 레시피 카드 클릭 이벤트
@@ -55,11 +54,12 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Craft")
 	TObjectPtr<UTextBlock> RecipeNameText;
 
-	// 제작 가능 여부 상태 텍스트
+	// 추가 상태를 표시하고 싶을 때 사용할 텍스트
+	// 현재 제작 패널에서는 사용하지 않지만 기존 블루프린트 바인딩 호환을 위해 유지
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Craft")
 	TObjectPtr<UTextBlock> CraftStateText;
 
-	// 희귀도 강조색 영역
+	// 희귀도 강조 영역
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Craft")
 	TObjectPtr<UBorder> RarityAccent;
 

@@ -1,13 +1,12 @@
 #include "Public/UI/Subsystem/EDUIManageSubsystem.h"
 
-#include "Characters/Player/EDPlayerController.h"
-#include "UI/HUD/EDHUDLayout.h"
 #include "Blueprint/UserWidget.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "CommonActivatableWidget.h"
+#include "Components/OverlaySlot.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
-#include "CommonActivatableWidget.h"
-#include "Blueprint/WidgetBlueprintLibrary.h"
-#include "Components/OverlaySlot.h"
+#include "UI/HUD/EDHUDLayout.h"
 #include "UI/Types/EDUIWidgetIds.h"
 
 void UEDUIManageSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -17,12 +16,6 @@ void UEDUIManageSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UEDUIManageSubsystem::Deinitialize()
 {
-	if (BoundPlayerController)
-	{
-		BoundPlayerController->OnToggleCraftPanelRequested.RemoveAll(this);
-		BoundPlayerController = nullptr;
-	}
-
 	// 서브시스템이 내려갈 때 생성했던 HUD를 먼저 정리
 	CleanupHUD();
 
@@ -64,8 +57,6 @@ void UEDUIManageSubsystem::ShowHUD()
 	{
 		HUDLayoutInstance->ShowLayout();
 	}
-
-	BindPlayerControllerDelegates();
 }
 
 void UEDUIManageSubsystem::HideHUD()
@@ -102,7 +93,7 @@ void UEDUIManageSubsystem::RegisterPanelClass(FName PanelId, EEDUILayer Layer,
 	RegisteredPanelClasses.Add(PanelId, PanelClass);
 	RegisteredPanelLayers.Add(PanelId, Layer);
 
-	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널 클래스와 레이어 등록이 완료되었습니다. 패널 ID = %s"), *PanelId.ToString());
+	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널 클래스와 레이어 등록을 완료했습니다. 패널 ID = %s"), *PanelId.ToString());
 }
 
 UCommonActivatableWidget* UEDUIManageSubsystem::OpenPanel(FName PanelId)
@@ -139,7 +130,7 @@ void UEDUIManageSubsystem::ClosePanel(FName PanelId)
 	(*FoundPanel)->DeactivateWidget();
 	(*FoundPanel)->SetVisibility(ESlateVisibility::Collapsed);
 
-	// 패널이 열린 뒤 현재 UI 상태에 맞는 입력 모드로 갱신
+	// 패널이 닫힌 뒤 현재 UI 상태에 맞는 입력 모드로 갱신
 	RefreshInputMode();
 
 	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널 닫힘"));
@@ -203,7 +194,7 @@ void UEDUIManageSubsystem::RestoreUIFocus()
 
 	if (TargetPanelId.IsNone())
 	{
-		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 복구할 UI 포커스 대상이 없어 게임 뷰포트 포커스를 유지합니다."));
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 복구할 UI 포커스 대상이 없어 게임 뷰포트로 포커스를 유지합니다."));
 		return;
 	}
 
@@ -234,39 +225,6 @@ void UEDUIManageSubsystem::ShowToastMessage(const FText& InMessage, EEDUIMessage
 	}
 
 	HUDLayoutInstance->ShowToastMessage(InMessage, InMessageType, InDuration);
-}
-
-void UEDUIManageSubsystem::BindPlayerControllerDelegates()
-{
-	ULocalPlayer* LocalPlayer = GetLocalPlayer();
-	if (!LocalPlayer)
-	{
-		return;
-	}
-
-	AEDPlayerController* PlayerController = Cast<AEDPlayerController>(LocalPlayer->GetPlayerController(GetWorld()));
-	if (!PlayerController)
-	{
-		return;
-	}
-
-	if (BoundPlayerController == PlayerController)
-	{
-		return;
-	}
-
-	if (BoundPlayerController)
-	{
-		BoundPlayerController->OnToggleCraftPanelRequested.RemoveAll(this);
-	}
-
-	BoundPlayerController = PlayerController;
-	BoundPlayerController->OnToggleCraftPanelRequested.AddUObject(this, &UEDUIManageSubsystem::HandleToggleCraftPanelRequested);
-}
-
-void UEDUIManageSubsystem::HandleToggleCraftPanelRequested()
-{
-	TogglePanel(EDUIWidgetIds::Panel_ItemCrafting);
 }
 
 bool UEDUIManageSubsystem::IsHUDCreated() const
@@ -304,7 +262,6 @@ UEDHUDLayout* UEDUIManageSubsystem::CreateHUDInternal()
 	}
 
 	HUDLayoutInstance->AddToViewport();
-	BindPlayerControllerDelegates();
 
 	return HUDLayoutInstance;
 }
@@ -415,7 +372,7 @@ bool UEDUIManageSubsystem::AttachPanelToLayer(FName PanelId, UCommonActivatableW
 	UPanelWidget* LayerSlot = HUDLayoutInstance->GetLayerSlot(PanelLayer);
 	if (!LayerSlot)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 레이어 슬롯을 찾을 수 없습니다. 패널 ID = %s"), *PanelId.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 레이어 패널을 찾을 수 없습니다. 패널 ID = %s"), *PanelId.ToString());
 		return false;
 	}
 
@@ -428,7 +385,7 @@ bool UEDUIManageSubsystem::AttachPanelToLayer(FName PanelId, UCommonActivatableW
 	UPanelSlot* AddedSlot = LayerSlot->AddChild(PanelInstance);
 	if (!AddedSlot)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 패널을 레이어 슬롯에 추가하지 못했습니다. 패널 ID = %s"), *PanelId.ToString());
+		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: 패널을 레이어 패널에 추가하지 못했습니다. 패널 ID = %s"), *PanelId.ToString());
 		return false;
 	}
 
@@ -445,7 +402,7 @@ bool UEDUIManageSubsystem::AttachPanelToLayer(FName PanelId, UCommonActivatableW
 		UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: Overlay 슬롯 캐스팅에 실패했습니다. 패널 ID = %s"), *PanelId.ToString());
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널을 레이어 슬롯에 부착했습니다. 패널 ID = %s"), *PanelId.ToString());
+	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널을 레이어 패널에 부착했습니다. 패널 ID = %s"), *PanelId.ToString());
 	return true;
 }
 
@@ -525,7 +482,7 @@ void UEDUIManageSubsystem::RefreshInputMode()
 	UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: OpenMenuPanel = %s"), *OpenMenuPanel.ToString());
 	UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: OpenGamePanel = %s"), *OpenGamePanel.ToString());
 
-	// Menu 또는 Modal 패널이 열려 있으면 UI 입력을 함께 받도록 유지
+	// Menu 또는 Modal 패널이 열려 있으면 UI 입력을 우선으로 받도록 전환
 	if (!OpenModalPanel.IsNone() || !OpenMenuPanel.IsNone())
 	{
 		UWidgetBlueprintLibrary::SetInputMode_GameAndUIEx(PlayerController, nullptr, EMouseLockMode::DoNotLock, false);
@@ -535,13 +492,13 @@ void UEDUIManageSubsystem::RefreshInputMode()
 		return;
 	}
 
-	// 현재 단계에서는 Game Layer 패널도 단축키 테스트를 위해 게임 입력을 유지
+	// Game 레이어 패널은 HUD 오버레이처럼 동작하므로 게임 입력을 유지
 	if (!OpenGamePanel.IsNone())
 	{
 		UWidgetBlueprintLibrary::SetInputMode_GameOnly(PlayerController);
 		PlayerController->bShowMouseCursor = true;
 
-		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 게임 레이어 패널이 열려 있어 게임과 UI 입력을 함께 유지합니다."));
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 게임 레이어 패널이 열려 있어 게임 입력 모드를 유지합니다."));
 		return;
 	}
 
@@ -549,5 +506,5 @@ void UEDUIManageSubsystem::RefreshInputMode()
 	PlayerController->bShowMouseCursor = true;
 	UWidgetBlueprintLibrary::SetFocusToGameViewport();
 
-	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 열린 패널이 없어 게임 입력 모드와 포커스를 게임 뷰포트로 복귀했습니다."));
+	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 열린 패널이 없어 게임 입력 모드와 포커스를 게임 뷰포트로 복구했습니다."));
 }
