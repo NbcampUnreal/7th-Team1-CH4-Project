@@ -256,6 +256,7 @@ void AEDPlayerController::HandleCraftItem()
 	}
 
 	CraftingInteractionComponent->HandleCraftInput();
+	OnCraftInputTriggered.Broadcast();
 }
 
 void AEDPlayerController::HandleApplicationReactivated()

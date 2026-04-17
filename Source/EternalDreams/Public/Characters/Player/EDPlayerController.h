@@ -17,6 +17,7 @@ class UEDCraftingInteractionComponent;
 class UEDLootInteractionComponent;
 
 DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
+DECLARE_MULTICAST_DELEGATE(FOnCraftInputTriggered);
 
 /**
  * 플레이어 컨트롤러 클래스
@@ -43,6 +44,8 @@ protected:
 	virtual void SetupInputComponent() override;
 
 public:
+	FOnCraftInputTriggered& GetOnCraftInputTriggered() { return OnCraftInputTriggered; }
+
 #pragma region Input UI
 	// UI 입력 전용 매핑 컨텍스트
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
@@ -181,6 +184,7 @@ private:
 #pragma region Delegate
 	FOnOtherInput OnCameraScroll;
 	FOnOtherInput OnCameraFocus;
+	FOnCraftInputTriggered OnCraftInputTriggered;
 
 #pragma endregion
 
