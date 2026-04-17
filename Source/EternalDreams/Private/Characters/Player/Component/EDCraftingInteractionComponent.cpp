@@ -3,7 +3,7 @@
 
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "GameFramework/PlayerController.h"
-#include "UI/HUD/EDItemCraftingWidget.h"
+#include "UI/Panel/EDItemCraftingWidget.h"
 
 UEDCraftingInteractionComponent::UEDCraftingInteractionComponent()
 {

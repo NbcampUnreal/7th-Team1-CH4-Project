@@ -9,7 +9,7 @@ class UEDItemCraftingWidget;
 
 /**
  * 플레이어의 제작 입력과 제작 HUD 위젯 사이를 중개하는 컴포넌트
- * 컨트롤러는 입력만 전달하고, 실제 위젯 탐색과 제작 요청은 이 컴포넌트가 담당한
+ * 컨트롤러는 입력만 전달하고, 실제 위젯 탐색과 제작 요청은 이 컴포넌트가 담당
  */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ETERNALDREAMS_API UEDCraftingInteractionComponent : public UActorComponent

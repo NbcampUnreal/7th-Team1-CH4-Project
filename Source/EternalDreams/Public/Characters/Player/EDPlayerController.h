@@ -17,6 +17,7 @@ class UEDCraftingInteractionComponent;
 class UEDLootInteractionComponent;
 
 DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
+DECLARE_MULTICAST_DELEGATE(FOnToggleCraftPanelRequested);
 
 /**
  * 플레이어 컨트롤러 클래스
@@ -52,9 +53,16 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
 	TObjectPtr<UInputAction> ToggleInventoryAction = nullptr;
 
+	// 아이템 제작 패널 열기/닫기 입력 액션
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
+	TObjectPtr<UInputAction> ToggleCraftPanelAction = nullptr;
+
 	// ESC 입력 처리용 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
 	TObjectPtr<UInputAction> UIBackAction = nullptr;
+	
+	// 아이템 제작 패널 토글 요청 델리게이트
+	FOnToggleCraftPanelRequested OnToggleCraftPanelRequested;
 #pragma endregion 김동주
 	
 	// -------------------------------------------------------
@@ -135,6 +143,7 @@ public:
 	
 	UFUNCTION()
 	void CameraFocus(const FInputActionValue& value);
+
 #pragma endregion
 #pragma region Spawn Actor
 protected:
@@ -159,6 +168,9 @@ private:
 	// 인벤토리 패널 열기/닫기 입력 처리
 	void HandleToggleInventory();
 
+	// 아이템 제작 패널 열기/닫기 입력 처리
+	void HandleToggleCraftPanel();
+
 	// ESC 입력 시 패널 닫기 또는 Pause 메뉴 열기 처리
 	void HandleUIBack();
 
@@ -167,11 +179,13 @@ private:
 
 	// 애플리케이션 복귀 시 현재 열린 UI 상태에 맞게 입력 모드와 포커스 복구를 요청
 	void HandleApplicationReactivated();
+	
 #pragma endregion 김동주
 
 #pragma region Delegate
 	FOnOtherInput OnCameraScroll;
 	FOnOtherInput OnCameraFocus;
+
 #pragma endregion
 
 	FGenericTeamId CachedTeamId;

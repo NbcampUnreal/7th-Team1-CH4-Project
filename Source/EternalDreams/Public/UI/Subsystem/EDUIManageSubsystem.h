@@ -1,10 +1,11 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Subsystems/LocalPlayerSubsystem.h"
 #include "UI/Types/EDUITypes.h"
 #include "EDUIManageSubsystem.generated.h"
 
+class AEDPlayerController;
 class UEDHUDLayout;
 class UCommonActivatableWidget;
 
@@ -21,7 +22,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void SetHUDLayoutClass(TSubclassOf<UEDHUDLayout> InHUDLayoutClass);
 
-	// HUD가 아직 없으면 생성하고 화면에 붙임 
+	// HUD가 아직 없으면 생성하고 화면에 붙임
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void CreateHUD();
 
@@ -56,12 +57,11 @@ public:
 	// 패널 열림 여부 확인
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	bool IsPanelOpen(FName PanelId) const;
-	
-	// ESC 입력 시 열려있는 패널을 닫거나
-	// 닫을 패널이 없으면 Pause 메뉴 열기
+
+	// ESC 입력 시 열려있는 패널을 닫거나 닫을 패널이 없으면 Pause 메뉴 열기
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	bool HandleEscapeAction();
-	
+
 	// 현재 열린 패널 상태에 맞춰 입력 모드와 포커스를 다시 복구
 	UFUNCTION(BlueprintCallable, Category = "UI")
 	void RestoreUIFocus();
@@ -91,7 +91,17 @@ protected:
 	UPROPERTY(Transient)
 	TMap<FName, EEDUILayer> RegisteredPanelLayers;
 
+	// 현재 델리게이트를 바인딩한 플레이어 컨트롤러
+	UPROPERTY(Transient)
+	TObjectPtr<AEDPlayerController> BoundPlayerController;
+
 private:
+	// 로컬 플레이어 컨트롤러 입력 델리게이트 구독
+	void BindPlayerControllerDelegates();
+
+	// 아이템 제작 패널 토글 요청을 처리
+	void HandleToggleCraftPanelRequested();
+
 	// HUD 인스턴스가 이미 생성되어 있는지 확인
 	bool IsHUDCreated() const;
 
@@ -103,19 +113,19 @@ private:
 
 	// 패널 없으면 생성
 	UCommonActivatableWidget* CreatePanelInstance(FName PanelId);
-	
+
 	// 패널 레이어 조회
 	EEDUILayer GetPanelLayer(FName PanelId) const;
-	
+
 	// 패널을 레이어 슬롯에 부착
 	bool AttachPanelToLayer(FName PanelId, UCommonActivatableWidget* PanelInstance);
-	
+
 	// 특정 레이어에서 현재 열려 있는 패널 ID를 찾음
 	FName FindOpenPanelInLayer(EEDUILayer Layer) const;
-	
+
 	// ESC 규칙에 따라 가장 먼저 닫아야 하는 패널 ID를 찾음
 	FName FindTopPriorityOpenPanel() const;
-	
+
 	// 현재 열린 패널 상태에 맞춰 플레이어 입력 모드 갱신
 	void RefreshInputMode();
 };

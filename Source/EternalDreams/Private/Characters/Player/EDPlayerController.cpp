@@ -140,6 +140,18 @@ void AEDPlayerController::SetupInputComponent()
 		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: ToggleInventoryAction이 설정되지 않았습니다."));
 	}
 
+	if (ToggleCraftPanelAction)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: ToggleCraftPanelAction 바인딩을 완료했습니다. 이름 = %s"),
+		       *ToggleCraftPanelAction->GetName());
+		EnhancedInputComponent->BindAction(ToggleCraftPanelAction, ETriggerEvent::Started, this,
+		                                   &AEDPlayerController::HandleToggleCraftPanel);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: ToggleCraftPanelAction이 설정되지 않았습니다."));
+	}
+
 	if (UIBackAction)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIBackAction 바인딩을 완료했습니다. 이름 = %s"),
@@ -190,6 +202,12 @@ void AEDPlayerController::HandleToggleInventory()
 	}
 
 	LootInteractionComponent->HandleToggleLootPanel();
+}
+
+void AEDPlayerController::HandleToggleCraftPanel()
+{
+	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 아이템 제작 패널 토글 입력을 처리합니다."));
+	OnToggleCraftPanelRequested.Broadcast();
 }
 
 void AEDPlayerController::HandleUIBack()

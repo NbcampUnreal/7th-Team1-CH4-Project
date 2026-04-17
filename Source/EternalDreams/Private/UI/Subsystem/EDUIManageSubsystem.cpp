@@ -1,5 +1,6 @@
-﻿#include "Public/UI/Subsystem/EDUIManageSubsystem.h"
+#include "Public/UI/Subsystem/EDUIManageSubsystem.h"
 
+#include "Characters/Player/EDPlayerController.h"
 #include "UI/HUD/EDHUDLayout.h"
 #include "Blueprint/UserWidget.h"
 #include "Engine/LocalPlayer.h"
@@ -16,6 +17,12 @@ void UEDUIManageSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 void UEDUIManageSubsystem::Deinitialize()
 {
+	if (BoundPlayerController)
+	{
+		BoundPlayerController->OnToggleCraftPanelRequested.RemoveAll(this);
+		BoundPlayerController = nullptr;
+	}
+
 	// 서브시스템이 내려갈 때 생성했던 HUD를 먼저 정리
 	CleanupHUD();
 
@@ -57,6 +64,8 @@ void UEDUIManageSubsystem::ShowHUD()
 	{
 		HUDLayoutInstance->ShowLayout();
 	}
+
+	BindPlayerControllerDelegates();
 }
 
 void UEDUIManageSubsystem::HideHUD()
@@ -75,7 +84,7 @@ UEDHUDLayout* UEDUIManageSubsystem::GetHUDLayout() const
 }
 
 void UEDUIManageSubsystem::RegisterPanelClass(FName PanelId, EEDUILayer Layer,
-                                              TSubclassOf<UCommonActivatableWidget> PanelClass)
+											  TSubclassOf<UCommonActivatableWidget> PanelClass)
 {
 	// 잘못된 등록 방지
 	if (PanelId.IsNone())
@@ -227,6 +236,39 @@ void UEDUIManageSubsystem::ShowToastMessage(const FText& InMessage, EEDUIMessage
 	HUDLayoutInstance->ShowToastMessage(InMessage, InMessageType, InDuration);
 }
 
+void UEDUIManageSubsystem::BindPlayerControllerDelegates()
+{
+	ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	if (!LocalPlayer)
+	{
+		return;
+	}
+
+	AEDPlayerController* PlayerController = Cast<AEDPlayerController>(LocalPlayer->GetPlayerController(GetWorld()));
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	if (BoundPlayerController == PlayerController)
+	{
+		return;
+	}
+
+	if (BoundPlayerController)
+	{
+		BoundPlayerController->OnToggleCraftPanelRequested.RemoveAll(this);
+	}
+
+	BoundPlayerController = PlayerController;
+	BoundPlayerController->OnToggleCraftPanelRequested.AddUObject(this, &UEDUIManageSubsystem::HandleToggleCraftPanelRequested);
+}
+
+void UEDUIManageSubsystem::HandleToggleCraftPanelRequested()
+{
+	TogglePanel(EDUIWidgetIds::Panel_ItemCrafting);
+}
+
 bool UEDUIManageSubsystem::IsHUDCreated() const
 {
 	return HUDLayoutInstance != nullptr;
@@ -262,6 +304,7 @@ UEDHUDLayout* UEDUIManageSubsystem::CreateHUDInternal()
 	}
 
 	HUDLayoutInstance->AddToViewport();
+	BindPlayerControllerDelegates();
 
 	return HUDLayoutInstance;
 }
@@ -495,7 +538,7 @@ void UEDUIManageSubsystem::RefreshInputMode()
 	// 현재 단계에서는 Game Layer 패널도 단축키 테스트를 위해 게임 입력을 유지
 	if (!OpenGamePanel.IsNone())
 	{
-		UWidgetBlueprintLibrary::SetInputMode_GameAndUIEx(PlayerController, nullptr, EMouseLockMode::DoNotLock, false);
+		UWidgetBlueprintLibrary::SetInputMode_GameOnly(PlayerController);
 		PlayerController->bShowMouseCursor = true;
 
 		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 게임 레이어 패널이 열려 있어 게임과 UI 입력을 함께 유지합니다."));

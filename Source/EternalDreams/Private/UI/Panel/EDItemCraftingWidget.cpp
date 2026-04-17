@@ -1,5 +1,5 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
-#include "UI/HUD/EDItemCraftingWidget.h"
+#include "UI/Panel/EDItemCraftingWidget.h"
 
 #include "Blueprint/WidgetTree.h"
 #include "Components/Border.h"
@@ -14,16 +14,19 @@
 #include "Components/VerticalBoxSlot.h"
 #include "Engine/AssetManager.h"
 #include "GameFramework/Pawn.h"
+#include "Input/Reply.h"
+#include "InputCoreTypes.h"
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "UI/HUD/EDCraftRecipeEntryWidget.h"
 #include "UI/HUD/EDCraftTreeNodeWidget.h"
 #include "UI/Subsystem/EDUIManageSubsystem.h"
+#include "UI/Types/EDUIWidgetIds.h"
 
 namespace
 {
-const UEDInventoryItemDataAsset* ResolveCraftTreeItemData(const FPrimaryAssetId& ItemId)
+const UEDInventoryItemDataAsset* ResolveCraftItemData(const FPrimaryAssetId& ItemId)
 {
 	if (!ItemId.IsValid())
 	{
@@ -81,6 +84,11 @@ FText GetCraftFailureText(EEDInventoryActionFailure Failure)
 }
 }
 
+UEDItemCraftingWidget::UEDItemCraftingWidget()
+{
+	SetIsFocusable(true);
+}
+
 void UEDItemCraftingWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -114,6 +122,13 @@ void UEDItemCraftingWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
+void UEDItemCraftingWidget::NativeOnActivated()
+{
+	Super::NativeOnActivated();
+
+	SetKeyboardFocus();
+}
+
 void UEDItemCraftingWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
@@ -145,6 +160,35 @@ void UEDItemCraftingWidget::NativeTick(const FGeometry& MyGeometry, float InDelt
 	}
 }
 
+FReply UEDItemCraftingWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+	ULocalPlayer* LocalPlayer = GetOwningLocalPlayer();
+	if (!LocalPlayer)
+	{
+		return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+	}
+
+	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIManageSubsystem)
+	{
+		return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+	}
+
+	if (InKeyEvent.GetKey() == EKeys::O)
+	{
+		UIManageSubsystem->TogglePanel(EDUIWidgetIds::Panel_ItemCrafting);
+		return FReply::Handled();
+	}
+
+	if (InKeyEvent.GetKey() == EKeys::Escape)
+	{
+		UIManageSubsystem->HandleEscapeAction();
+		return FReply::Handled();
+	}
+
+	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+}
+
 int32 UEDItemCraftingWidget::NativePaint(
 	const FPaintArgs& Args,
 	const FGeometry& AllottedGeometry,
@@ -154,14 +198,7 @@ int32 UEDItemCraftingWidget::NativePaint(
 	const FWidgetStyle& InWidgetStyle,
 	bool bParentEnabled) const
 {
-	return Super::NativePaint(
-		Args,
-		AllottedGeometry,
-		MyCullingRect,
-		OutDrawElements,
-		LayerId,
-		InWidgetStyle,
-		bParentEnabled);
+	return Super::NativePaint(Args, AllottedGeometry, MyCullingRect, OutDrawElements, LayerId, InWidgetStyle, bParentEnabled);
 }
 
 void UEDItemCraftingWidget::SetInventoryComponent(UEDInventoryComponent* InInventoryComponent)
@@ -182,52 +219,54 @@ bool UEDItemCraftingWidget::RequestCraftSelectedRecipe()
 {
 	if (!InventoryComponent)
 	{
-		ShowCraftFailure(EEDInventoryActionFailure::InvalidInventory);
-		return false;
-	}
-
-	if (SelectedRecipeRowId.IsNone())
-	{
-		ShowCraftFailure(EEDInventoryActionFailure::InvalidRecipe);
-		return false;
-	}
-
-	FEDCraftRecipeViewData SelectedRecipe;
-	if (!TryGetSelectedRecipeViewData(SelectedRecipe))
-	{
-		ShowCraftFailure(EEDInventoryActionFailure::InvalidRecipe);
-		return false;
-	}
-
-	if (!SelectedRecipe.bCanCraft)
-	{
-		bool bHasMissingIngredient = false;
-		for (const FEDCraftIngredientViewData& Ingredient : SelectedRecipe.Ingredients)
+		if (ULocalPlayer* LocalPlayer = GetOwningLocalPlayer())
 		{
-			if (!Ingredient.bSatisfied)
+			if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
 			{
-				bHasMissingIngredient = true;
-				break;
+				UIManageSubsystem->ShowToastMessage(GetCraftFailureText(EEDInventoryActionFailure::InvalidInventory), EEDUIMessageType::Error, 3.0f);
 			}
 		}
+		return false;
+	}
 
-		ShowCraftFailure(bHasMissingIngredient
-			? EEDInventoryActionFailure::MissingIngredient
-			: EEDInventoryActionFailure::NoSpace);
+	FEDCraftableRecipeEntry CraftTargetRecipe;
+	if (!TryGetFirstCraftableRecipeEntry(CraftTargetRecipe))
+	{
+		if (ULocalPlayer* LocalPlayer = GetOwningLocalPlayer())
+		{
+			if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
+			{
+				UIManageSubsystem->ShowToastMessage(GetCraftFailureText(EEDInventoryActionFailure::InvalidRecipe), EEDUIMessageType::Error, 3.0f);
+			}
+		}
 		return false;
 	}
 
 	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-	const bool bSuccess = InventoryComponent->PredicateCraftItem(SelectedRecipeRowId, Failure);
+	const bool bSuccess = InventoryComponent->PredicateCraftItem(CraftTargetRecipe.RecipeId, Failure);
 	if (!bSuccess)
 	{
-		ShowCraftFailure(Failure);
+		if (ULocalPlayer* LocalPlayer = GetOwningLocalPlayer())
+		{
+			if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
+			{
+				UIManageSubsystem->ShowToastMessage(GetCraftFailureText(Failure), EEDUIMessageType::Error, 3.0f);
+			}
+		}
 		return false;
 	}
 
-	ShowCraftSuccess(FText::Format(
-		FText::FromString(TEXT("{0} 제작에 성공했습니다.")),
-		SelectedRecipe.ResultItemName));
+	if (ULocalPlayer* LocalPlayer = GetOwningLocalPlayer())
+	{
+		if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
+		{
+			UIManageSubsystem->ShowToastMessage(
+				FText::Format(FText::FromString(TEXT("{0} 제작에 성공했습니다.")), CraftTargetRecipe.ResultItemName),
+				EEDUIMessageType::Success,
+				3.0f);
+		}
+	}
+
 	return true;
 }
 
@@ -236,15 +275,10 @@ void UEDItemCraftingWidget::InitializeInventoryComponent()
 	APawn* OwningPawn = GetOwningPlayerPawn();
 	if (!OwningPawn)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDItemCraftingWidget: OwningPlayerPawn을 찾을 수 없습니다."));
 		return;
 	}
 
 	InventoryComponent = UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(OwningPawn);
-	if (!InventoryComponent)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("EDItemCraftingWidget: InventoryComponent를 찾을 수 없습니다."));
-	}
 }
 
 void UEDItemCraftingWidget::BindCategoryTabButtons()
@@ -290,7 +324,7 @@ void UEDItemCraftingWidget::UnbindInventoryChanged()
 
 void UEDItemCraftingWidget::RefreshCraftRecipes()
 {
-	CachedRecipeViews.Reset();
+	CachedRecipeEntries.Reset();
 
 	if (!InventoryComponent)
 	{
@@ -300,40 +334,17 @@ void UEDItemCraftingWidget::RefreshCraftRecipes()
 		return;
 	}
 
-	TArray<FEDCraftRecipeViewData> AllRecipeViews;
-	UEDInventoryBlueprintLibrary::GetCraftRecipeViewDataList(
-		InventoryComponent,
-		AllRecipeViews,
-		false,
-		EEDCraftableRecipeSortOption::ByRarity,
-		true);
+	InventoryComponent->RefreshCraftableRecipesCache();
 
-	for (const FEDCraftRecipeViewData& RecipeView : AllRecipeViews)
+	TArray<FEDCraftableRecipeEntry> AllRecipeEntries;
+	InventoryComponent->GetCachedCraftableRecipes(AllRecipeEntries);
+
+	for (const FEDCraftableRecipeEntry& RecipeEntry : AllRecipeEntries)
 	{
-		if (IsRecipeInSelectedCategory(RecipeView))
+		if (IsRecipeInSelectedCategory(RecipeEntry))
 		{
-			CachedRecipeViews.Add(RecipeView);
+			CachedRecipeEntries.Add(RecipeEntry);
 		}
-	}
-
-	if (SelectedRecipeRowId.IsNone() && CachedRecipeViews.Num() > 0)
-	{
-		SelectedRecipeRowId = CachedRecipeViews[0].RowId;
-	}
-
-	bool bHasSelectedRecipe = false;
-	for (const FEDCraftRecipeViewData& RecipeView : CachedRecipeViews)
-	{
-		if (RecipeView.RowId == SelectedRecipeRowId)
-		{
-			bHasSelectedRecipe = true;
-			break;
-		}
-	}
-
-	if (!bHasSelectedRecipe)
-	{
-		SelectedRecipeRowId = CachedRecipeViews.Num() > 0 ? CachedRecipeViews[0].RowId : NAME_None;
 	}
 
 	RebuildRecipeEntries();
@@ -341,14 +352,14 @@ void UEDItemCraftingWidget::RefreshCraftRecipes()
 	RefreshSelectedRecipeSummary();
 }
 
-bool UEDItemCraftingWidget::IsRecipeInSelectedCategory(const FEDCraftRecipeViewData& InRecipeData) const
+bool UEDItemCraftingWidget::IsRecipeInSelectedCategory(const FEDCraftableRecipeEntry& InRecipeData) const
 {
 	if (SelectedCraftCategory == EEDEquippableType::None)
 	{
 		return true;
 	}
 
-	const UEDInventoryItemDataAsset* ResultData = ResolveCraftTreeItemData(InRecipeData.ResultItemId);
+	const UEDInventoryItemDataAsset* ResultData = ResolveCraftItemData(InRecipeData.ResultItemId);
 	if (!ResultData || ResultData->ItemType != EEDInventoryItemType::Equippable)
 	{
 		return false;
@@ -369,21 +380,30 @@ void UEDItemCraftingWidget::RebuildRecipeEntries()
 
 	if (!RecipeEntryWidgetClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDItemCraftingWidget: RecipeEntryWidgetClass가 설정되지 않았습니다."));
 		return;
 	}
 
-	for (const FEDCraftRecipeViewData& RecipeView : CachedRecipeViews)
+	for (const FEDCraftableRecipeEntry& RecipeEntry : CachedRecipeEntries)
 	{
+		UTexture2D* ResultIconTexture = nullptr;
+		FPrimaryAssetId IgnoredResultItemId;
+		ResolveRecipeDisplayData(RecipeEntry, ResultIconTexture, IgnoredResultItemId);
+
 		UEDCraftRecipeEntryWidget* EntryWidget = CreateWidget<UEDCraftRecipeEntryWidget>(this, RecipeEntryWidgetClass);
 		if (!EntryWidget)
 		{
 			continue;
 		}
 
-		EntryWidget->SetRecipeViewData(RecipeView);
-		EntryWidget->SetSelectedState(RecipeView.RowId == SelectedRecipeRowId);
-		EntryWidget->OnRecipeEntryClicked.AddUObject(this, &UEDItemCraftingWidget::HandleRecipeEntryClicked);
+		FEDCraftRecipeEntryDisplayData DisplayData;
+		DisplayData.RowId = RecipeEntry.RowId;
+		DisplayData.ResultItemName = RecipeEntry.ResultItemName;
+		DisplayData.ResultRarity = RecipeEntry.ResultRarity;
+		DisplayData.ResultIconTexture = ResultIconTexture;
+		DisplayData.bCanCraft = true;
+
+		EntryWidget->SetRecipeEntryData(DisplayData);
+		EntryWidget->SetSelectedState(false);
 
 		RecipeListContainer->AddChild(EntryWidget);
 		RecipeEntryWidgets.Add(EntryWidget);
@@ -408,12 +428,11 @@ void UEDItemCraftingWidget::RebuildCraftTreeNodes()
 
 	if (!CraftTreeNodeWidgetClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDItemCraftingWidget: CraftTreeNodeWidgetClass가 설정되지 않았습니다."));
 		return;
 	}
 
-	FEDCraftRecipeViewData SelectedRecipe;
-	if (!TryGetSelectedRecipeViewData(SelectedRecipe))
+	FEDCraftableRecipeEntry CraftTargetRecipe;
+	if (!TryGetFirstCraftableRecipeEntry(CraftTargetRecipe))
 	{
 		return;
 	}
@@ -421,7 +440,7 @@ void UEDItemCraftingWidget::RebuildCraftTreeNodes()
 	bool bCyclePruned = false;
 	UEDInventoryBlueprintLibrary::BuildCraftTreeFlat(
 		InventoryComponent,
-		SelectedRecipe.ResultItemId,
+		CraftTargetRecipe.ResultItemId,
 		CachedFlatTreeNodes,
 		bCyclePruned,
 		8);
@@ -470,11 +489,12 @@ void UEDItemCraftingWidget::RebuildCraftTreeNodes()
 			continue;
 		}
 
-		FEDCraftTreeNodeViewData NodeViewData;
-		if (!BuildCraftTreeNodeViewData(FlatNode, NodeViewData))
-		{
-			continue;
-		}
+		const UEDInventoryItemDataAsset* ItemData = ResolveCraftItemData(FlatNode.ItemId);
+		const FText DisplayName = ItemData && !ItemData->DisplayName.IsEmpty()
+			? ItemData->DisplayName
+			: FText::FromName(FlatNode.ItemId.PrimaryAssetName);
+		const EEDItemRarity Rarity = ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
+		UTexture2D* IconTexture = ItemData ? ItemData->IconTexture : nullptr;
 
 		UEDCraftTreeNodeWidget* NodeWidget = CreateWidget<UEDCraftTreeNodeWidget>(this, CraftTreeNodeWidgetClass);
 		if (!NodeWidget)
@@ -482,7 +502,13 @@ void UEDItemCraftingWidget::RebuildCraftTreeNodes()
 			continue;
 		}
 
-		NodeWidget->SetTreeNodeViewData(NodeViewData);
+		FEDCraftTreeNodeDisplayData DisplayData;
+		DisplayData.DisplayName = DisplayName;
+		DisplayData.IconTexture = IconTexture;
+		DisplayData.Rarity = Rarity;
+		DisplayData.RequiredQuantity = FlatNode.Quantity;
+
+		NodeWidget->SetTreeNodeDisplayData(DisplayData);
 		if (UHorizontalBoxSlot* NodeSlot = CurrentRow->AddChildToHorizontalBox(NodeWidget))
 		{
 			NodeSlot->SetPadding(TreeNodePadding);
@@ -554,7 +580,7 @@ void UEDItemCraftingWidget::RebuildCraftTreeLines()
 			FVector2D(ParentGeometry.GetLocalSize().X * 0.5f, ParentGeometry.GetLocalSize().Y - ParentBottomInset));
 		const FVector2D ChildTopAbsolute = ChildGeometry.LocalToAbsolute(
 			FVector2D(ChildGeometry.GetLocalSize().X * 0.5f, ChildTopInset));
-
+		
 		// 선은 CraftTreeLineCanvas 위에 배치해야 하므로,
 		// 절대 좌표를 다시 "라인 캔버스 기준 로컬 좌표"로 변환
 		const FVector2D ParentBottomLocal = LineCanvasGeometry.AbsoluteToLocal(ParentBottomAbsolute);
@@ -631,7 +657,6 @@ void UEDItemCraftingWidget::AddCraftTreeLineSegment(
 
 	if (UCanvasPanelSlot* LineSlot = CraftTreeLineCanvas->AddChildToCanvas(LineWidget))
 	{
-		// CanvasPanel 위에 직접 위치/크기를 지정해서 선을 고정
 		LineSlot->SetAutoSize(false);
 		LineSlot->SetPosition(SegmentPosition);
 		LineSlot->SetSize(SegmentSize);
@@ -702,8 +727,8 @@ uint32 UEDItemCraftingWidget::BuildCraftTreeLayoutHash() const
 
 void UEDItemCraftingWidget::RefreshSelectedRecipeSummary()
 {
-	FEDCraftRecipeViewData SelectedRecipe;
-	if (!TryGetSelectedRecipeViewData(SelectedRecipe))
+	FEDCraftableRecipeEntry CraftTargetRecipe;
+	if (!TryGetFirstCraftableRecipeEntry(CraftTargetRecipe))
 	{
 		if (SelectedRecipeIconImage)
 		{
@@ -723,201 +748,74 @@ void UEDItemCraftingWidget::RefreshSelectedRecipeSummary()
 		return;
 	}
 
+	UTexture2D* ResultIconTexture = nullptr;
+	FPrimaryAssetId ResultItemId;
+	ResolveRecipeDisplayData(CraftTargetRecipe, ResultIconTexture, ResultItemId);
+
 	if (SelectedRecipeIconImage)
 	{
-		SelectedRecipeIconImage->SetBrushFromTexture(SelectedRecipe.ResultIconTexture);
+		SelectedRecipeIconImage->SetBrushFromTexture(ResultIconTexture);
 	}
 
 	if (SelectedRecipeNameText)
 	{
-		SelectedRecipeNameText->SetText(SelectedRecipe.ResultItemName);
+		SelectedRecipeNameText->SetText(CraftTargetRecipe.ResultItemName);
 	}
 
 	if (SelectedRecipeStateText)
 	{
-		SelectedRecipeStateText->SetText(
-			SelectedRecipe.bCanCraft
-				? FText::FromString(TEXT("제작 키를 눌러 아이템을 제작할 수 있습니다."))
-				: FText::FromString(TEXT("필요한 재료를 모두 모아야 제작할 수 있습니다.")));
+		SelectedRecipeStateText->SetText(FText::FromString(TEXT("제작 키를 눌러 아이템을 제작할 수 있습니다.")));
 	}
 }
 
-bool UEDItemCraftingWidget::TryGetSelectedRecipeViewData(FEDCraftRecipeViewData& OutRecipeData) const
+bool UEDItemCraftingWidget::TryGetFirstCraftableRecipeEntry(FEDCraftableRecipeEntry& OutRecipeData) const
 {
-	for (const FEDCraftRecipeViewData& RecipeView : CachedRecipeViews)
-	{
-		if (RecipeView.RowId == SelectedRecipeRowId)
-		{
-			OutRecipeData = RecipeView;
-			return true;
-		}
-	}
-
-	return false;
-}
-
-bool UEDItemCraftingWidget::BuildCraftTreeNodeViewData(const FEDCraftTreeFlatNode& InFlatNode, FEDCraftTreeNodeViewData& OutNodeData) const
-{
-	OutNodeData = FEDCraftTreeNodeViewData();
-
-	if (!InFlatNode.ItemId.IsValid())
+	if (CachedRecipeEntries.Num() <= 0)
 	{
 		return false;
 	}
 
-	const UEDInventoryItemDataAsset* ItemData = ResolveCraftTreeItemData(InFlatNode.ItemId);
-
-	OutNodeData.NodeId = InFlatNode.NodeId;
-	OutNodeData.ParentNodeId = InFlatNode.ParentNodeId;
-	OutNodeData.Depth = InFlatNode.Depth;
-	OutNodeData.ItemId = InFlatNode.ItemId;
-	OutNodeData.DisplayName = ItemData && !ItemData->DisplayName.IsEmpty()
-		? ItemData->DisplayName
-		: FText::FromName(InFlatNode.ItemId.PrimaryAssetName);
-	OutNodeData.Rarity = ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
-	OutNodeData.IconTexture = ItemData ? ItemData->IconTexture : nullptr;
-	OutNodeData.RequiredQuantity = FMath::Max(1, InFlatNode.Quantity);
-	OutNodeData.OwnedQuantity = CountOwnedItemQuantity(InFlatNode.ItemId);
-	OutNodeData.bSatisfied = OutNodeData.OwnedQuantity >= OutNodeData.RequiredQuantity;
-	OutNodeData.bIsCraftable = InFlatNode.bIsCraftable;
+	OutRecipeData = CachedRecipeEntries[0];
 	return true;
 }
 
-int32 UEDItemCraftingWidget::CountOwnedItemQuantity(const FPrimaryAssetId& ItemId) const
+bool UEDItemCraftingWidget::ResolveRecipeDisplayData(
+	const FEDCraftableRecipeEntry& InRecipeData,
+	UTexture2D*& OutIconTexture,
+	FPrimaryAssetId& OutResultItemId) const
 {
-	if (!InventoryComponent || !ItemId.IsValid())
+	OutIconTexture = nullptr;
+	OutResultItemId = InRecipeData.ResultItemId;
+
+	const UEDInventoryItemDataAsset* ResultData = ResolveCraftItemData(InRecipeData.ResultItemId);
+	if (!ResultData)
 	{
-		return 0;
+		return false;
 	}
 
-	int32 OwnedQuantity = 0;
-
-	for (const FEDInventorySlotData& SlotData : InventoryComponent->InventorySlots)
-	{
-		if (!SlotData.IsEmpty() && SlotData.Item.ItemId == ItemId)
-		{
-			OwnedQuantity += SlotData.Item.Quantity;
-		}
-	}
-
-	const TArray<const FEDEquipmentSlotData*> EquipmentSlots =
-	{
-		&InventoryComponent->WeaponSlot,
-		&InventoryComponent->TopArmorSlot,
-		&InventoryComponent->BottomArmorSlot
-	};
-
-	for (const FEDEquipmentSlotData* EquipmentSlot : EquipmentSlots)
-	{
-		if (EquipmentSlot && EquipmentSlot->EquippedItem.IsValid() && EquipmentSlot->EquippedItem.ItemId == ItemId)
-		{
-			OwnedQuantity += EquipmentSlot->EquippedItem.Quantity;
-		}
-	}
-
-	return OwnedQuantity;
-}
-
-void UEDItemCraftingWidget::HandleRecipeEntryClicked(FName InRecipeRowId)
-{
-	if (InRecipeRowId.IsNone())
-	{
-		return;
-	}
-
-	SelectedRecipeRowId = InRecipeRowId;
-	RebuildRecipeEntries();
-	RebuildCraftTreeNodes();
-	RefreshSelectedRecipeSummary();
+	OutIconTexture = ResultData->IconTexture;
+	return true;
 }
 
 void UEDItemCraftingWidget::HandleWeaponCategoryClicked()
 {
 	SelectedCraftCategory = EEDEquippableType::Weapon;
-	SelectedRecipeRowId = NAME_None;
 	RefreshCraftRecipes();
 }
 
 void UEDItemCraftingWidget::HandleTopArmorCategoryClicked()
 {
 	SelectedCraftCategory = EEDEquippableType::TopArmor;
-	SelectedRecipeRowId = NAME_None;
 	RefreshCraftRecipes();
 }
 
 void UEDItemCraftingWidget::HandleBottomArmorCategoryClicked()
 {
 	SelectedCraftCategory = EEDEquippableType::BottomArmor;
-	SelectedRecipeRowId = NAME_None;
 	RefreshCraftRecipes();
 }
 
 void UEDItemCraftingWidget::HandleInventoryChanged()
 {
 	RefreshCraftRecipes();
-}
-
-void UEDItemCraftingWidget::ShowCraftSuccess(const FText& InMessage) const
-{
-	if (ULocalPlayer* LocalPlayer = GetOwningLocalPlayer())
-	{
-		if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
-		{
-			UIManageSubsystem->ShowToastMessage(InMessage, EEDUIMessageType::Success, 3.0f);
-
-			if (ActionResultText)
-			{
-				ActionResultText->SetText(FText::GetEmpty());
-				ActionResultText->SetVisibility(ESlateVisibility::Collapsed);
-			}
-			return;
-		}
-	}
-
-	if (!ActionResultText)
-	{
-		return;
-	}
-
-	ActionResultText->SetColorAndOpacity(FSlateColor(FLinearColor(0.19f, 0.62f, 0.27f, 1.0f)));
-	ActionResultText->SetText(InMessage);
-	ActionResultText->SetVisibility(ESlateVisibility::Visible);
-}
-
-void UEDItemCraftingWidget::ShowCraftFailure(EEDInventoryActionFailure Failure) const
-{
-	if (ULocalPlayer* LocalPlayer = GetOwningLocalPlayer())
-	{
-		if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
-		{
-			UIManageSubsystem->ShowToastMessage(GetCraftFailureText(Failure), EEDUIMessageType::Error, 3.0f);
-
-			if (ActionResultText)
-			{
-				ActionResultText->SetText(FText::GetEmpty());
-				ActionResultText->SetVisibility(ESlateVisibility::Collapsed);
-			}
-			return;
-		}
-	}
-
-	if (!ActionResultText)
-	{
-		return;
-	}
-
-	ActionResultText->SetColorAndOpacity(FSlateColor(FLinearColor(0.77f, 0.27f, 0.21f, 1.0f)));
-	ActionResultText->SetText(GetCraftFailureText(Failure));
-	ActionResultText->SetVisibility(ESlateVisibility::Visible);
-}
-
-void UEDItemCraftingWidget::ClearActionMessage() const
-{
-	if (!ActionResultText)
-	{
-		return;
-	}
-
-	ActionResultText->SetText(FText::GetEmpty());
-	ActionResultText->SetVisibility(ESlateVisibility::Collapsed);
 }

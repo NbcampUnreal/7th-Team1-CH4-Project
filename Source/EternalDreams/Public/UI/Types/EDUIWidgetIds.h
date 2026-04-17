@@ -10,6 +10,9 @@ namespace EDUIWidgetIds
 	// 인벤토리 패널 ID
 	static const FName Panel_Inventory(TEXT("Panel.Inventory"));
 
+	// 아이템 제작 패널 ID
+	static const FName Panel_ItemCrafting(TEXT("Panel.ItemCrafting"));
+
 	// 일시정지 패널 ID
 	static const FName Panel_PauseMenu(TEXT("Panel.PauseMenu"));
 
