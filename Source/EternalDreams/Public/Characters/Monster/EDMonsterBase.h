@@ -8,13 +8,14 @@
 #include "Characters/Base/GAS/EDBaseAttributeSet.h"
 #include "Core/EDGameDataSubsystem.h"
 #include "Data/Types/EDMonsterTypes.h"
+#include "Data/EDMonsterDataAsset.h"
 #include "EDMonsterBase.generated.h"
+
 
 DECLARE_MULTICAST_DELEGATE(FOnMonsterDeath);
 DECLARE_MULTICAST_DELEGATE(FOnAttackFinished);
 
 class UAbilitySystemComponent;
-class UEDMonsterDataAsset;
 struct FStreamableHandle;
 
 UCLASS()
