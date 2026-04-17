@@ -63,11 +63,7 @@ protected:
 	// 현재 선택한 제작 아이템 아이콘
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Craft")
 	TObjectPtr<UImage> SelectedRecipeIconImage;
-
-	// 현재 선택한 제작 아이템 상태 텍스트
-	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Craft")
-	TObjectPtr<UTextBlock> SelectedRecipeStateText;
-
+	
 	// 생성할 레시피 카드 위젯 클래스
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Craft")
 	TSubclassOf<UEDCraftRecipeEntryWidget> RecipeEntryWidgetClass;

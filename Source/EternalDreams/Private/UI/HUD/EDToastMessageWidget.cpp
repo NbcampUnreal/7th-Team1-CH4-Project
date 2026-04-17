@@ -2,6 +2,7 @@
 #include "UI/HUD/EDToastMessageWidget.h"
 
 #include "Components/Border.h"
+#include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
 
 void UEDToastMessageWidget::NativeConstruct()
@@ -10,6 +11,7 @@ void UEDToastMessageWidget::NativeConstruct()
 
 	SetVisibility(ESlateVisibility::Collapsed);
 	SetRenderOpacity(0.0f);
+	ApplyToastLayout();
 }
 
 void UEDToastMessageWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
@@ -30,7 +32,7 @@ void UEDToastMessageWidget::NativeTick(const FGeometry& MyGeometry, float InDelt
 	{
 		TargetOpacity = FMath::Clamp(ElapsedTime / FadeInDuration, 0.0f, 1.0f);
 	}
-	// 끝 구간은 부드럽게 사라짐
+	// 마지막 구간은 부드럽게 사라짐
 	else if (ElapsedTime > DisplayDuration - FadeOutDuration)
 	{
 		const float FadeOutElapsed = ElapsedTime - (DisplayDuration - FadeOutDuration);
@@ -64,8 +66,40 @@ void UEDToastMessageWidget::ShowToastMessage(const FText& InMessage, EEDUIMessag
 		BackgroundBorder->SetBrushColor(GetBackgroundColor(InMessageType));
 	}
 
+	ApplyToastLayout();
+	InvalidateLayoutAndVolatility();
+	ForceLayoutPrepass();
+
 	SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	SetRenderOpacity(0.0f);
+}
+
+void UEDToastMessageWidget::ApplyToastLayout()
+{
+	if (RootSizeBox)
+	{
+		RootSizeBox->SetWidthOverride(ToastWidth);
+		RootSizeBox->SetMinDesiredWidth(ToastWidth);
+		RootSizeBox->SetMaxDesiredWidth(ToastWidth);
+		RootSizeBox->ClearHeightOverride();
+		RootSizeBox->ClearMinDesiredHeight();
+		RootSizeBox->ClearMaxDesiredHeight();
+	}
+
+	if (BackgroundBorder)
+	{
+		BackgroundBorder->SetPadding(FMargin(18.0f, 12.0f));
+		BackgroundBorder->SetClipping(EWidgetClipping::Inherit);
+	}
+
+	if (MessageText)
+	{
+		MessageText->SetAutoWrapText(true);
+		MessageText->SetWrapTextAt(TextWrapWidth);
+		MessageText->SetJustification(ETextJustify::Center);
+		MessageText->SetClipping(EWidgetClipping::Inherit);
+		MessageText->SetWrappingPolicy(ETextWrappingPolicy::AllowPerCharacterWrapping);
+	}
 }
 
 FLinearColor UEDToastMessageWidget::GetBackgroundColor(EEDUIMessageType InMessageType) const

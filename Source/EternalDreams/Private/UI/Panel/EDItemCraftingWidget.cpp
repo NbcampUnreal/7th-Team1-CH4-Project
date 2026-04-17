@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/Panel/EDItemCraftingWidget.h"
 
 #include "Components/Button.h"
@@ -12,6 +12,7 @@
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Item/Data/EDItemDataRows.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
+#include "UI/Message/EDUserFacingMessage.h"
 #include "UI/HUD/EDCraftRecipeEntryWidget.h"
 #include "UI/Panel/EDCraftTreeWidget.h"
 #include "UI/Subsystem/EDUIManageSubsystem.h"
@@ -40,39 +41,7 @@ const UEDInventoryItemDataAsset* ResolveCraftItemData(const FPrimaryAssetId& Ite
 
 FText GetCraftFailureText(EEDInventoryActionFailure Failure)
 {
-	switch (Failure)
-	{
-	case EEDInventoryActionFailure::None:
-		return FText::GetEmpty();
-	case EEDInventoryActionFailure::InvalidInventory:
-		return FText::FromString(TEXT("인벤토리 정보를 찾을 수 없습니다."));
-	case EEDInventoryActionFailure::InvalidSlot:
-		return FText::FromString(TEXT("잘못된 슬롯입니다."));
-	case EEDInventoryActionFailure::EmptySlot:
-		return FText::FromString(TEXT("선택한 슬롯이 비어 있습니다."));
-	case EEDInventoryActionFailure::InvalidQuantity:
-		return FText::FromString(TEXT("수량 정보가 올바르지 않습니다."));
-	case EEDInventoryActionFailure::SlotConflict:
-		return FText::FromString(TEXT("슬롯 상태가 충돌합니다."));
-	case EEDInventoryActionFailure::NoSpace:
-		return FText::FromString(TEXT("인벤토리 공간이 부족합니다."));
-	case EEDInventoryActionFailure::StackLimit:
-		return FText::FromString(TEXT("더 이상 같은 아이템을 넣을 수 없습니다."));
-	case EEDInventoryActionFailure::MissingData:
-		return FText::FromString(TEXT("아이템 데이터가 없습니다."));
-	case EEDInventoryActionFailure::InvalidRecipe:
-		return FText::FromString(TEXT("유효하지 않은 레시피입니다."));
-	case EEDInventoryActionFailure::MissingIngredient:
-		return FText::FromString(TEXT("재료가 부족하여 제작할 수 없습니다."));
-	case EEDInventoryActionFailure::NotConsumable:
-		return FText::FromString(TEXT("사용할 수 없는 아이템입니다."));
-	case EEDInventoryActionFailure::HealthAlreadyFull:
-		return FText::FromString(TEXT("이미 체력이 가득 찬 상태입니다."));
-	case EEDInventoryActionFailure::EffectApplyFailed:
-		return FText::FromString(TEXT("효과 적용에 실패했습니다."));
-	default:
-		return FText::FromString(TEXT("알 수 없는 이유로 제작에 실패했습니다."));
-	}
+	return EDUserFacingMessage::Craft::GetFailureText(Failure);
 }
 }
 
@@ -130,7 +99,7 @@ bool UEDItemCraftingWidget::RequestCraftSelectedRecipe()
 		{
 			if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
 			{
-				UIManageSubsystem->ShowToastMessage(GetCraftFailureText(EEDInventoryActionFailure::InvalidInventory), EEDUIMessageType::Error, 3.0f);
+				UIManageSubsystem->ShowToastMessage(EDUserFacingMessage::Craft::GetFailureText(EEDInventoryActionFailure::InvalidInventory), EEDUIMessageType::Error, 3.0f);
 			}
 		}
 		return false;
@@ -145,7 +114,7 @@ bool UEDItemCraftingWidget::RequestCraftSelectedRecipe()
 		{
 			if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
 			{
-				UIManageSubsystem->ShowToastMessage(GetCraftFailureText(EEDInventoryActionFailure::InvalidRecipe), EEDUIMessageType::Error, 3.0f);
+				UIManageSubsystem->ShowToastMessage(EDUserFacingMessage::Craft::GetFailureText(EEDInventoryActionFailure::InvalidRecipe), EEDUIMessageType::Error, 3.0f);
 			}
 		}
 		return false;
@@ -159,7 +128,7 @@ bool UEDItemCraftingWidget::RequestCraftSelectedRecipe()
 		{
 			if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
 			{
-				UIManageSubsystem->ShowToastMessage(GetCraftFailureText(Failure), EEDUIMessageType::Error, 3.0f);
+				UIManageSubsystem->ShowToastMessage(EDUserFacingMessage::Craft::GetFailureText(Failure), EEDUIMessageType::Error, 3.0f);
 			}
 		}
 		return false;
@@ -170,7 +139,7 @@ bool UEDItemCraftingWidget::RequestCraftSelectedRecipe()
 		if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
 		{
 			UIManageSubsystem->ShowToastMessage(
-				FText::Format(FText::FromString(TEXT("{0} 제작에 성공했습니다.")), CraftTargetRecipe.ResultItemName),
+				EDUserFacingMessage::Craft::GetSuccessText(CraftTargetRecipe.ResultItemName),
 				EEDUIMessageType::Success,
 				3.0f);
 		}
@@ -438,11 +407,6 @@ void UEDItemCraftingWidget::RefreshSelectedRecipeSummary()
 			SelectedRecipeNameText->SetText(FText::FromString(TEXT("선택된 레시피가 없습니다.")));
 		}
 
-		if (SelectedRecipeStateText)
-		{
-			SelectedRecipeStateText->SetText(FText::GetEmpty());
-		}
-
 		return;
 	}
 
@@ -458,11 +422,6 @@ void UEDItemCraftingWidget::RefreshSelectedRecipeSummary()
 	if (SelectedRecipeNameText)
 	{
 		SelectedRecipeNameText->SetText(DisplayedRecipe.ResultItemName);
-	}
-
-	if (SelectedRecipeStateText)
-	{
-		SelectedRecipeStateText->SetText(FText::FromString(TEXT("제작 키를 눌러 아이템을 제작할 수 있습니다.")));
 	}
 }
 
@@ -564,3 +523,6 @@ void UEDItemCraftingWidget::HandleRecipeEntryClicked(FName InRecipeRowId)
 		CraftTreeWidget->RefreshTree();
 	}
 }
+
+
+

@@ -1,4 +1,4 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "Characters/Player/Component/EDCraftingInteractionComponent.h"
 
 #include "Engine/LocalPlayer.h"
@@ -7,6 +7,7 @@
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Inventory/Core/EDInventoryTypes.h"
+#include "UI/Message/EDUserFacingMessage.h"
 #include "UI/Subsystem/EDUIManageSubsystem.h"
 #include "UI/Types/EDUITypes.h"
 
@@ -36,7 +37,7 @@ void UEDCraftingInteractionComponent::HandleCraftInput()
 				if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
 				{
 					UIManageSubsystem->ShowToastMessage(
-						UEDInventoryBlueprintLibrary::GetInventoryActionFailureText(EEDInventoryActionFailure::InvalidRecipe),
+						EDUserFacingMessage::Craft::GetFailureText(EEDInventoryActionFailure::InvalidRecipe),
 						EEDUIMessageType::Error,
 						3.0f);
 				}
@@ -56,8 +57,24 @@ void UEDCraftingInteractionComponent::HandleCraftInput()
 				if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
 				{
 					UIManageSubsystem->ShowToastMessage(
-						UEDInventoryBlueprintLibrary::GetInventoryActionFailureText(Failure),
+						EDUserFacingMessage::Craft::GetFailureText(Failure),
 						EEDUIMessageType::Error,
+						3.0f);
+				}
+			}
+		}
+	}
+	else
+	{
+		if (APlayerController* PlayerController = GetOwningPlayerController())
+		{
+			if (ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer())
+			{
+				if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
+				{
+					UIManageSubsystem->ShowToastMessage(
+						EDUserFacingMessage::Craft::GetSuccessText(CraftTargetRecipe.ResultItemName),
+						EEDUIMessageType::Success,
 						3.0f);
 				}
 			}
@@ -106,3 +123,5 @@ bool UEDCraftingInteractionComponent::TryGetFirstCraftableRecipeEntry(
 	OutRecipeEntry = CraftableRecipeEntries[0];
 	return true;
 }
+
+

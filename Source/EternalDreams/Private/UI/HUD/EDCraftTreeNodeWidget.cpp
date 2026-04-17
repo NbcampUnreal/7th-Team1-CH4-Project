@@ -1,10 +1,10 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/HUD/EDCraftTreeNodeWidget.h"
 
 #include "Components/Border.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
-#include "UI/Core/EDUIRarityColors.h"
+#include "UI/Style/EDUIRarityColors.h"
 
 void UEDCraftTreeNodeWidget::SetTreeNodeDisplayData(const FEDCraftTreeNodeDisplayData& InDisplayData)
 {
@@ -28,3 +28,4 @@ void UEDCraftTreeNodeWidget::SetTreeNodeDisplayData(const FEDCraftTreeNodeDispla
 		RarityAccent->SetBrushColor(EDRarityColors::Resolve(InDisplayData.Rarity));
 	}
 }
+

@@ -1,9 +1,9 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/HUD/EDCraftableRecipeSlotWidget.h"
 
 #include "Components/Border.h"
 #include "Components/Image.h"
-#include "UI/Core/EDUIRarityColors.h"
+#include "UI/Style/EDUIRarityColors.h"
 
 void UEDCraftableRecipeSlotWidget::SetSlotDisplayData(const FEDCraftableRecipeSlotDisplayData& InDisplayData)
 {
@@ -18,3 +18,4 @@ void UEDCraftableRecipeSlotWidget::SetSlotDisplayData(const FEDCraftableRecipeSl
 		CurrentTargetBorder->SetVisibility(InDisplayData.bIsCurrentCraftTarget ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 	}
 }
+

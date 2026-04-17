@@ -1,9 +1,9 @@
-// Copyright Epic Games, Inc. All Rights Reserved.s
+﻿// Copyright Epic Games, Inc. All Rights Reserved.s
 #include "UI/Panel/EDInventorySlotWidget.h"
 
 #include "Components/Border.h"
 #include "Components/TextBlock.h"
-#include "UI/Core/EDUIRarityColors.h"
+#include "UI/Style/EDUIRarityColors.h"
 
 void UEDInventorySlotWidget::SetEmptyState()
 {
@@ -110,3 +110,4 @@ FReply UEDInventorySlotWidget::NativeOnMouseButtonDoubleClick(
 
 	return Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
 }
+

@@ -1,10 +1,10 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/Panel/EDEquipmentSlotWidget.h"
 
 #include "Components/Border.h"
 #include "Components/TextBlock.h"
 #include "InputCoreTypes.h"
-#include "UI/Core/EDUIRarityColors.h"
+#include "UI/Style/EDUIRarityColors.h"
 
 void UEDEquipmentSlotWidget::SetEmptyState(const FText& InSlotTypeName)
 {
@@ -108,3 +108,4 @@ FReply UEDEquipmentSlotWidget::NativeOnMouseButtonDown(
 
 	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
 }
+

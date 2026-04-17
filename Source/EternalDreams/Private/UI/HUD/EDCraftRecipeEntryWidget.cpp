@@ -1,11 +1,11 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/HUD/EDCraftRecipeEntryWidget.h"
 
 #include "Components/Border.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "InputCoreTypes.h"
-#include "UI/Core/EDUIRarityColors.h"
+#include "UI/Style/EDUIRarityColors.h"
 
 void UEDCraftRecipeEntryWidget::SetRecipeEntryData(const FEDCraftRecipeEntryDisplayData& InDisplayData)
 {
@@ -50,3 +50,4 @@ FReply UEDCraftRecipeEntryWidget::NativeOnMouseButtonDown(const FGeometry& InGeo
 
 	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
 }
+
