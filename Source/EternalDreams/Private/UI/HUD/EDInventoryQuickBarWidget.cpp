@@ -379,7 +379,7 @@ void UEDInventoryQuickBarWidget::TryMoveQuickSlotItem(int32 FromSlotIndex, int32
 	}
 
 	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-	const bool bSuccess = InventoryComponent->PredicateMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex, Failure, true);
+	const bool bSuccess = InventoryComponent->PredicateMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex, Failure);
 	if (!bSuccess)
 	{
 		ShowInventoryFailure(Failure);
@@ -404,7 +404,7 @@ void UEDInventoryQuickBarWidget::TryDropQuickSlotItemCount(int32 FromSlotIndex, 
 	}
 
 	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-	const bool bSuccess = InventoryComponent->PredicateDropCountFromSlot(FromSlotIndex, DropCount, Failure, true);
+	const bool bSuccess = InventoryComponent->PredicateDropCountFromSlot(FromSlotIndex, DropCount, Failure);
 	if (!bSuccess)
 	{
 		ShowInventoryFailure(Failure);
@@ -479,7 +479,7 @@ void UEDInventoryQuickBarWidget::TryUnequipEquipmentSlot(EEDEquippableType SlotT
 	case EEDEquippableType::TopArmor:
 		{
 			EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-			const bool bSuccess = InventoryComponent->PredicateUnequipTopArmor(Failure, true);
+			const bool bSuccess = InventoryComponent->PredicateUnequipTopArmor(Failure);
 			if (!bSuccess)
 			{
 				ShowInventoryFailure(Failure);
@@ -493,7 +493,7 @@ void UEDInventoryQuickBarWidget::TryUnequipEquipmentSlot(EEDEquippableType SlotT
 	case EEDEquippableType::BottomArmor:
 		{
 			EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-			const bool bSuccess = InventoryComponent->PredicateUnequipBottomArmor(Failure, true);
+			const bool bSuccess = InventoryComponent->PredicateUnequipBottomArmor(Failure);
 			if (!bSuccess)
 			{
 				ShowInventoryFailure(Failure);
@@ -577,7 +577,7 @@ void UEDInventoryQuickBarWidget::HandleQuickSlotDoubleClicked(int32 InSlotIndex)
 	if (ItemData->ItemType == EEDInventoryItemType::Consumable)
 	{
 		EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-		const bool bSuccess = InventoryComponent->PredicateConsumeItemAtSlot(InSlotIndex, Failure, true);
+		const bool bSuccess = InventoryComponent->PredicateConsumeItemAtSlot(InSlotIndex, Failure);
 
 		if (!bSuccess)
 		{
@@ -599,7 +599,7 @@ void UEDInventoryQuickBarWidget::HandleQuickSlotDoubleClicked(int32 InSlotIndex)
 		}
 
 		EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-		const bool bSuccess = InventoryComponent->PredicateEquipItemFromSlot(InSlotIndex, ItemData->EquippableType, Failure, true);
+		const bool bSuccess = InventoryComponent->PredicateEquipItemFromSlot(InSlotIndex, ItemData->EquippableType, Failure);
 		if (!bSuccess)
 		{
 			ShowInventoryFailure(Failure);
