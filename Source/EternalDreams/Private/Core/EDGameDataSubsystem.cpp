@@ -164,16 +164,17 @@ void UEDGameDataSubsystem::LoadPhase_Monster()
 	AM.GetPrimaryAssetIdList(MonsterAssetType, Ids);
 	if (Ids.IsEmpty())
 	{
+		UE_LOG(LogTemp, Log, TEXT("몬스터 정보 로드 실패"));
 		OnMonsterDataLoaded();
 		return;
 	}
-	
+
 	TSharedPtr<FStreamableHandle> Handle = AM.LoadPrimaryAssetsAsync(
 		Ids,
-		{TEXT("Monster")},
+		{MonsterAssetType.GetName()},
 		FStreamableDelegate::CreateUObject(this, &UEDGameDataSubsystem::OnMonsterDataLoaded)
 	);
-	PhaseHandles.Add(TEXT("Monster"), Handle);
+	PhaseHandles.Add(MonsterAssetType.GetName(), Handle);
 }
 
 // ================================================================
