@@ -218,7 +218,7 @@ bool UEDItemCraftingWidget::RequestCraftSelectedRecipe()
 	}
 
 	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-	const bool bSuccess = InventoryComponent->RequestCraftItemDetailed(SelectedRecipeRowId, Failure);
+	const bool bSuccess = InventoryComponent->PredicateCraftItem(SelectedRecipeRowId, Failure, true);
 	if (!bSuccess)
 	{
 		ShowCraftFailure(Failure);

@@ -378,10 +378,11 @@ void UEDInventoryQuickBarWidget::TryMoveQuickSlotItem(int32 FromSlotIndex, int32
 		return;
 	}
 
-	const bool bSuccess = InventoryComponent->RequestMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex);
+	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+	const bool bSuccess = InventoryComponent->PredicateMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex, Failure, true);
 	if (!bSuccess)
 	{
-		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
+		ShowInventoryFailure(Failure);
 		return;
 	}
 
@@ -402,10 +403,11 @@ void UEDInventoryQuickBarWidget::TryDropQuickSlotItemCount(int32 FromSlotIndex, 
 		return;
 	}
 
-	const bool bSuccess = InventoryComponent->RequestDropCountFromSlot(FromSlotIndex, DropCount);
+	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+	const bool bSuccess = InventoryComponent->PredicateDropCountFromSlot(FromSlotIndex, DropCount, Failure, true);
 	if (!bSuccess)
 	{
-		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
+		ShowInventoryFailure(Failure);
 		return;
 	}
 
@@ -476,11 +478,11 @@ void UEDInventoryQuickBarWidget::TryUnequipEquipmentSlot(EEDEquippableType SlotT
 
 	case EEDEquippableType::TopArmor:
 		{
-			const bool bSuccess = InventoryComponent->RequestUnequipTopArmor();
+			EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+			const bool bSuccess = InventoryComponent->PredicateUnequipTopArmor(Failure, true);
 			if (!bSuccess)
 			{
-				// 인벤토리 공간이 없거나 해제할 장비가 없는 경우를 실패로 처리
-				ShowInventoryFailure(EEDInventoryActionFailure::NoSpace);
+				ShowInventoryFailure(Failure);
 				return;
 			}
 
@@ -490,10 +492,11 @@ void UEDInventoryQuickBarWidget::TryUnequipEquipmentSlot(EEDEquippableType SlotT
 
 	case EEDEquippableType::BottomArmor:
 		{
-			const bool bSuccess = InventoryComponent->RequestUnequipBottomArmor();
+			EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+			const bool bSuccess = InventoryComponent->PredicateUnequipBottomArmor(Failure, true);
 			if (!bSuccess)
 			{
-				ShowInventoryFailure(EEDInventoryActionFailure::NoSpace);
+				ShowInventoryFailure(Failure);
 				return;
 			}
 
@@ -574,7 +577,7 @@ void UEDInventoryQuickBarWidget::HandleQuickSlotDoubleClicked(int32 InSlotIndex)
 	if (ItemData->ItemType == EEDInventoryItemType::Consumable)
 	{
 		EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-		const bool bSuccess = InventoryComponent->RequestConsumeItemAtSlotDetailed(InSlotIndex, Failure);
+		const bool bSuccess = InventoryComponent->PredicateConsumeItemAtSlot(InSlotIndex, Failure, true);
 
 		if (!bSuccess)
 		{
@@ -595,10 +598,11 @@ void UEDInventoryQuickBarWidget::HandleQuickSlotDoubleClicked(int32 InSlotIndex)
 			return;
 		}
 
-		const bool bSuccess = InventoryComponent->RequestEquipItemFromSlot(InSlotIndex, ItemData->EquippableType);
+		EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+		const bool bSuccess = InventoryComponent->PredicateEquipItemFromSlot(InSlotIndex, ItemData->EquippableType, Failure, true);
 		if (!bSuccess)
 		{
-			ShowInventoryFailure(EEDInventoryActionFailure::SlotConflict);
+			ShowInventoryFailure(Failure);
 			return;
 		}
 
