@@ -23,6 +23,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Spawn")
 	void TriggerSpawn();
 	
+	UFUNCTION(BlueprintCallable, Category = "ED|Spawn")
 	UEDMonsterDataAsset* GetMonsterDataAsset() const;
 protected:
 	virtual void BeginPlay() override;
@@ -48,6 +49,9 @@ private:
 	
 	FTimerHandle RespawnTimerHandle;
 	
+	// 데이터 서브시스템의 로드 완료 알림 받을 함수
 	UFUNCTION()
 	void OnDataLoadedResponse();
+	
+	bool bIsDataReady = false;
 };
