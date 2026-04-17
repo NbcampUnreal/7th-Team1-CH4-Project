@@ -9,6 +9,8 @@
 #include "Characters/Base/GAS/EDBaseAttributeSet.h"
 #include "Characters/Player/EDPlayerController.h"
 #include "Characters/Player/GAS/EDPlayerAttributeSet.h"
+#include "Core/EDGameMode.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
 #include "Characters/Player/Component/SkillComponent.h"
@@ -221,5 +223,40 @@ float AEDPlayerCharacter::GetMaxHealth() const
 		return BaseAttributeSet->GetMaxHealth();
 	}
 	return 0.0f;
+}
+
+// ============================================================
+//  사망 처리
+// ============================================================
+
+void AEDPlayerCharacter::HandleDeath(AController* Killer)
+{
+	if (!HasAuthority() || bIsDead)
+	{
+		return;
+	}
+	bIsDead = true;
+
+	// 이동/충돌 차단 (관전 전환 전에 플레이어가 움직이지 못하게)
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->DisableMovement();
+		MoveComp->StopMovementImmediately();
+	}
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// GA_Death 어빌리티 발동 (몽타주 재생)
+	if (IsValid(AbilitySystemComponent))
+	{
+		FGameplayTagContainer DeathTag;
+		DeathTag.AddTag(FEDGameplayTags::Get().State_Dead);
+		AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
+	}
+
+	// GameMode에 사망 전달 → 관전/부활/탈락 분기
+	if (AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(this)))
+	{
+		GM->HandlePlayerDeath(GetController(), Killer);
+	}
 }
 

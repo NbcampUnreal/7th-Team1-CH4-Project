@@ -74,8 +74,18 @@ public:
 	// -------------------------------------------------------
 
 	/**
-	 * [서버→클라이언트] 사망 후 10초 경과 시 호출.
-	 * BP에서 구현하여 EDZoneSelectWidget을 오픈한다.
+	 * [서버→클라이언트] 사망 직후 호출.
+	 * BP에서 구현하여 사망 오버레이 + RespawnCountdown UI를 띄운다.
+	 * bCanRespawn=false면 "Eliminated" 표시용.
+	 * @param CountdownSeconds  ZoneSelect 오픈까지 남은 초 (부활 가능 시)
+	 * @param bCanRespawn       부활 가능 여부 (Day 판정 결과)
+	 */
+	UFUNCTION(BlueprintImplementableEvent, Client, Reliable, Category = "ED|Death")
+	void ClientOnPlayerDied(float CountdownSeconds, bool bCanRespawn);
+
+	/**
+	 * [서버→클라이언트] 사망 후 카운트다운 경과 시 호출.
+	 * BP에서 구현하여 EDZoneSelectWidget(인게임 모드)을 오픈한다.
 	 * 유저가 구역 선택 전까지 계속 관전.
 	 */
 	UFUNCTION(BlueprintImplementableEvent, Client, Reliable, Category = "ED|Death")

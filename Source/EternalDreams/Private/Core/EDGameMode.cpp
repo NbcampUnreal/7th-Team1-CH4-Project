@@ -426,6 +426,12 @@ void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 	const int32 Day = GetCurrentDay();
 	const bool bCanRevive = (Day >= 1 && Day <= 2) && VictimPS->RemainingRevives > 0;
 
+	// 클라에 사망 UI 트리거 (오버레이 + 카운트다운)
+	if (AEDPlayerController* PC = Cast<AEDPlayerController>(Victim))
+	{
+		PC->ClientOnPlayerDied(bCanRevive ? RespawnZoneSelectDelay : 0.f, bCanRevive);
+	}
+
 	if (bCanRevive)
 	{
 		SchedulePlayerRespawn(Victim);
