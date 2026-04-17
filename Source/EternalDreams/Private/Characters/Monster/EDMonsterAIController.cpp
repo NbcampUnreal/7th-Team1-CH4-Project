@@ -129,18 +129,18 @@ void AEDMonsterAIController::OnPossess(APawn* InPawn)
 	AIPerceptionComp->ConfigureSense(*HearingConfig);
 	
 	UBehaviorTree* BT = DA->GetBehaviorTree().Get();
-	
-	if (!IsValid(BT))
-	{
-		// 만약 로드되지 않았다면 커스텀 에셋 매니저를 통해 동기 로드
-		BT = UEDAssetManager::Get().LoadAssetSync<UBehaviorTree>(DA->GetBehaviorTree().ToSoftObjectPath());
-	}
 
 	if (IsValid(BT))
 	{
 		bool bResult = RunBehaviorTree(BT);
 		UE_LOG(LogTemp, Log, TEXT("[AICtrl][%s] RunBehaviorTree 즉시 실행: %s"), 
 			*GetName(), bResult ? TEXT("성공") : TEXT("실패"));
+	} else
+	{
+		BTLoadHandle = UEDAssetManager::Get().LoadAssetAsync(
+			DA->GetBehaviorTree().ToSoftObjectPath(),
+			FStreamableDelegate::CreateUObject(this, &AEDMonsterAIController::OnBTLoaded)
+		);
 	}
 }
 
@@ -264,6 +264,11 @@ void AEDMonsterAIController::StartTeamReport(AActor* Target)
 
 void AEDMonsterAIController::OnBTLoaded()
 {
+	if (BTLoadHandle.IsValid())
+	{
+		BTLoadHandle.Reset();
+	}
+	
 	AEDMonsterBase* Monster = Cast<AEDMonsterBase>(GetPawn());
 	if (IsValid(Monster) == false || IsValid(Monster->GetDataAsset()) == false)
 	{
@@ -277,7 +282,6 @@ void AEDMonsterAIController::OnBTLoaded()
 		UE_LOG(LogTemp, Warning, TEXT("[AICtrl][%s] OnBTLoaded: BT 유효하지 않음"), *GetName());
 		return;
 	}
-	
 
 	if (IsValid(this) == false || IsValid(GetPawn()) == false)
 		return;
