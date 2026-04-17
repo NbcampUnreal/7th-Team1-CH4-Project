@@ -66,6 +66,5 @@ private:
 	FTimerHandle TeamReportTimerHandle;
 	TWeakObjectPtr<AActor> TeamReportTarget;
 	
-	// 제거
-	// TSharedPtr<FStreamableHandle> BTLoadHandle;
+	TSharedPtr<FStreamableHandle> BTLoadHandle;
 };
