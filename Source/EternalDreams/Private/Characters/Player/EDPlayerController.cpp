@@ -11,11 +11,14 @@
 #include "Engine/LocalPlayer.h"
 #include "InputAction.h"
 #include "UI/Subsystem/EDUIManageSubsystem.h"
+#include "UI/HUD/EDDeathOverlayWidget.h"
+#include "UI/HUD/EDRespawnZoneSelectWidget.h"
 #include "Misc/CoreDelegates.h"
 #include "Core/EDGameMode.h"
 #include "Core/EDPlayerState.h"
 #include "InputMappingContext.h"
 #include "Kismet/GameplayStatics.h"
+#include "Blueprint/UserWidget.h"
 
 AEDPlayerController::AEDPlayerController()
 {
@@ -298,12 +301,45 @@ void AEDPlayerController::Server_RequestSkipPhase_Implementation()
 
 void AEDPlayerController::ClientOnPlayerDied_Implementation(float CountdownSeconds, bool bCanRespawn)
 {
-	BP_OnPlayerDied(CountdownSeconds, bCanRespawn);
+	if (DeathOverlayWidget)
+	{
+		DeathOverlayWidget->RemoveFromParent();
+		DeathOverlayWidget = nullptr;
+	}
+
+	if (!DeathOverlayWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: DeathOverlayWidgetClass가 지정되지 않았습니다."));
+		return;
+	}
+
+	DeathOverlayWidget = CreateWidget<UEDDeathOverlayWidget>(this, DeathOverlayWidgetClass);
+	if (DeathOverlayWidget)
+	{
+		DeathOverlayWidget->AddToViewport();
+		DeathOverlayWidget->StartCountdown(CountdownSeconds, bCanRespawn);
+	}
 }
 
 void AEDPlayerController::ClientOpenZoneSelectWidget_Implementation()
 {
-	BP_OpenZoneSelectWidget();
+	if (RespawnZoneSelectWidget)
+	{
+		RespawnZoneSelectWidget->RemoveFromParent();
+		RespawnZoneSelectWidget = nullptr;
+	}
+
+	if (!RespawnZoneSelectWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: RespawnZoneSelectWidgetClass가 지정되지 않았습니다."));
+		return;
+	}
+
+	RespawnZoneSelectWidget = CreateWidget<UEDRespawnZoneSelectWidget>(this, RespawnZoneSelectWidgetClass);
+	if (RespawnZoneSelectWidget)
+	{
+		RespawnZoneSelectWidget->AddToViewport();
+	}
 }
 
 void AEDPlayerController::Server_RequestRespawn_Implementation(int32 SelectedZoneId)

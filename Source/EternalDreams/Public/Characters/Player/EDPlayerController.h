@@ -15,6 +15,8 @@ class UInputMappingContext;
 class UInputAction;
 class UEDCraftingInteractionComponent;
 class UEDLootInteractionComponent;
+class UEDDeathOverlayWidget;
+class UEDRespawnZoneSelectWidget;
 
 DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
 
@@ -75,27 +77,18 @@ public:
 
 	/**
 	 * [서버→클라이언트] 사망 직후 호출.
-	 * BP에서 구현하여 사망 오버레이 + RespawnCountdown UI를 띄운다.
-	 * bCanRespawn=false면 "Eliminated" 표시용.
-	 * @param CountdownSeconds  ZoneSelect 오픈까지 남은 초 (부활 가능 시)
-	 * @param bCanRespawn       부활 가능 여부 (Day 판정 결과)
+	 * 사망 오버레이를 뷰포트에 띄우고 카운트다운 시작.
+	 * bCanRespawn=false면 Eliminated 표시로 전환.
 	 */
 	UFUNCTION(Client, Reliable, Category = "ED|Death")
 	void ClientOnPlayerDied(float CountdownSeconds, bool bCanRespawn);
 
-	UFUNCTION(BlueprintImplementableEvent, Category = "ED|Death")
-	void BP_OnPlayerDied(float CountdownSeconds, bool bCanRespawn);
-
 	/**
 	 * [서버→클라이언트] 사망 후 카운트다운 경과 시 호출.
-	 * BP에서 구현하여 EDZoneSelectWidget(인게임 모드)을 오픈한다.
-	 * 유저가 구역 선택 전까지 계속 관전.
+	 * RespawnZoneSelect 위젯을 뷰포트에 띄운다. 유저가 구역 선택 전까지 계속 관전.
 	 */
 	UFUNCTION(Client, Reliable, Category = "ED|Death")
 	void ClientOpenZoneSelectWidget();
-
-	UFUNCTION(BlueprintImplementableEvent, Category = "ED|Death")
-	void BP_OpenZoneSelectWidget();
 
 	/**
 	 * [클라이언트→서버] 유저가 ZoneSelectWidget에서 구역 선택 후 호출.
@@ -103,6 +96,19 @@ public:
 	 */
 	UFUNCTION(Server, Reliable, Category = "ED|Death")
 	void Server_RequestRespawn(int32 SelectedZoneId);
+
+	UPROPERTY(EditDefaultsOnly, Category = "ED|Death|UI")
+	TSubclassOf<UEDDeathOverlayWidget> DeathOverlayWidgetClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "ED|Death|UI")
+	TSubclassOf<UEDRespawnZoneSelectWidget> RespawnZoneSelectWidgetClass;
+
+protected:
+	UPROPERTY()
+	TObjectPtr<UEDDeathOverlayWidget> DeathOverlayWidget;
+
+	UPROPERTY()
+	TObjectPtr<UEDRespawnZoneSelectWidget> RespawnZoneSelectWidget;
 
 public:
 #pragma region Input Player
