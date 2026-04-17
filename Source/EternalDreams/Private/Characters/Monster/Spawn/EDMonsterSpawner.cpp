@@ -81,7 +81,7 @@ void AEDMonsterSpawner::SpawnMonster()
 		return;
 	}
 	
-	TSubclassOf<AEDMonsterBase> SpawnClass = MonsterDataAsset->GetMonsterClass();
+	TSubclassOf<AEDMonsterBase> SpawnClass = MonsterDataAsset->GetMonsterClass().Get();
 	if (IsValid(SpawnClass) == false)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[%s] SpawnMonster: MonsterClass 없음"), *GetName());
