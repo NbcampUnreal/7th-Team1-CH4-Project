@@ -7,6 +7,9 @@ const FPrimaryAssetType UEDGameDataSubsystem::LobbyAssetType = FPrimaryAssetType
 const FPrimaryAssetType UEDGameDataSubsystem::UIAssetType = FPrimaryAssetType(TEXT("UIData"));
 const FPrimaryAssetType UEDGameDataSubsystem::ItemAssetType = FPrimaryAssetType(TEXT("InventoryItem"));
 const FPrimaryAssetType UEDGameDataSubsystem::MonsterAssetType = FPrimaryAssetType(TEXT("MonsterData"));
+const FPrimaryAssetType UEDGameDataSubsystem::PlayerDataAssetType = FPrimaryAssetType(TEXT("PlayerData"));
+const FPrimaryAssetType UEDGameDataSubsystem::PlayerAnimDataAssetType = FPrimaryAssetType(TEXT("PlayerAnimData"));
+const FPrimaryAssetType UEDGameDataSubsystem::WeaponDataAssetType = FPrimaryAssetType(TEXT("WeaponData"));
 
 void UEDGameDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -35,7 +38,7 @@ void UEDGameDataSubsystem::InitializeGameData()
 {
 	if (CurrentPhase != EDataLoadPhase::LobbyReady) return;
 	LoadPhase_UI();
-	UnloadPhaseData(LobbyAssetType, TEXT("Lobby"));
+	UnloadPhaseData(LobbyAssetType, LobbyAssetType.GetName());
 }
 
 // ================================================================
@@ -46,19 +49,25 @@ void UEDGameDataSubsystem::InitializeGameData()
 void UEDGameDataSubsystem::ReturnToLobby()
 {
 	// 게임씬 데이터 언로드
-	UnloadPhaseData(UIAssetType, TEXT("UI"));
-	UnloadPhaseData(ItemAssetType, TEXT("Item"));
-	UnloadPhaseData(MonsterAssetType, TEXT("Monster"));
+	UnloadPhaseData(UIAssetType,            UIAssetType.GetName());
+	UnloadPhaseData(ItemAssetType,          ItemAssetType.GetName());
+	UnloadPhaseData(MonsterAssetType,       MonsterAssetType.GetName());
+	UnloadPhaseData(PlayerDataAssetType,    PlayerDataAssetType.GetName());
+	UnloadPhaseData(PlayerAnimDataAssetType,PlayerAnimDataAssetType.GetName());
+	UnloadPhaseData(WeaponDataAssetType,    WeaponDataAssetType.GetName());
 	LoadPhase_Lobby();
 }
 
 // 게임 완전히 종료
 void UEDGameDataSubsystem::UnloadAllData()
 {
-	UnloadPhaseData(LobbyAssetType, TEXT("Lobby"));
-	UnloadPhaseData(UIAssetType, TEXT("UI"));
-	UnloadPhaseData(ItemAssetType, TEXT("Item"));
-	UnloadPhaseData(MonsterAssetType, TEXT("Monster"));
+	UnloadPhaseData(LobbyAssetType,         LobbyAssetType.GetName());
+	UnloadPhaseData(UIAssetType,            UIAssetType.GetName());
+	UnloadPhaseData(ItemAssetType,          ItemAssetType.GetName());
+	UnloadPhaseData(MonsterAssetType,       MonsterAssetType.GetName());
+	UnloadPhaseData(PlayerDataAssetType,    PlayerDataAssetType.GetName());
+	UnloadPhaseData(PlayerAnimDataAssetType,PlayerAnimDataAssetType.GetName());
+	UnloadPhaseData(WeaponDataAssetType,    WeaponDataAssetType.GetName());
 	SetPhase(EDataLoadPhase::NotStarted);
 }
 
@@ -176,6 +185,47 @@ void UEDGameDataSubsystem::LoadPhase_Monster()
 	PhaseHandles.Add(MonsterAssetType.GetName(), Handle);
 }
 
+void UEDGameDataSubsystem::LoadPhase_Player()
+{
+	SetPhase(EDataLoadPhase::LoadingPlayer);
+	UEDAssetManager& AM = UEDAssetManager::Get();
+	
+	// PlayerData, PlayerAnimData, WeaponData 모두 로드
+	TArray<FPrimaryAssetId> PlayerIds;
+	AM.GetPrimaryAssetIdList(PlayerDataAssetType, PlayerIds);
+	
+	TArray<FPrimaryAssetId> PlayerAnimIds;
+	AM.GetPrimaryAssetIdList(PlayerAnimDataAssetType, PlayerAnimIds);
+	
+	TArray<FPrimaryAssetId> WeaponIds;
+	AM.GetPrimaryAssetIdList(WeaponDataAssetType, WeaponIds);
+	
+	// 모든 ID를 하나의 배열로 통합
+	TArray<FPrimaryAssetId> AllIds;
+	AllIds.Append(PlayerIds);
+	AllIds.Append(PlayerAnimIds);
+	AllIds.Append(WeaponIds);
+	
+	if (AllIds.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem] 플레이어 관련 데이터 에셋을 찾을 수 없습니다"));
+		OnPlayerDataLoaded();
+		return;
+	}
+
+	// 핸들은 우선 PlayerData로 통일
+	TSharedPtr<FStreamableHandle> Handle = AM.LoadPrimaryAssetsAsync(
+		AllIds,
+		{PlayerDataAssetType.GetName()},
+		FStreamableDelegate::CreateUObject(this, &UEDGameDataSubsystem::OnPlayerDataLoaded)
+	);
+	
+	// 언로드시 키 일치위해서 핸들은 타입별로 저장
+	PhaseHandles.Add(PlayerDataAssetType.GetName(), Handle);
+	PhaseHandles.Add(PlayerAnimDataAssetType.GetName(), Handle);
+	PhaseHandles.Add(WeaponDataAssetType.GetName(), Handle);
+}
+
 // ================================================================
 // 단계별 완료 콜백 함수
 // ================================================================
@@ -207,8 +257,16 @@ void UEDGameDataSubsystem::OnItemDataLoaded()
 void UEDGameDataSubsystem::OnMonsterDataLoaded()
 {
 	CacheLoadedAssets(MonsterAssetType);
+	LoadPhase_Player();
+}
+
+void UEDGameDataSubsystem::OnPlayerDataLoaded()
+{
+	CacheLoadedAssets(PlayerDataAssetType);
+	CacheLoadedAssets(PlayerAnimDataAssetType);
+	CacheLoadedAssets(WeaponDataAssetType);
 	SetPhase(EDataLoadPhase::Completed);
-	UE_LOG(LogTemp, Log, TEXT("몬스터 정보 로드 완료"));
+	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem] 플레이어 데이터 로드 완료"));
 	// 완료 신호
 	OnAllDataLoaded.Broadcast();
 }

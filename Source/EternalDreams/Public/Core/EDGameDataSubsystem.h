@@ -15,6 +15,7 @@ enum class EDataLoadPhase : uint8
 	LoadingUI		UMETA(DisplayName = "UI 데이터 로딩"),
 	LoadingItem     UMETA(DisplayName = "아이템 데이터 로딩"),
 	LoadingMonster  UMETA(DisplayName = "몬스터 데이터 로딩"),
+	LoadingPlayer   UMETA(DisplayName = "플레이어 데이터 로딩"),
 	
 	Completed       UMETA(DisplayName = "완료")
 };
@@ -133,6 +134,9 @@ public:
 	static const FPrimaryAssetType UIAssetType;
     static const FPrimaryAssetType ItemAssetType;
     static const FPrimaryAssetType MonsterAssetType;
+	static const FPrimaryAssetType PlayerDataAssetType;
+	static const FPrimaryAssetType PlayerAnimDataAssetType;
+	static const FPrimaryAssetType WeaponDataAssetType;
 private:
 	// ================================================================
 	// 단계별 로드 함수
@@ -141,12 +145,14 @@ private:
 	void LoadPhase_UI();
 	void LoadPhase_Item();
 	void LoadPhase_Monster();
+	void LoadPhase_Player();
 
 	// 각 단계 완료 콜백
 	void OnLobbyDataLoaded();
 	void OnUIDataLoaded();
 	void OnItemDataLoaded();
 	void OnMonsterDataLoaded();
+	void OnPlayerDataLoaded();
 
 	// 공통 캐싱 헬퍼 -> 특정 타입의 로드된 에셋들을 DataCache에 저장
 	void CacheLoadedAssets(const FPrimaryAssetType& AssetType);
