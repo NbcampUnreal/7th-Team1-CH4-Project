@@ -20,6 +20,7 @@
 #include "Core/EDAssetManager.h"
 #include "Core/EDGameDataSubsystem.h"
 #include "Data/EDWeaponDataAsset.h"
+#include "Data/EDPlayerDataAsset.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
 #include "Engine/AssetManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -79,34 +80,24 @@ void AEDPlayerCharacter::BeginPlay()
 		return;
 	}
 	
-	//Weapon Test
-	if (HasAuthority())
+	UEDGameDataSubsystem* DataSubsystem = UEDGameDataSubsystem::Get(GetWorld());
+	if (!DataSubsystem)
 	{
-		RWeaponActor=GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
-		if (IsValid(RWeaponActor))
-		{
-			SkeletalMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
-			if (!IsValid(SkeletalMeshComp))
-			{
-				return;
-			}
-			RWeaponActor->SetOwner(this);
-			RWeaponActor->AttachToComponent(GetMesh()->GetChildComponent(0),FAttachmentTransformRules::SnapToTargetNotIncludingScale,RWeaponSocketName);
-			GetCapsuleComponent()->IgnoreActorWhenMoving(RWeaponActor,true);
-		}
-		LWeaponActor=GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
-		if (IsValid(LWeaponActor))
-		{
-			SkeletalMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
-			if (!IsValid(SkeletalMeshComp))
-			{
-				return;
-			}
-			LWeaponActor->SetOwner(this);
-			LWeaponActor->AttachToComponent(GetMesh()->GetChildComponent(0),FAttachmentTransformRules::SnapToTargetNotIncludingScale,LWeaponSocketName);
-			GetCapsuleComponent()->IgnoreActorWhenMoving(LWeaponActor,true);
-		}
+		UE_LOG(LogTemp, Error, TEXT("[PlayerChar] BeginPlay - GameDataSubsystem 없음"));
+		return;
 	}
+	// 데이터 서브시스템 캐싱
+	CachedDataSubsystem = DataSubsystem;
+	if (DataSubsystem->IsDataReady())
+	{
+		UE_LOG(LogTemp, Log, TEXT("[PlayerChar] 데이터 준비 완료 - 즉시 초기화 실행"));
+		SetupFromPlayerData();	
+	} else
+	{
+		UE_LOG(LogTemp, Log, TEXT("[PlayerChar] 데이터 준비 미완료 - 콜백 초기화 실행"));
+		DataSubsystem->OnAllDataLoaded.AddDynamic(this, &AEDPlayerCharacter::SetupFromPlayerData);
+	}
+	
 	
 	//ASC Duration Callback
 	if (!IsValid(AbilitySystemComponent))
@@ -332,6 +323,131 @@ float AEDPlayerCharacter::GetMaxHealth() const
 		return BaseAttributeSet->GetMaxHealth();
 	}
 	return 0.0f;
+}
+
+// ============================================================
+//  데이터 처리
+// ============================================================
+
+void AEDPlayerCharacter::SetupFromPlayerData()
+{
+	UEDGameDataSubsystem* GameDataSubsystem = UEDGameDataSubsystem::Get(GetWorld());
+	if (!GameDataSubsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - SetupFromPlayerData] EDGameDataSubsystem을 찾을 수 없습니다"));
+		return;
+	}
+	
+	UEDPlayerDataAsset* PlayerData = GameDataSubsystem->GetData<UEDPlayerDataAsset>(
+		FPrimaryAssetId(TEXT("PlayerData"), TEXT("PlayerData"))
+	);
+
+	if (!PlayerData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - SetupFromPlayerData] EDGameDataSubsystem에 캐시된 PlayerData가 없습니다."));
+		return;
+	}
+	
+	ApplyPlayerDataAsset();
+}
+
+
+void AEDPlayerCharacter::ApplyPlayerDataAsset()
+{
+	// 서버에서만 실행
+	if (!HasAuthority()) return;
+	
+	UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - ApplyPlayerDataAsset] 서버 조건 지나서"));
+	UEDGameDataSubsystem* DataSubsystem = CachedDataSubsystem.Get();
+	if (!DataSubsystem) return;
+	UEDPlayerDataAsset* PlayerData = DataSubsystem->GetData<UEDPlayerDataAsset>(
+		FPrimaryAssetId(TEXT("PlayerData"), TEXT("PlayerData"))
+	);
+	if (!PlayerData) return;
+	
+	UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - ApplyPlayerDataAsset] PlayerData있음"));
+	if (PlayerData->SkeletalMesh.IsValid())
+	{
+		USkeletalMesh* SkeletalMesh = PlayerData->SkeletalMesh.Get();
+		if (!SkeletalMesh)
+		{
+			// 혹시 로드 실패시 동기 로드
+			SkeletalMesh = PlayerData->SkeletalMesh.LoadSynchronous();
+		}
+		
+		if (SkeletalMesh)
+		{
+			GetMesh()->SetSkeletalMesh(SkeletalMesh);
+			UE_LOG(LogTemp, Log, TEXT("[AEDPlayerCharacter] 스켈레탈 메시 적용: %s"), *SkeletalMesh->GetName());
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter] 스켈레탈 메시 로드 실패"));
+		}
+	}
+
+	if (PlayerData->AnimationBlueprint.IsValid())
+	{
+		// 이미 로드됨
+		UClass* AnimBPClass = PlayerData->AnimationBlueprint.Get();
+		if (!AnimBPClass)
+		{
+			// 혹시 로드 실패시 동기 로드
+			AnimBPClass = PlayerData->AnimationBlueprint.LoadSynchronous();
+		}
+		
+		if (AnimBPClass)
+		{
+			GetMesh()->SetAnimClass(AnimBPClass);
+			UE_LOG(LogTemp, Log, TEXT("[AEDPlayerCharacter] 애니메이션 블루프린트 적용: %s"), *AnimBPClass->GetName());
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter] 애니메이션 블루프린트 로드 실패"));
+		}
+	}
+
+	if (!IsValid(WeaponClass))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter] WeaponClass가 설정되지 않았습니다"));
+		return;
+	}
+
+	// 오른쪽 무기 스폰
+	if (!IsValid(RWeaponActor))
+	{
+		RWeaponActor = GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
+		if (IsValid(RWeaponActor))
+		{
+			SkeletalMeshComp = Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
+			if (IsValid(SkeletalMeshComp))
+			{
+				RWeaponActor->SetOwner(this);
+				RWeaponActor->AttachToComponent(GetMesh()->GetChildComponent(0), 
+					FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
+				GetCapsuleComponent()->IgnoreActorWhenMoving(RWeaponActor, true);
+				UE_LOG(LogTemp, Log, TEXT("[AEDPlayerCharacter] 오른쪽 무기 장착 완료"));
+			}
+		}
+	}
+
+	// 왼쪽 무기 스폰
+	if (!IsValid(LWeaponActor))
+	{
+		LWeaponActor = GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
+		if (IsValid(LWeaponActor))
+		{
+			SkeletalMeshComp = Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
+			if (IsValid(SkeletalMeshComp))
+			{
+				LWeaponActor->SetOwner(this);
+				LWeaponActor->AttachToComponent(GetMesh()->GetChildComponent(0), 
+					FAttachmentTransformRules::SnapToTargetNotIncludingScale, LWeaponSocketName);
+				GetCapsuleComponent()->IgnoreActorWhenMoving(LWeaponActor, true);
+				UE_LOG(LogTemp, Log, TEXT("[AEDPlayerCharacter] 왼쪽 무기 장착 완료"));
+			}
+		}
+	}
 }
 
 // ============================================================

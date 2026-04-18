@@ -22,6 +22,7 @@ class UIMCComponent;
 class UZoneDetectorComponent;
 class UEDInventoryComponent;
 class USkillComponent;
+class UEDGameDataSubsystem;
 struct FOnAttributeChangeData;
 
 
@@ -196,4 +197,11 @@ public:
 	FORCEINLINE UStaticMeshComponent* GetWeaponMeshComp()
 	{if (LWeaponActor!=nullptr&&RWeaponActor!=nullptr) return RWeaponActor->GetStaticMesh()!=nullptr ? RWeaponActor->GetStaticMeshComp():LWeaponActor->GetStaticMeshComp(); else return nullptr;};
 #pragma endregion
+
+private:
+	// 플레이어 데이터 로드 및 초기화
+	UFUNCTION()
+	void SetupFromPlayerData();
+	void ApplyPlayerDataAsset();
+	TWeakObjectPtr<UEDGameDataSubsystem> CachedDataSubsystem;
 };
