@@ -91,7 +91,7 @@ void AEDPlayerCharacter::BeginPlay()
 	if (DataSubsystem->IsDataReady())
 	{
 		UE_LOG(LogTemp, Log, TEXT("[PlayerChar] 데이터 준비 완료 - 즉시 초기화 실행"));
-		SetupFromPlayerData();	
+		SetupFromPlayerData();
 	} else
 	{
 		UE_LOG(LogTemp, Log, TEXT("[PlayerChar] 데이터 준비 미완료 - 콜백 초기화 실행"));
@@ -331,15 +331,15 @@ float AEDPlayerCharacter::GetMaxHealth() const
 
 void AEDPlayerCharacter::SetupFromPlayerData()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - SetupFromPlayerData] 입장"));
 	UEDGameDataSubsystem* GameDataSubsystem = UEDGameDataSubsystem::Get(GetWorld());
 	if (!GameDataSubsystem)
 	{
 		UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - SetupFromPlayerData] EDGameDataSubsystem을 찾을 수 없습니다"));
 		return;
 	}
-	
 	UEDPlayerDataAsset* PlayerData = GameDataSubsystem->GetData<UEDPlayerDataAsset>(
-		FPrimaryAssetId(TEXT("PlayerData"), TEXT("PlayerData"))
+		FPrimaryAssetId(TEXT("PlayerData"), TEXT("DA_PlayerData"))
 	);
 
 	if (!PlayerData)
@@ -347,13 +347,14 @@ void AEDPlayerCharacter::SetupFromPlayerData()
 		UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - SetupFromPlayerData] EDGameDataSubsystem에 캐시된 PlayerData가 없습니다."));
 		return;
 	}
-	
+	UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - SetupFromPlayerData] 끝까지 버팀 ApplyPlayerDataAsset들어가기 직전"));
 	ApplyPlayerDataAsset();
 }
 
 
 void AEDPlayerCharacter::ApplyPlayerDataAsset()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - ApplyPlayerDataAsset] 서버 조건 못 지나서"));
 	// 서버에서만 실행
 	if (!HasAuthority()) return;
 	
@@ -361,7 +362,7 @@ void AEDPlayerCharacter::ApplyPlayerDataAsset()
 	UEDGameDataSubsystem* DataSubsystem = CachedDataSubsystem.Get();
 	if (!DataSubsystem) return;
 	UEDPlayerDataAsset* PlayerData = DataSubsystem->GetData<UEDPlayerDataAsset>(
-		FPrimaryAssetId(TEXT("PlayerData"), TEXT("PlayerData"))
+		FPrimaryAssetId(TEXT("PlayerData"), TEXT("DA_PlayerData"))
 	);
 	if (!PlayerData) return;
 	
