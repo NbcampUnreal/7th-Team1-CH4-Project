@@ -11,7 +11,6 @@ struct FEDInventorySlotData;
 class UUniformGridPanel;
 class UEDInventoryComponent;
 class UEDEquipmentSlotWidget;
-class UTextBlock;
 class UEDQuickBarSlotWidget;
 class UEDInventoryQuantityPopupWidget;
 class UEDInventoryItemDataAsset;
@@ -62,10 +61,6 @@ protected:
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "Inventory")
 	TObjectPtr<UEDInventoryComponent> InventoryComponent;
 	
-	// 퀵바 액션 실패/안내 메시지 표시용 텍스트
-	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Inventory")
-	TObjectPtr<UTextBlock> ActionResultText;
-
 	// 일부 버리기 수량 선택 팝업
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Inventory")
 	TObjectPtr<UEDInventoryQuantityPopupWidget> QuantityPopupWidget;
@@ -97,11 +92,11 @@ private:
 	// 퀵바 인덱스로 슬롯 데이터를 얻음
 	bool TryGetQuickSlotData(int32 QuickIndex, FEDInventorySlotData& OutSlotData) const;
 
-	// 인벤토리 액션 실패 메시지 표시
+	// 인벤토리 액션 실패 메시지를 토스트로 표시
 	void ShowInventoryFailure(EEDInventoryActionFailure Failure) const;
 
-	// 인벤토리 액션 메시지 지우기
-	void ClearInventoryActionMessage() const;
+	// 인벤토리 액션 성공 메시지를 토스트로 표시
+	void ShowInventorySuccess(const FText& TargetName, const FText& ActionName) const;
 	
 	// 슬롯 간 드롭 처리
 	void HandleQuickSlotDroppedOnSlot(int32 FromSlotIndex, int32 ToSlotIndex);
@@ -129,6 +124,7 @@ private:
 
 	// 수량 팝업으로 넘길 대기 중 슬롯
 	int32 PendingDropSlotIndex = INDEX_NONE;
+	
 	// 장비 슬롯 더블 클릭 처리
 	void HandleEquipmentSlotDoubleClicked(EEDEquippableType SlotType);
 
@@ -147,12 +143,17 @@ private:
 	// 인벤토리 에셋을 비동기 로드 요청
 	UFUNCTION()
 	void PreloadInventoryAssets();
+	
 	// 비동기 요청에 대한 콜백
 	void DoRefresh();
+	
 	// ResolveItemDisplayName + ResolveItemRarity를 합쳐서 비동기로 만든 함수
 	const UEDInventoryItemDataAsset* ResolveItemData(const FPrimaryAssetId& ItemId) const;
+	FText ResolveItemDisplayName(const FPrimaryAssetId& ItemId) const;
+	
 	// 리프레시 방지 변수
 	bool bRefreshPending = false;
+	
 	// GC방지용 핸들
 	TSharedPtr<FStreamableHandle> PreloadHandle;
 };

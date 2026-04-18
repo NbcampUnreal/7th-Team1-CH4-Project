@@ -625,58 +625,6 @@ void UEDInventoryComponent::BeginPlay()
 
     RefreshCraftableRecipesCache();
 
-    // ---
-    // ?묒꽦??: 源?숈＜
-    if (GetOwner() && GetOwner()->HasAuthority())
-    {
-        UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s bGiveDebugItemsOnBeginPlay=%s MaxSlots=%d"),
-            *GetOwner()->GetName(),
-            bGiveDebugItemsOnBeginPlay ? TEXT("true") : TEXT("false"),
-            MaxInventorySlots);
-    }
-
-    if (GetOwner() && GetOwner()->HasAuthority() && bGiveDebugItemsOnBeginPlay)
-    {
-        EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-
-        UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s ConsumableId=%s MaterialId=%s EquipId=%s"),
-            *GetOwner()->GetName(),
-            *DebugConsumableItemId.ToString(),
-            *DebugMaterialItemId.ToString(),
-            *DebugEquipItemId.ToString());
-
-        if (DebugConsumableItemId.IsValid())
-        {
-            const bool bSuccess = RequestAddItemAutoDetailed(DebugConsumableItemId, 5, Failure);
-            UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s AddConsumable success=%s failure=%d"),
-                *GetOwner()->GetName(),
-                bSuccess ? TEXT("true") : TEXT("false"),
-                static_cast<int32>(Failure));
-        }
-
-        Failure = EEDInventoryActionFailure::None;
-
-        if (DebugMaterialItemId.IsValid())
-        {
-            const bool bSuccess = RequestAddItemAutoDetailed(DebugMaterialItemId, 10, Failure);
-            UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s AddMaterial success=%s failure=%d"),
-                *GetOwner()->GetName(),
-                bSuccess ? TEXT("true") : TEXT("false"),
-                static_cast<int32>(Failure));
-        }
-
-        Failure = EEDInventoryActionFailure::None;
-
-        if (DebugEquipItemId.IsValid())
-        {
-            const bool bSuccess = RequestAddItemAutoDetailed(DebugEquipItemId, 1, Failure);
-            UE_LOG(LogTemp, Warning, TEXT("InventoryDebug: Owner=%s AddEquip success=%s failure=%d"),
-                *GetOwner()->GetName(),
-                bSuccess ? TEXT("true") : TEXT("false"),
-                static_cast<int32>(Failure));
-        }
-    }
-    // ---
 }
 
 void UEDInventoryComponent::RequestInitializeInventorySlots()
@@ -2712,4 +2660,3 @@ void UEDInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
     DOREPLIFETIME(UEDInventoryComponent, TopArmorSlot);
     DOREPLIFETIME(UEDInventoryComponent, BottomArmorSlot);
 }
-

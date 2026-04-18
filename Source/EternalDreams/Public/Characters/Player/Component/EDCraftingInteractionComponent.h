@@ -5,11 +5,12 @@
 #include "EDCraftingInteractionComponent.generated.h"
 
 class APlayerController;
-class UEDItemCraftingWidget;
+class UEDInventoryComponent;
+struct FEDCraftableRecipeEntry;
 
 /**
- * 플레이어의 제작 입력과 제작 HUD 위젯 사이를 중개하는 컴포넌트
- * 컨트롤러는 입력만 전달하고, 실제 위젯 탐색과 제작 요청은 이 컴포넌트가 담당한
+ * 플레이어의 제작 입력을 처리하는 컴포넌트
+ * 현재 제작 가능한 첫 번째 레시피를 보여줌
  */
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ETERNALDREAMS_API UEDCraftingInteractionComponent : public UActorComponent
@@ -19,13 +20,16 @@ class ETERNALDREAMS_API UEDCraftingInteractionComponent : public UActorComponent
 public:
 	UEDCraftingInteractionComponent();
 
-	// 제작 입력을 처리하고, 현재 선택된 레시피 제작 시도
+	// 제작 입력을 처리하고 현재 제작 가능한 첫 번째 레시피 제작을 시도
 	void HandleCraftInput();
 
 private:
 	// 소유 플레이어 컨트롤러 반환
 	APlayerController* GetOwningPlayerController() const;
 
-	// 현재 화면에 떠 있는 제작 위젯 인스턴스를 찾음
-	UEDItemCraftingWidget* FindCraftingWidget() const;
+	// 플레이어가 사용하는 인벤토리 컴포넌트 반환
+	UEDInventoryComponent* GetOwningInventoryComponent() const;
+
+	// 현재 제작 가능한 레시피 캐시 중 첫 번째 항목을 반환
+	bool TryGetFirstCraftableRecipeEntry(UEDInventoryComponent* InventoryComponent, FEDCraftableRecipeEntry& OutRecipeEntry) const;
 };
