@@ -14,7 +14,7 @@
 
 
 UCLASS()
-class ETERNALDREAMS_API UPlayerDataAsset : public UPrimaryDataAsset
+class ETERNALDREAMS_API UEDPlayerDataAsset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 public:
@@ -30,11 +30,11 @@ public:
 	
 public:
 	//스켈레탈 메시
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Data", meta=(AssetBundles="Player"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Data", meta=(AssetBundles="PlayerData"))
 	TSoftObjectPtr<USkeletalMesh> SkeletalMesh;
 	
 	//ABP
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Data", meta=(AssetBundles="Player"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Data", meta=(AssetBundles="PlayerData"))
 	TSoftClassPtr<UAnimInstance> AnimationBlueprint;
 	
 	//오버레이머티리얼

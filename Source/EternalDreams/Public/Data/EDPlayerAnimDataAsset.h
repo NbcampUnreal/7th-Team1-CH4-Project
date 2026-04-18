@@ -26,6 +26,6 @@ public:
 	
 public:
 	//애님몽타주
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Data", meta=(AssetBundles="Player"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Data", meta=(AssetBundles="PlayerData"))
 	TSoftObjectPtr<UAnimMontage> AnimMontage;
 };

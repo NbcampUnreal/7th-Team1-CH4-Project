@@ -26,7 +26,7 @@ public:
 	
 public:
 	//StaticMesh
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon",meta=(AssetBundles="Weapon"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon",meta=(AssetBundles="PlayerData"))
 	TSoftObjectPtr<UStaticMesh> WeaponStaticMesh;
 	
 };
