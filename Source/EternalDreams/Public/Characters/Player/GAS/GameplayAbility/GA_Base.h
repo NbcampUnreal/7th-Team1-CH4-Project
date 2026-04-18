@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
+#include "Data/Types/EDPlayerTypes.h"
 #include "GA_Base.generated.h"
 
+enum class EPlayerAnimNameType : uint8;
 /**
  * GameplayAbility를 적용하는 애니메이션 몽타주 기반 행동의 부모 클래스
  */
@@ -41,6 +43,9 @@ public:
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	EPlayerAnimNameType MontageName=EPlayerAnimNameType::NONE;
+	
+	UPROPERTY()
 	UAnimMontage* AnimMontage=nullptr;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")

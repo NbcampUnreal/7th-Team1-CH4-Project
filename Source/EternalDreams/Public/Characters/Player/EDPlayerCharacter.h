@@ -10,6 +10,7 @@
 #include "Weapon/EDWeapon.h"
 #include "EDPlayerCharacter.generated.h"
 
+enum class EPlayerNameType : uint8;
 class UPlayerAssetComponent;
 class UGameplayEffect;
 class UGameplayAbility;
@@ -102,6 +103,8 @@ protected:
 	UPROPERTY()
 	FName LWeaponSocketName=FName("handslot_l");
 	
+	
+
 	//Get Attribute
 public:
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
@@ -148,6 +151,8 @@ protected:
 	void OnEquipChanged(FGameplayTag& AttributeDataTag, float Value);
 	UFUNCTION(BlueprintCallable)
 	void OnWeaponChanged();
+	UFUNCTION(BlueprintCallable)
+	void OnPlayerSkinChanged(EPlayerNameType& SkinName);
 	
 	//Anim Move
 #pragma region Animation Movement

@@ -14,7 +14,7 @@
 
 
 UCLASS()
-class ETERNALDREAMS_API UPlayerDataAsset : public UPrimaryDataAsset
+class ETERNALDREAMS_API UEDPlayerDataAsset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 public:
@@ -37,8 +37,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Data", meta=(AssetBundles="Player"))
 	TSoftClassPtr<UAnimInstance> AnimationBlueprint;
 	
-	//오버레이머티리얼
-	//UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Data", meta=(AssetBundles="Player"))
-	//TSoftObjectPtr<UMaterial> PlayerMaterial;
+
 
 };
