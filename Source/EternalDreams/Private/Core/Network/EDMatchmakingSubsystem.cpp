@@ -76,6 +76,7 @@ void UEDMatchmakingSubsystem::DisconnectFromMatchServer()
 	AuthToken.Empty();
 	Nickname.Empty();
 	CurrentMatchId.Empty();
+	CurrentZoneId = 0;
 }
 
 bool UEDMatchmakingSubsystem::IsConnectedToMatchServer() const
@@ -193,6 +194,21 @@ void UEDMatchmakingSubsystem::LobbyChangeTeam(int32 NewTeamId)
 	FJsonSerializer::Serialize(Json.ToSharedRef(), Writer);
 
 	TCPClient->SendPacket(EDNet::C2S_LOBBY_TEAM_CHANGE, Body);
+}
+
+void UEDMatchmakingSubsystem::LobbySelectZone(int32 ZoneId)
+{
+	// 현재 IOCP 서버에는 Zone OpCode가 없으므로 로컬 상태만 저장한다.
+	// 서버 측에 C2S_LOBBY_ZONE_SELECT가 추가되면 여기서 패킷 전송을 이어붙일 것.
+	if (CurrentZoneId == ZoneId)
+	{
+		return;
+	}
+
+	CurrentZoneId = ZoneId;
+	OnLobbyZoneSelected.Broadcast(ZoneId);
+
+	UE_LOG(LogEDCore, Warning, TEXT("[MatchmakingSubsystem] Zone selected locally: %d"), ZoneId);
 }
 
 // ============================================================

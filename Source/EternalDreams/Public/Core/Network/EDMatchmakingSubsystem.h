@@ -17,6 +17,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnRegisterResult, bool, bSuccess, 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMatchQueued);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnMatchFound, const FString&, MatchId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLobbyStateChanged, const FString&, JsonState);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnLobbyZoneSelected, int32, ZoneId);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnGameStart, const FString&, ServerIP, int32, ServerPort);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnMatchServerDisconnected);
 
@@ -90,6 +91,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "ED|Matchmaking")
 	void LobbyChangeTeam(int32 NewTeamId);
 
+	/**
+	 * 로비/리스폰 존 선택.
+	 * 현재 IOCP 서버에 Zone OpCode가 없으므로 로컬 상태(Subsystem)만 갱신하고 델리게이트로 브로드캐스트한다.
+	 * 서버 측 핸들러가 추가되면 이 함수에서 패킷도 같이 전송하도록 확장할 것.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ED|Matchmaking")
+	void LobbySelectZone(int32 ZoneId);
+
+	UFUNCTION(BlueprintPure, Category = "ED|Matchmaking")
+	int32 GetSelectedZoneId() const { return CurrentZoneId; }
+
 	// -------------------------------------------------------
 	//  Delegates
 	// -------------------------------------------------------
@@ -108,6 +120,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "ED|Matchmaking")
 	FOnLobbyStateChanged OnLobbyStateChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "ED|Matchmaking")
+	FOnLobbyZoneSelected OnLobbyZoneSelected;
 
 	UPROPERTY(BlueprintAssignable, Category = "ED|Matchmaking")
 	FOnGameStart OnGameStart;
@@ -132,4 +147,5 @@ private:
 	FString AuthToken;
 	FString Nickname;
 	FString CurrentMatchId;
+	int32   CurrentZoneId = 0;
 };
