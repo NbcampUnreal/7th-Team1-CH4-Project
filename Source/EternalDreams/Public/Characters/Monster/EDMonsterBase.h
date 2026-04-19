@@ -14,6 +14,7 @@
 
 DECLARE_MULTICAST_DELEGATE(FOnMonsterDeath);
 DECLARE_MULTICAST_DELEGATE(FOnAttackFinished);
+DECLARE_MULTICAST_DELEGATE(FOnDataAssetInitialized);
 
 class UAbilitySystemComponent;
 struct FStreamableHandle;
@@ -52,6 +53,7 @@ public:
 
 	FOnMonsterDeath OnMonsterDeath;
 	FOnAttackFinished OnAttackFinished;
+	FOnDataAssetInitialized OnDataAssetInitialized;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -60,6 +62,8 @@ protected:
 
 	UFUNCTION()
 	void OnRep_MonsterState();	
+	UFUNCTION()
+	void OnRep_MonsterDataId();
 	
 	UFUNCTION(BlueprintCallable, Category = "Monster")
 	void SetMonsterState(EMonsterState NewState) { if (HasAuthority()) MonsterState = NewState; }
@@ -71,7 +75,7 @@ protected:
 	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
 	// TObjectPtr<UEDMonsterDataAsset> DataAsset;
 	// 수정 후
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_MonsterDataId, Category = "Monster|Data")
 	FPrimaryAssetId MonsterDataId;
 private:
 	// 비동기 로드(임시)
