@@ -7,6 +7,7 @@
 #include "GameplayEffectTypes.h"
 #include "Characters/Player/EDPlayerCharacter.h"
 #include "Characters/Player/Weapon/EDWeapon.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 
@@ -101,30 +102,11 @@ void UANS_AttackTrace::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenc
 		}
 		//피격당한 목록에 추가
 		Player->HittedCharacterArray.Add(HittedPlayer);
+		FGameplayEventData HitGameplayEventData;
 		
-		//맞은 적의 ASI, ASC를 가져온다.
-		IAbilitySystemInterface* TargetASI = Cast<IAbilitySystemInterface>(HittedPlayer);
-		if (TargetASI == nullptr)
-		{
-			continue;
-		}
-		UAbilitySystemComponent* TargetASC = TargetASI->GetAbilitySystemComponent();
-		if (TargetASC==nullptr)
-		{
-			continue;
-		}
+		HitGameplayEventData.Target=HittedPlayer;
+		Player->GetAbilitySystemComponent()->HandleGameplayEvent(FEDGameplayTags::Get().Event_SkillHit,&HitGameplayEventData);
 		
-		//GE 적용
-		FGameplayEffectContextHandle Context = Player->GetAbilitySystemComponent()->MakeEffectContext();
-		Context.AddSourceObject(Player);
-
-		FGameplayEffectSpecHandle SpecHandle = Player->GetAbilitySystemComponent()->MakeOutgoingSpec(
-			DamageEffectClass, 1.0f, Context);
-
-		if (SpecHandle.IsValid())
-		{
-			Player->GetAbilitySystemComponent()->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
-		}
 		
 		//넉백 추가
 		HittedPlayer->GetCharacterMovement()->Velocity=FVector::ZeroVector;

@@ -4,6 +4,7 @@
 #include "Characters/Base/GAS/ExecCalc_Damage.h"
 
 #include "Characters/Base/GAS/EDBaseAttributeSet.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
 
 struct FDamageStatics
 {
@@ -45,16 +46,14 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 
     AActor* SourceActor = SourceASC->GetAvatarActor();
     AActor* TargetActor = TargetASC->GetAvatarActor();
-    if (!SourceActor || !TargetActor) return;
-
-    if (TargetASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("State.Invincible"))))
+    if (!SourceActor || !TargetActor)
     {
-        return;
+	    return;
     }
-    
+
 	
     float RawDamage = Spec.GetSetByCallerMagnitude(
-        FGameplayTag::RequestGameplayTag(FName("Data.Damage")),
+        FEDGameplayTags::Get().Data_Damage,
         false,      
         30.0f       
     );
@@ -70,13 +69,7 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
         EvalParams,
         Defense
     );
-
-   //TODO: 나중에 태그를 확인할수도있다.
-	/*
-    bool bIsBlocking = TargetASC->HasMatchingGameplayTag(
-        FGameplayTag::RequestGameplayTag(FName("State.Blocking"))
-    );
-	*/
+	
 	
     float FinalDamage = RawDamage - Defense;
     FinalDamage = FMath::Max(FinalDamage, 0.f);

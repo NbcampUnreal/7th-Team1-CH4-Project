@@ -49,6 +49,18 @@ protected:
 	UAnimMontage* PlayerAnimMontage=nullptr;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	float DamageStrengthMultiplier = 0.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	float DamageDexterityMultiplier = 0.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	float DamageIntellegenceMultiplier = 0.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
 	TSubclassOf<UGameplayEffect> CoolTimeEffectClass;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
@@ -64,4 +76,7 @@ protected:
 	
 	UFUNCTION()
 	void OnMontageCancelled();
+	
+	UFUNCTION()
+	void OnNotifyHitEvent(FGameplayEventData HitGameplayEventData);
 };
