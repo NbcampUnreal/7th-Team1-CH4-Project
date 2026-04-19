@@ -83,8 +83,6 @@ public:
 protected:
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
-	virtual void PostLogin(APlayerController* NewPlayer) override;
-	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
 
@@ -183,7 +181,7 @@ private:
 	float GetPhaseDuration(int32 PhaseIndex) const;
 	void SetPhase(FGameplayTag NewPhase);
 
-	/** 전원 접속 여부 확인 후 Phase 시작 */
+	/** IOCP 전원 접속 감지 후 Phase 시작 (PostLogin에서 호출) */
 	void TryStartPhaseSequence();
 
 	// -------------------------------------------------------
@@ -212,12 +210,4 @@ private:
 
 	/** 사망한 플레이어의 ZoneSelect 오픈 타이머 핸들 */
 	TMap<TWeakObjectPtr<AController>, FTimerHandle> RespawnTimers;
-
-	/**
-	 * [IOCP 전용] 전원 접속 시 Phase 시작.
-	 * 현재는 BeginPlay에서 바로 시작하므로 비활성.
-	 * 향후 IOCP 로비 연결 시, BeginPlay의 StartPhaseSequence 호출을 제거하고
-	 * PostLogin에서 이 함수로 전원 접속 감지 후 시작하도록 전환.
-	 */
-	void TryStartPhaseSequence();
 };
