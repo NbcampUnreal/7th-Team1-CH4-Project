@@ -7,6 +7,8 @@
 #include "Projects.h"
 #include "Characters/Player/EDPlayerCharacter.h"
 #include "Components/SphereComponent.h"
+#include "Core/EDGameDataSubsystem.h"
+#include "Data/EDWeaponDataAsset.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -46,6 +48,16 @@ AProjectileActor::AProjectileActor()
 void AProjectileActor::BeginPlay()
 {
 	Super::BeginPlay();
+	//로드된 StaticMesh 적용
+	const UEDGameDataSubsystem* EDGameplayDataSubsystem=UEDGameDataSubsystem::Get(GetWorld());
+	if (EDGameplayDataSubsystem)
+	{
+		UEDWeaponDataAsset* Arrow = 
+			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(TEXT("WeaponData"), TEXT("DA_Arrow")));
+		ProjectileStaticMesh->SetStaticMesh(Arrow->WeaponStaticMesh.Get());
+	}
+	
+	
 	
 	//Projectile 활성화
 	SphereComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);

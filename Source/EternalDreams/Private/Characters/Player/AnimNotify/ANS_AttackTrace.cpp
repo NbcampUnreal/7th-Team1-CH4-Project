@@ -7,6 +7,7 @@
 #include "GameplayEffectTypes.h"
 #include "Characters/Player/EDPlayerCharacter.h"
 #include "Characters/Player/Weapon/EDWeapon.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 UANS_AttackTrace::UANS_AttackTrace()
@@ -126,6 +127,8 @@ void UANS_AttackTrace::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenc
 		}
 		
 		//넉백 추가
+		HittedPlayer->GetCharacterMovement()->Velocity=FVector::ZeroVector;
+		
 		FVector KnockBackDirection;
 		FVector2D KnockBackDirection2D;
 		KnockBackDirection=(HittedPlayer->GetActorLocation()-Player->GetActorLocation());

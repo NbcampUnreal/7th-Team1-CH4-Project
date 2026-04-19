@@ -1,13 +1,17 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 #include "Characters/Player/Component/EDLootInteractionComponent.h"
 
+#include "Core/EDAssetManager.h"
 #include "CommonActivatableWidget.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/Pawn.h"
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
 #include "Inventory/Component/EDInventoryComponent.h"
+#include "Item/Data/EDInventoryItemDataAsset.h"
+#include "UI/Message/EDUserFacingMessage.h"
 #include "UI/Panel/EDInventoryPanelWidget.h"
 #include "UI/Subsystem/EDUIManageSubsystem.h"
+#include "UI/Types/EDUITypes.h"
 #include "UI/Types/EDUIWidgetIds.h"
 
 UEDLootInteractionComponent::UEDLootInteractionComponent()
@@ -93,9 +97,12 @@ void UEDLootInteractionComponent::RequestLootTransfer(
 	int32 FromSlotIndex,
 	int32 Quantity)
 {
+	PendingLootItemName = ResolveLootItemDisplayName(FromInventory, FromSlotIndex);
+
 	if (!FromInventory)
 	{
 		OnLootTransferResult.Broadcast(false, EEDInventoryActionFailure::InvalidInventory);
+		ShowLootTransferFailure(EEDInventoryActionFailure::InvalidInventory);
 		return;
 	}
 
@@ -139,11 +146,79 @@ void UEDLootInteractionComponent::ClientNotifyLootTransferResult_Implementation(
 	EEDInventoryActionFailure Failure)
 {
 	OnLootTransferResult.Broadcast(bSuccess, Failure);
+
+	if (bSuccess)
+	{
+		ShowLootTransferSuccess(PendingLootItemName);
+	}
+	else
+	{
+		ShowLootTransferFailure(Failure);
+	}
+
+	PendingLootItemName = FText::GetEmpty();
 }
 
 bool UEDLootInteractionComponent::CanOpenLootPanel() const
 {
 	return ResolveCurrentLootInventoryComponent() != nullptr;
+}
+
+FText UEDLootInteractionComponent::ResolveLootItemDisplayName(
+	UEDInventoryComponent* FromInventory,
+	int32 FromSlotIndex) const
+{
+	if (!FromInventory || !FromInventory->InventorySlots.IsValidIndex(FromSlotIndex))
+	{
+		return NSLOCTEXT("LootUI", "DefaultLootItemName", "아이템");
+	}
+
+	const FEDInventorySlotData& SlotData = FromInventory->InventorySlots[FromSlotIndex];
+	if (!SlotData.Item.ItemId.IsValid())
+	{
+		return NSLOCTEXT("LootUI", "DefaultLootItemName", "아이템");
+	}
+
+	const UEDInventoryItemDataAsset* ItemData =
+		UEDAssetManager::Get().GetPrimaryAsset<UEDInventoryItemDataAsset>(SlotData.Item.ItemId);
+	if (ItemData && !ItemData->DisplayName.IsEmpty())
+	{
+		return ItemData->DisplayName;
+	}
+
+	return FText::FromName(SlotData.Item.ItemId.PrimaryAssetName);
+}
+
+void UEDLootInteractionComponent::ShowLootTransferSuccess(const FText& ItemName) const
+{
+	UEDUIManageSubsystem* UIManageSubsystem = GetUIManageSubsystem();
+	if (!UIManageSubsystem)
+	{
+		return;
+	}
+
+	const FText SafeItemName = ItemName.IsEmpty()
+		? NSLOCTEXT("LootUI", "DefaultLootItemName", "아이템")
+		: ItemName;
+
+	UIManageSubsystem->ShowToastMessage(
+		EDUserFacingMessage::Inventory::GetSuccessText(SafeItemName, NSLOCTEXT("LootUI", "LootAction", "획득")),
+		EEDUIMessageType::Success,
+		3.0f);
+}
+
+void UEDLootInteractionComponent::ShowLootTransferFailure(EEDInventoryActionFailure Failure) const
+{
+	UEDUIManageSubsystem* UIManageSubsystem = GetUIManageSubsystem();
+	if (!UIManageSubsystem)
+	{
+		return;
+	}
+
+	UIManageSubsystem->ShowToastMessage(
+		EDUserFacingMessage::Inventory::GetFailureText(Failure),
+		EEDUIMessageType::Error,
+		3.0f);
 }
 
 UEDInventoryComponent* UEDLootInteractionComponent::ResolveCurrentLootInventoryComponent() const

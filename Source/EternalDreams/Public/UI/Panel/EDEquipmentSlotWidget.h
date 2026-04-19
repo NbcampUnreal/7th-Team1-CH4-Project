@@ -24,17 +24,18 @@ public:
 	// 장비가 장착된 상태로 표시
 	UFUNCTION(BlueprintCallable, Category = "Equipment")
 	void SetItemState(const FText& InSlotTypeName, const FText& InItemName, EEDItemRarity InRarity);
-	
+
 	// 장비 슬롯 타입 설정
 	void SetSlotType(EEDEquippableType InSlotType);
-
-	// 장비 슬롯 더블 클릭 이벤트
-	FOnEDEquipmentSlotDoubleClicked OnEquipmentSlotDoubleClicked;
 	
 	// 선택 여부에 따른 시각 상태 갱신
 	void SetSelectedState(bool bSelected);
 	
+	// 장비 슬롯 클릭 이벤트
 	FOnEDEquipmentSlotClicked OnEquipmentSlotClicked;
+	
+	// 장비 슬롯 더블 클릭 이벤트
+	FOnEDEquipmentSlotDoubleClicked OnEquipmentSlotDoubleClicked;
 
 protected:
 	// 슬롯 종류 표시 텍스트
@@ -52,20 +53,17 @@ protected:
 	// 희귀도 강조 라인
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Equipment")
 	TObjectPtr<UBorder> RarityAccent;
-	
-	// 마우스 더블 클릭 입력 처리
-	virtual FReply NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-	
+
 	// 장비 슬롯 선택 강조용 테두리
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Equipment")
 	TObjectPtr<UBorder> SelectionBorder;
-	
+
+	// 마우스 클릭 입력 처리
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 
+	// 마우스 더블 클릭 입력 처리
+	virtual FReply NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
 private:
-	// 희귀도에 맞는 색상을 반환
-	FLinearColor GetRarityColor(EEDItemRarity InRarity) const;
-	
 	// 현재 장비 슬롯 타입
 	EEDEquippableType SlotType = EEDEquippableType::None;
 	

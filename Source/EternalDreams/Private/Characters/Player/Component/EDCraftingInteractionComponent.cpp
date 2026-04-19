@@ -1,9 +1,15 @@
-// Copyright Epic Games, Inc. All Rights Reserved.
+﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "Characters/Player/Component/EDCraftingInteractionComponent.h"
 
-#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Engine/LocalPlayer.h"
+#include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
-#include "UI/HUD/EDItemCraftingWidget.h"
+#include "Inventory/BP/EDInventoryBlueprintLibrary.h"
+#include "Inventory/Component/EDInventoryComponent.h"
+#include "Inventory/Core/EDInventoryTypes.h"
+#include "UI/Message/EDUserFacingMessage.h"
+#include "UI/Subsystem/EDUIManageSubsystem.h"
+#include "UI/Types/EDUITypes.h"
 
 UEDCraftingInteractionComponent::UEDCraftingInteractionComponent()
 {
@@ -12,14 +18,68 @@ UEDCraftingInteractionComponent::UEDCraftingInteractionComponent()
 
 void UEDCraftingInteractionComponent::HandleCraftInput()
 {
-	UEDItemCraftingWidget* CraftingWidget = FindCraftingWidget();
-	if (!CraftingWidget)
+	UEDInventoryComponent* InventoryComponent = GetOwningInventoryComponent();
+	if (!InventoryComponent)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDCraftingInteractionComponent: 제작 위젯을 찾지 못해 제작 입력을 처리할 수 없습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDCraftingInteractionComponent: InventoryComponent를 찾지 못해 제작 입력을 처리할 수 없습니다."));
 		return;
 	}
 
-	CraftingWidget->RequestCraftSelectedRecipe();
+	InventoryComponent->RefreshCraftableRecipesCache();
+
+	FEDCraftableRecipeEntry CraftTargetRecipe;
+	if (!TryGetFirstCraftableRecipeEntry(InventoryComponent, CraftTargetRecipe))
+	{
+		if (APlayerController* PlayerController = GetOwningPlayerController())
+		{
+			if (ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer())
+			{
+				if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
+				{
+					UIManageSubsystem->ShowToastMessage(
+						EDUserFacingMessage::Craft::GetFailureText(EEDInventoryActionFailure::InvalidRecipe),
+						EEDUIMessageType::Error,
+						3.0f);
+				}
+			}
+		}
+		return;
+	}
+
+	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+	const bool bSucceeded = InventoryComponent->PredicateCraftItem(CraftTargetRecipe.RecipeId, Failure);
+	if (!bSucceeded)
+	{
+		if (APlayerController* PlayerController = GetOwningPlayerController())
+		{
+			if (ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer())
+			{
+				if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
+				{
+					UIManageSubsystem->ShowToastMessage(
+						EDUserFacingMessage::Craft::GetFailureText(Failure),
+						EEDUIMessageType::Error,
+						3.0f);
+				}
+			}
+		}
+	}
+	else
+	{
+		if (APlayerController* PlayerController = GetOwningPlayerController())
+		{
+			if (ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer())
+			{
+				if (UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>())
+				{
+					UIManageSubsystem->ShowToastMessage(
+						EDUserFacingMessage::Craft::GetSuccessText(CraftTargetRecipe.ResultItemName),
+						EEDUIMessageType::Success,
+						3.0f);
+				}
+			}
+		}
+	}
 }
 
 APlayerController* UEDCraftingInteractionComponent::GetOwningPlayerController() const
@@ -27,7 +87,7 @@ APlayerController* UEDCraftingInteractionComponent::GetOwningPlayerController() 
 	return Cast<APlayerController>(GetOwner());
 }
 
-UEDItemCraftingWidget* UEDCraftingInteractionComponent::FindCraftingWidget() const
+UEDInventoryComponent* UEDCraftingInteractionComponent::GetOwningInventoryComponent() const
 {
 	APlayerController* PlayerController = GetOwningPlayerController();
 	if (!PlayerController)
@@ -35,21 +95,33 @@ UEDItemCraftingWidget* UEDCraftingInteractionComponent::FindCraftingWidget() con
 		return nullptr;
 	}
 
-	TArray<UUserWidget*> FoundWidgets;
-	UWidgetBlueprintLibrary::GetAllWidgetsOfClass(
-		PlayerController,
-		FoundWidgets,
-		UEDItemCraftingWidget::StaticClass(),
-		false);
-
-	for (UUserWidget* Widget : FoundWidgets)
+	APawn* ControlledPawn = PlayerController->GetPawn();
+	if (!ControlledPawn)
 	{
-		UEDItemCraftingWidget* CraftingWidget = Cast<UEDItemCraftingWidget>(Widget);
-		if (CraftingWidget && CraftingWidget->IsVisible())
-		{
-			return CraftingWidget;
-		}
+		return nullptr;
 	}
 
-	return FoundWidgets.Num() > 0 ? Cast<UEDItemCraftingWidget>(FoundWidgets[0]) : nullptr;
+	return UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(ControlledPawn);
 }
+
+bool UEDCraftingInteractionComponent::TryGetFirstCraftableRecipeEntry(
+	UEDInventoryComponent* InventoryComponent,
+	FEDCraftableRecipeEntry& OutRecipeEntry) const
+{
+	if (!InventoryComponent)
+	{
+		return false;
+	}
+
+	TArray<FEDCraftableRecipeEntry> CraftableRecipeEntries;
+	InventoryComponent->GetCachedCraftableRecipes(CraftableRecipeEntries);
+	if (CraftableRecipeEntries.Num() <= 0)
+	{
+		return false;
+	}
+
+	OutRecipeEntry = CraftableRecipeEntries[0];
+	return true;
+}
+
+

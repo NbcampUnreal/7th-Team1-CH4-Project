@@ -7,12 +7,15 @@
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Inventory/Core/EDInventoryTypes.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
+#include "UI/Message/EDUserFacingMessage.h"
 #include "UI/Panel/EDEquipmentSlotWidget.h"
 #include "UI/HUD/EDQuickBarSlotWidget.h"
+#include "UI/Subsystem/EDUIManageSubsystem.h"
+#include "UI/Types/EDUITypes.h"
 #include "Core/EDAssetManager.h"
 #include "Core/EDGameDataSubsystem.h"
 
-#include "Components/TextBlock.h"
+#include "Engine/LocalPlayer.h"
 #include "UI/Panel/EDInventoryQuantityPopupWidget.h"
 
 void UEDInventoryQuickBarWidget::NativeConstruct()
@@ -168,7 +171,7 @@ void UEDInventoryQuickBarWidget::CreateQuickSlotWidgets()
 			GridSlot->SetVerticalAlignment(VAlign_Fill);
 		}
 
-		// 슬롯 인덱스를 설정하고 클릭 이벤트를 퀵바로 연결한다.
+		// 슬롯 인덱스를 설정하고 클릭 이벤트를 퀵바로 연결
 		SlotWidget->SetSlotIndex(SlotIndex);
 		SlotWidget->OnQuickBarSlotClicked.AddUObject(this, &UEDInventoryQuickBarWidget::HandleQuickSlotClicked);
 		SlotWidget->OnQuickBarSlotDoubleClicked.AddUObject(
@@ -306,25 +309,42 @@ bool UEDInventoryQuickBarWidget::TryGetQuickSlotData(int32 QuickIndex, FEDInvent
 
 void UEDInventoryQuickBarWidget::ShowInventoryFailure(EEDInventoryActionFailure Failure) const
 {
-	if (!ActionResultText)
+	ULocalPlayer* LocalPlayer = GetOwningLocalPlayer();
+	if (!LocalPlayer)
 	{
 		return;
 	}
 
-	const FText FailureText = UEDInventoryBlueprintLibrary::GetInventoryActionFailureText(Failure);
-	ActionResultText->SetText(FailureText);
-	ActionResultText->SetVisibility(ESlateVisibility::Visible);
+	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIManageSubsystem)
+	{
+		return;
+	}
+
+	UIManageSubsystem->ShowToastMessage(
+		EDUserFacingMessage::Inventory::GetFailureText(Failure),
+		EEDUIMessageType::Error,
+		3.0f);
 }
 
-void UEDInventoryQuickBarWidget::ClearInventoryActionMessage() const
+void UEDInventoryQuickBarWidget::ShowInventorySuccess(const FText& TargetName, const FText& ActionName) const
 {
-	if (!ActionResultText)
+	ULocalPlayer* LocalPlayer = GetOwningLocalPlayer();
+	if (!LocalPlayer)
 	{
 		return;
 	}
 
-	ActionResultText->SetText(FText::GetEmpty());
-	ActionResultText->SetVisibility(ESlateVisibility::Collapsed);
+	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIManageSubsystem)
+	{
+		return;
+	}
+
+	UIManageSubsystem->ShowToastMessage(
+		EDUserFacingMessage::Inventory::GetSuccessText(TargetName, ActionName),
+		EEDUIMessageType::Success,
+		3.0f);
 }
 
 void UEDInventoryQuickBarWidget::HandleQuickSlotDroppedOnSlot(int32 FromSlotIndex, int32 ToSlotIndex)
@@ -353,14 +373,14 @@ void UEDInventoryQuickBarWidget::HandleQuickSlotDroppedOutside(int32 FromSlotInd
 		return;
 	}
 
-	// 수량이 1이면 바로 버린다.
+	// 수량이 1이면 바로 버림
 	if (SlotData.Item.Quantity <= 1)
 	{
 		TryDropQuickSlotItemCount(FromSlotIndex, 1);
 		return;
 	}
 
-	// 스택 아이템이면 수량 선택 팝업을 띄운다.
+	// 스택 아이템이면 수량 선택 팝업을 띄움
 	OpenDropQuantityPopup(FromSlotIndex, SlotData.Item.Quantity);
 }
 
@@ -378,14 +398,14 @@ void UEDInventoryQuickBarWidget::TryMoveQuickSlotItem(int32 FromSlotIndex, int32
 		return;
 	}
 
-	const bool bSuccess = InventoryComponent->RequestMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex);
+	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+	const bool bSuccess = InventoryComponent->PredicateMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex, Failure);
 	if (!bSuccess)
 	{
-		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
+		ShowInventoryFailure(Failure);
 		return;
 	}
 
-	ClearInventoryActionMessage();
 }
 
 void UEDInventoryQuickBarWidget::TryDropQuickSlotItemCount(int32 FromSlotIndex, int32 DropCount)
@@ -402,14 +422,21 @@ void UEDInventoryQuickBarWidget::TryDropQuickSlotItemCount(int32 FromSlotIndex, 
 		return;
 	}
 
-	const bool bSuccess = InventoryComponent->RequestDropCountFromSlot(FromSlotIndex, DropCount);
+	FEDInventorySlotData SlotData;
+	const FText DroppedItemName = TryGetQuickSlotData(FromSlotIndex, SlotData)
+		? ResolveItemDisplayName(SlotData.Item.ItemId)
+		: FText::FromString(TEXT("아이템"));
+
+	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+	const bool bSuccess = InventoryComponent->PredicateDropCountFromSlot(FromSlotIndex, DropCount, Failure);
 	if (!bSuccess)
 	{
-		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
+		ShowInventoryFailure(Failure);
 		return;
 	}
 
-	ClearInventoryActionMessage();
+	ShowInventorySuccess(DroppedItemName, FText::FromString(TEXT("버리기")));
+
 }
 
 void UEDInventoryQuickBarWidget::OpenDropQuantityPopup(int32 FromSlotIndex, int32 MaxQuantity)
@@ -423,7 +450,6 @@ void UEDInventoryQuickBarWidget::OpenDropQuantityPopup(int32 FromSlotIndex, int3
 	PendingDropSlotIndex = FromSlotIndex;
 	const int32 SafeMaxQuantity = FMath::Max(1, MaxQuantity);
 	QuantityPopupWidget->SetupQuantityRange(1, SafeMaxQuantity, 1);
-	ClearInventoryActionMessage();
 }
 
 void UEDInventoryQuickBarWidget::CloseDropQuantityPopup()
@@ -476,28 +502,31 @@ void UEDInventoryQuickBarWidget::TryUnequipEquipmentSlot(EEDEquippableType SlotT
 
 	case EEDEquippableType::TopArmor:
 		{
-			const bool bSuccess = InventoryComponent->RequestUnequipTopArmor();
+			const FText UnequippedItemName = ResolveItemDisplayName(InventoryComponent->TopArmorSlot.EquippedItem.ItemId);
+			EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+			const bool bSuccess = InventoryComponent->PredicateUnequipTopArmor(Failure);
 			if (!bSuccess)
 			{
-				// 인벤토리 공간이 없거나 해제할 장비가 없는 경우를 실패로 처리
-				ShowInventoryFailure(EEDInventoryActionFailure::NoSpace);
+				ShowInventoryFailure(Failure);
 				return;
 			}
 
-			ClearInventoryActionMessage();
+			ShowInventorySuccess(UnequippedItemName, FText::FromString(TEXT("해제")));
 			return;
 		}
 
 	case EEDEquippableType::BottomArmor:
 		{
-			const bool bSuccess = InventoryComponent->RequestUnequipBottomArmor();
+			const FText UnequippedItemName = ResolveItemDisplayName(InventoryComponent->BottomArmorSlot.EquippedItem.ItemId);
+			EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+			const bool bSuccess = InventoryComponent->PredicateUnequipBottomArmor(Failure);
 			if (!bSuccess)
 			{
-				ShowInventoryFailure(EEDInventoryActionFailure::NoSpace);
+				ShowInventoryFailure(Failure);
 				return;
 			}
 
-			ClearInventoryActionMessage();
+			ShowInventorySuccess(UnequippedItemName, FText::FromString(TEXT("해제")));
 			return;
 		}
 
@@ -574,7 +603,7 @@ void UEDInventoryQuickBarWidget::HandleQuickSlotDoubleClicked(int32 InSlotIndex)
 	if (ItemData->ItemType == EEDInventoryItemType::Consumable)
 	{
 		EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-		const bool bSuccess = InventoryComponent->RequestConsumeItemAtSlotDetailed(InSlotIndex, Failure);
+		const bool bSuccess = InventoryComponent->PredicateConsumeItemAtSlot(InSlotIndex, Failure);
 
 		if (!bSuccess)
 		{
@@ -582,7 +611,7 @@ void UEDInventoryQuickBarWidget::HandleQuickSlotDoubleClicked(int32 InSlotIndex)
 			return;
 		}
 
-		ClearInventoryActionMessage();
+		ShowInventorySuccess(ItemData->DisplayName, FText::FromString(TEXT("사용")));
 		return;
 	}
 
@@ -595,14 +624,15 @@ void UEDInventoryQuickBarWidget::HandleQuickSlotDoubleClicked(int32 InSlotIndex)
 			return;
 		}
 
-		const bool bSuccess = InventoryComponent->RequestEquipItemFromSlot(InSlotIndex, ItemData->EquippableType);
+		EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+		const bool bSuccess = InventoryComponent->PredicateEquipItemFromSlot(InSlotIndex, ItemData->EquippableType, Failure);
 		if (!bSuccess)
 		{
-			ShowInventoryFailure(EEDInventoryActionFailure::SlotConflict);
+			ShowInventoryFailure(Failure);
 			return;
 		}
 
-		ClearInventoryActionMessage();
+		ShowInventorySuccess(ItemData->DisplayName, FText::FromString(TEXT("장착")));
 		return;
 	}
 
@@ -644,6 +674,17 @@ const UEDInventoryItemDataAsset* UEDInventoryQuickBarWidget::ResolveItemData(con
 	}
 }
 
+FText UEDInventoryQuickBarWidget::ResolveItemDisplayName(const FPrimaryAssetId& ItemId) const
+{
+	const UEDInventoryItemDataAsset* ItemData = ResolveItemData(ItemId);
+	if (ItemData && !ItemData->DisplayName.IsEmpty())
+	{
+		return ItemData->DisplayName;
+	}
+
+	return ItemId.IsValid() ? FText::FromName(ItemId.PrimaryAssetName) : FText::FromString(TEXT("아이템"));
+}
+
 void UEDInventoryQuickBarWidget::PreloadInventoryAssets()
 {
 	if (!InventoryComponent)
@@ -676,7 +717,7 @@ void UEDInventoryQuickBarWidget::PreloadInventoryAssets()
 		}
 	}
 	
-	// 로드할 에셋이 없으면 즉시 리프레시
+	// 로드할 에셋이 없으면 즉시 갱신
 	if (PathsToLoad.IsEmpty())
 	{
 		DoRefresh();

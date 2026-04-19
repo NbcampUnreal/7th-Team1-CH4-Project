@@ -23,12 +23,6 @@ void UEDInventoryPanelWidget::NativeConstruct()
 	InitializePlayerInventoryComponent();
 	RefreshInventorySlots();
 
-	if (UEDLootInteractionComponent* LootInteractionComponent = GetLootInteractionComponent())
-	{
-		LootInteractionComponent->OnLootTransferResult.AddUObject(
-			this, &UEDInventoryPanelWidget::HandleLootTransferResult);
-	}
-
 	if (TitleText)
 	{
 		TitleText->SetText(FText::FromString(TEXT("Loot")));
@@ -45,11 +39,6 @@ void UEDInventoryPanelWidget::NativeConstruct()
 void UEDInventoryPanelWidget::NativeDestruct()
 {
 	UnbindInventoryChanged();
-
-	if (UEDLootInteractionComponent* LootInteractionComponent = GetLootInteractionComponent())
-	{
-		LootInteractionComponent->OnLootTransferResult.RemoveAll(this);
-	}
 
 	Super::NativeDestruct();
 
@@ -254,17 +243,6 @@ void UEDInventoryPanelWidget::HandleInventoryChanged()
 	RefreshInventorySlots();
 }
 
-void UEDInventoryPanelWidget::HandleLootTransferResult(bool bSuccess, EEDInventoryActionFailure Failure)
-{
-	if (bSuccess || Failure == EEDInventoryActionFailure::None)
-	{
-		ClearInventoryActionMessage();
-		return;
-	}
-
-	ShowInventoryFailure(Failure);
-}
-
 void UEDInventoryPanelWidget::HandleLootSlotDoubleClicked(int32 InSlotIndex)
 {
 	// 더블 클릭 - 아이템을 플레이어 인벤토리로 옮김
@@ -276,31 +254,25 @@ void UEDInventoryPanelWidget::TryTransferItemToPlayerInventory(int32 InSlotIndex
 {
 	if (!DisplayedInventoryComponent)
 	{
-		ShowInventoryFailure(EEDInventoryActionFailure::InvalidInventory);
 		return;
 	}
 
 	FEDInventorySlotData SlotData;
 	if (!TryGetSlotData(InSlotIndex, SlotData))
 	{
-		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
 		return;
 	}
 
 	if (SlotData.IsEmpty())
 	{
-		ShowInventoryFailure(EEDInventoryActionFailure::EmptySlot);
 		return;
 	}
 
 	UEDLootInteractionComponent* LootInteractionComponent = GetLootInteractionComponent();
 	if (!LootInteractionComponent)
 	{
-		ShowInventoryFailure(EEDInventoryActionFailure::InvalidInventory);
 		return;
 	}
-
-	ClearInventoryActionMessage();
 
 	LootInteractionComponent->RequestLootTransfer(
 		DisplayedInventoryComponent,
@@ -398,26 +370,4 @@ void UEDInventoryPanelWidget::RefreshSelectedSlotState()
 			InventorySlotWidgets[Index]->SetSelectedState(Index == SelectedSlotIndex);
 		}
 	}
-}
-
-void UEDInventoryPanelWidget::ShowInventoryFailure(EEDInventoryActionFailure Failure) const
-{
-	if (!ActionResultText)
-	{
-		return;
-	}
-
-	ActionResultText->SetText(UEDInventoryBlueprintLibrary::GetInventoryActionFailureText(Failure));
-	ActionResultText->SetVisibility(ESlateVisibility::Visible);
-}
-
-void UEDInventoryPanelWidget::ClearInventoryActionMessage() const
-{
-	if (!ActionResultText)
-	{
-		return;
-	}
-
-	ActionResultText->SetText(FText::GetEmpty());
-	ActionResultText->SetVisibility(ESlateVisibility::Collapsed);
 }

@@ -9,15 +9,12 @@
 class UButton;
 class UTextBlock;
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FEDOnZoneSelectionChanged, int32, ZoneId);
+
 /**
- * UEDZoneSelectWidget
- *
- * 로비에서 스폰 구역(A~D)을 선택하는 위젯.
- *
- * 사용법 (BP):
- *   1. 이 위젯을 상속하는 WBP 생성
- *   2. ZoneButton1~4, ZoneLabel 이름으로 위젯 배치 (BindWidget 자동 연결)
- *   3. 선택된 버튼은 자동으로 하이라이트됨
+ * Reusable zone selector panel.
+ * This widget only owns visuals and local selection state.
+ * Lobby and respawn flows should listen to the selection event and decide what to do.
  */
 UCLASS()
 class ETERNALDREAMS_API UEDZoneSelectWidget : public UUserWidget
@@ -25,27 +22,35 @@ class ETERNALDREAMS_API UEDZoneSelectWidget : public UUserWidget
 	GENERATED_BODY()
 
 public:
-	/**
-	 * 구역 선택. 서버에 RPC로 전달한다.
-	 * @param ZoneId 선택할 구역 번호 (1~4)
-	 */
-	UFUNCTION(BlueprintCallable, Category = "ED|Lobby")
+	UFUNCTION(BlueprintCallable, Category = "ED|ZoneSelector")
 	void SelectZone(int32 ZoneId);
 
-	/** 현재 선택된 구역 ID 반환 (0 = 미선택) */
-	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ED|Lobby")
-	int32 GetSelectedZoneId() const;
+	UFUNCTION(BlueprintCallable, Category = "ED|ZoneSelector")
+	void SetSelectedZone(int32 ZoneId, bool bBroadcastSelection = false);
 
-	/** 구역 선택 시 BP에서 추가 UI 갱신용으로 사용 */
-	UFUNCTION(BlueprintImplementableEvent, Category = "ED|Lobby")
+	UFUNCTION(BlueprintCallable, BlueprintPure, Category = "ED|ZoneSelector")
+	int32 GetSelectedZoneId() const { return SelectedZoneId; }
+
+	UFUNCTION(BlueprintCallable, Category = "ED|ZoneSelector")
+	void SetZoneEnabled(int32 ZoneId, bool bEnabled);
+
+	UFUNCTION(BlueprintCallable, Category = "ED|ZoneSelector")
+	void SetAllZonesEnabled(bool bEnabled);
+
+	UFUNCTION(BlueprintCallable, Category = "ED|ZoneSelector")
+	void RefreshVisuals();
+
+	UFUNCTION(BlueprintCallable, Category = "ED|ZoneSelector")
+	void ClearSelection();
+
+	UPROPERTY(BlueprintAssignable, Category = "ED|ZoneSelector")
+	FEDOnZoneSelectionChanged OnZoneSelectionChanged;
+
+	UFUNCTION(BlueprintImplementableEvent, Category = "ED|ZoneSelector")
 	void OnZoneSelected(int32 ZoneId);
 
 protected:
 	virtual void NativeConstruct() override;
-
-	// -------------------------------------------------------
-	// BindWidget — BP에서 같은 이름의 위젯을 배치하면 자동 연결
-	// -------------------------------------------------------
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> ZoneButton1;
@@ -59,28 +64,30 @@ protected:
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> ZoneButton4;
 
-	/** 현재 선택된 구역 표시 텍스트 */
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> ZoneLabel;
 
-	// -------------------------------------------------------
-	// 하이라이트 색상 (에디터에서 조정 가능)
-	// -------------------------------------------------------
-
-	UPROPERTY(EditDefaultsOnly, Category = "ED|Lobby|Style")
+	UPROPERTY(EditDefaultsOnly, Category = "ED|ZoneSelector|Style")
 	FLinearColor SelectedColor = FLinearColor(0.2f, 0.6f, 1.0f, 1.0f);
 
-	UPROPERTY(EditDefaultsOnly, Category = "ED|Lobby|Style")
+	UPROPERTY(EditDefaultsOnly, Category = "ED|ZoneSelector|Style")
 	FLinearColor NormalColor = FLinearColor(0.3f, 0.3f, 0.3f, 1.0f);
 
-private:
-	void UpdateButtonVisuals(int32 SelectedZoneId);
-	UButton* GetButtonByZoneId(int32 ZoneId) const;
+	UPROPERTY(EditDefaultsOnly, Category = "ED|ZoneSelector|Style")
+	FLinearColor DisabledColor = FLinearColor(0.15f, 0.15f, 0.15f, 0.6f);
 
-	UFUNCTION() void OnZone1Clicked() { SelectZone(1); }
-	UFUNCTION() void OnZone2Clicked() { SelectZone(2); }
-	UFUNCTION() void OnZone3Clicked() { SelectZone(3); }
-	UFUNCTION() void OnZone4Clicked() { SelectZone(4); }
+private:
+	void UpdateButtonVisuals() const;
+	UButton* GetButtonByZoneId(int32 ZoneId) const;
+	bool IsValidZoneId(int32 ZoneId) const;
+
+	UFUNCTION() void OnZone1Clicked();
+	UFUNCTION() void OnZone2Clicked();
+	UFUNCTION() void OnZone3Clicked();
+	UFUNCTION() void OnZone4Clicked();
+
+	UPROPERTY(VisibleAnywhere, Category = "ED|ZoneSelector")
+	int32 SelectedZoneId = 0;
 
 	static const TCHAR* ZoneNames[4];
 };

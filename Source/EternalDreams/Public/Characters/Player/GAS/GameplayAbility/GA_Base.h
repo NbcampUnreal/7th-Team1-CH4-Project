@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
+#include "Data/Types/EDPlayerTypes.h"
 #include "GA_Base.generated.h"
 
+enum class EPlayerAnimNameType : uint8;
 /**
  * GameplayAbility를 적용하는 애니메이션 몽타주 기반 행동의 부모 클래스
  */
@@ -40,8 +42,20 @@ public:
    ) override;
 	
 protected:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Attack")
-	UAnimMontage* AttackMontage;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	EPlayerAnimNameType MontageName=EPlayerAnimNameType::NONE;
+	
+	UPROPERTY()
+	UAnimMontage* AnimMontage=nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	TSubclassOf<UGameplayEffect> CoolTimeEffectClass;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	float CoolTime=0.f;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	FGameplayTag CoolTimeTag=FGameplayTag::EmptyTag;
 	
 	//콜백 함수
 protected:

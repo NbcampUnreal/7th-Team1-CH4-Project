@@ -10,6 +10,9 @@
 #include "Weapon/EDWeapon.h"
 #include "EDPlayerCharacter.generated.h"
 
+enum class EPlayerNameType : uint8;
+class UPlayerAssetComponent;
+class UGameplayEffect;
 class UGameplayAbility;
 class AEDWeapon;
 class AEDPlayerController;
@@ -72,6 +75,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
 	TObjectPtr<USkillComponent> PlayerSkillComponent;
 	
+	
 	UPROPERTY()
 	TObjectPtr<USkeletalMeshComponent> SkeletalMeshComp;
 	
@@ -99,6 +103,8 @@ protected:
 	UPROPERTY()
 	FName LWeaponSocketName=FName("handslot_l");
 	
+	
+
 	//Get Attribute
 public:
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
@@ -106,6 +112,28 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Attributes")
 	float GetMaxHealth() const;
+
+	// -------------------------------------------------------
+	// Death
+	// -------------------------------------------------------
+
+	/**
+	 * 플레이어 사망 처리 진입점. 서버에서만 호출.
+	 * HP 0 또는 SurvivalTime 0 감지 시 AttributeSet에서 호출된다.
+	 * GA_Death 몽타주 발동 + GameMode에 사망 전달 (관전/부활/탈락 분기)
+	 */
+	UFUNCTION(BlueprintCallable, Category = "ED|Death")
+	void HandleDeath(AController* Killer);
+
+	UFUNCTION(BlueprintCallable, Category = "ED|Death")
+	bool IsDead() const { return bIsDead; }
+
+protected:
+	/** 중복 HandleDeath 호출 방지용 서버 전용 플래그 */
+	bool bIsDead = false;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "EquipEffect")
+	TSubclassOf<UGameplayEffect> EquipEffect;
 	
 	//Initialize AS
 	virtual void InitializeAbilitySystem();
@@ -116,17 +144,19 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
 	TObjectPtr<UEDInventoryComponent> InventoryComponent;
 	
-	//Get Animation Movement Input
-public:
-	UFUNCTION()
-	void StartAnimMove(float InDashSpeed, bool InbIsForward, bool InbIsZ );
-	UFUNCTION()
-	void StopAnimMove();
 	
 	//Callback
 	void OnWalkSpeedChanged(const struct FOnAttributeChangeData& Data);
+	UFUNCTION()
+	void OnEquipChanged(FGameplayTag& AttributeDataTag, float Value);
+	UFUNCTION(BlueprintCallable)
+	void OnWeaponChanged();
+	UFUNCTION(BlueprintCallable)
+	void OnPlayerSkinChanged(EPlayerNameType& SkinName);
 	
-	
+	//Anim Move
+#pragma region Animation Movement
+	//Caching
 protected:
 	UPROPERTY()
 	bool bIsAnimMoving=false;
@@ -141,7 +171,15 @@ protected:
 	UPROPERTY()
 	FHitResult Hit;
 	
+	//Get Animation Movement Input
+public:
+	UFUNCTION()
+	void StartAnimMove(float InDashSpeed, bool InbIsForward, bool InbIsZ );
+	UFUNCTION()
+	void StopAnimMove();
+#pragma endregion
 	//Anim Notify Used
+#pragma region AnimNotifyUsed
 public:
 	UPROPERTY()
 	FVector PresentAttackSocketLocation=FVector::ZeroVector;
@@ -162,5 +200,5 @@ public:
 	
 	FORCEINLINE UStaticMeshComponent* GetWeaponMeshComp()
 	{if (LWeaponActor!=nullptr&&RWeaponActor!=nullptr) return RWeaponActor->GetStaticMesh()!=nullptr ? RWeaponActor->GetStaticMeshComp():LWeaponActor->GetStaticMeshComp(); else return nullptr;};
-	
+#pragma endregion
 };

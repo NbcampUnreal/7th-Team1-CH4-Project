@@ -3,6 +3,8 @@
 
 #include "Characters/Base/GAS/EDBaseAttributeSet.h"
 
+#include "Characters/Player/EDPlayerCharacter.h"
+#include "Characters/Monster/EDMonsterBase.h"
 #include "GameplayEffectExtension.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -56,11 +58,6 @@ void UEDBaseAttributeSet::OnRep_MaxDefensive(const FGameplayAttributeData& OldMa
 void UEDBaseAttributeSet::OnRep_WalkSpeed(const FGameplayAttributeData& OldWalkSpeed)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDBaseAttributeSet,WalkSpeed, OldWalkSpeed);
-	
-	if (ACharacter* CharacterBase = Cast<ACharacter>(GetOwningActor()))
-	{
-		CharacterBase->GetCharacterMovement()->MaxWalkSpeed = GetWalkSpeed();
-	}
 }
 
 void UEDBaseAttributeSet::OnRep_MaxWalkSpeed(const FGameplayAttributeData& OldMaxWalkSpeed)
@@ -96,7 +93,34 @@ void UEDBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 		// Health가 변경되었을 때
 		SetHealth(FMath::Clamp(GetHealth(), 0.0f, GetMaxHealth()));
 
-		//TODO: Health가 0이면 Death 처리 
+		// HP 0 감지 → Target 타입별 사망 진입점 호출
+		if (GetHealth() <= 0.0f)
+		{
+			AActor* TargetActor = Data.Target.GetAvatarActor();
+
+			// Killer 추출: Instigator Pawn → Controller
+			AController* Killer = nullptr;
+			if (AActor* InstigatorActor = Data.EffectSpec.GetContext().GetInstigator())
+			{
+				if (APawn* InstigatorPawn = Cast<APawn>(InstigatorActor))
+				{
+					Killer = InstigatorPawn->GetController();
+				}
+				else
+				{
+					Killer = Cast<AController>(InstigatorActor);
+				}
+			}
+
+			if (AEDPlayerCharacter* Player = Cast<AEDPlayerCharacter>(TargetActor))
+			{
+				Player->HandleDeath(Killer);
+			}
+			else if (AEDMonsterBase* Monster = Cast<AEDMonsterBase>(TargetActor))
+			{
+				Monster->HandleDeath();
+			}
+		}
 	}
 	if (Data.EvaluatedData.Attribute == GetDefensiveAttribute())
 	{
@@ -107,13 +131,6 @@ void UEDBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 	{
 		// WalkSpeed가 변경되었을 때
 		SetWalkSpeed(FMath::Clamp(GetWalkSpeed(), 0.0f, MaxAttributeValue));
-		
-		AActor* TargetActor = Data.Target.GetAvatarActor();
-		if (ACharacter* CharacterBase = Cast<ACharacter>(TargetActor))
-		{
-			CharacterBase->GetCharacterMovement()->MaxWalkSpeed = GetWalkSpeed();
-		}
-		
 	}
 }
 

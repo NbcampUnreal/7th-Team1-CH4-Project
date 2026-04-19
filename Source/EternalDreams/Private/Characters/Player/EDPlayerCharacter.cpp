@@ -9,15 +9,25 @@
 #include "Characters/Base/GAS/EDBaseAttributeSet.h"
 #include "Characters/Player/EDPlayerController.h"
 #include "Characters/Player/GAS/EDPlayerAttributeSet.h"
+#include "Core/EDGameMode.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
 #include "EnhancedInputSubsystems.h"
 #include "Blueprint/UserWidget.h"
 #include "Characters/Player/Component/SkillComponent.h"
 #include "Characters/Player/Weapon/EDWeapon.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Core/EDAssetManager.h"
+#include "Core/EDGameDataSubsystem.h"
+#include "Data/EDPlayerDataAsset.h"
+#include "Data/EDWeaponDataAsset.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
+#include "Data/Types/EDPlayerTypes.h"
+#include "Engine/AssetManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Inventory/Component/EDInventoryComponent.h"
+#include "Item/Data/EDInventoryItemDataAsset.h"
 
 
 // Sets default values
@@ -107,6 +117,13 @@ void AEDPlayerCharacter::BeginPlay()
 	}
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(BaseAttributeSet->GetWalkSpeedAttribute())
 	.AddUObject(this, &AEDPlayerCharacter::OnWalkSpeedChanged);
+	
+	if (IsValid(InventoryComponent))
+	{
+		InventoryComponent->OnInventoryChanged.AddDynamic(this,&AEDPlayerCharacter::OnWeaponChanged);
+	}
+	
+	
 }
 
 void AEDPlayerCharacter::Tick(float DeltaSeconds)
@@ -205,6 +222,166 @@ void AEDPlayerCharacter::OnWalkSpeedChanged(const FOnAttributeChangeData& Data)
 	GetCharacterMovement()->MaxWalkSpeed=Data.NewValue;
 }
 
+void AEDPlayerCharacter::OnEquipChanged(FGameplayTag& AttributeDataTag, float Value)
+{
+	if (!EquipEffect||!AbilitySystemComponent)
+	{
+		return;
+	}
+	
+	//EffectContext 생성
+	FGameplayEffectContextHandle Context = AbilitySystemComponent->MakeEffectContext();
+	Context.AddSourceObject(this);
+
+	//EffectSpec 생성
+	FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(
+		EquipEffect, 1.0f, Context);
+
+	if (Spec.IsValid())
+	{
+		Spec.Data.Get()->SetSetByCallerMagnitude(AttributeDataTag, Value);
+		AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+	}
+	
+}
+
+void AEDPlayerCharacter::OnWeaponChanged()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	
+	if (!IsValid(InventoryComponent)||
+		!IsValid(AbilitySystemComponent)||
+		!IsValid(PlayerSkillComponent))
+	{
+		return;
+	}
+	
+	const FEDGameplayTags& EDGameplayTags=FEDGameplayTags::Get();
+	const UEDGameDataSubsystem* EDGameplayDataSubsystem=UEDGameDataSubsystem::Get(GetWorld());
+	if (!EDGameplayDataSubsystem)
+	{
+		return;
+	}
+
+	FName WeaponCategory=  *UEnum::GetDisplayValueAsText(EPlayerDataType::WeaponData).ToString();
+	
+	
+	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Bow))
+	{
+		UEDWeaponDataAsset* Bow = 
+			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
+				WeaponCategory, 
+				*UEnum::GetDisplayValueAsText(EWeaponNameType::Bow).ToString()
+				));
+		
+		LWeaponActor->SetServerStaticMesh(Bow->WeaponStaticMesh.Get());
+		RWeaponActor->SetServerStaticMesh(nullptr);
+		
+		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Bow);
+		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Bow);
+		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Bow);
+	}
+	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Hammer))
+	{
+		UEDWeaponDataAsset* Hammer = 
+			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
+				WeaponCategory, 
+				*UEnum::GetDisplayValueAsText(EWeaponNameType::Hammer).ToString()
+				));
+		
+		LWeaponActor->SetServerStaticMesh(nullptr);
+		RWeaponActor->SetServerStaticMesh(Hammer->WeaponStaticMesh.Get());
+		
+		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Hammer);
+		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Hammer);
+		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Hammer);
+	}
+	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Staff))
+	{
+		UEDWeaponDataAsset* Staff = 
+			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
+				WeaponCategory, 
+				*UEnum::GetDisplayValueAsText(EWeaponNameType::Staff).ToString()
+				));
+		
+		LWeaponActor->SetServerStaticMesh(nullptr);
+		RWeaponActor->SetServerStaticMesh(Staff->WeaponStaticMesh.Get());
+		
+		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Staff);
+		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Staff);
+		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Staff);
+	}
+	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Sword))
+	{
+		UEDWeaponDataAsset* Sword = 
+			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
+				WeaponCategory, 
+				*UEnum::GetDisplayValueAsText(EWeaponNameType::Sword).ToString()
+				));
+		
+		LWeaponActor->SetServerStaticMesh(nullptr);
+		RWeaponActor->SetServerStaticMesh(Sword->WeaponStaticMesh.Get());
+		
+		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Sword);
+		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Sword);
+		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Sword);	
+	}
+	
+
+}
+
+void AEDPlayerCharacter::OnPlayerSkinChanged(EPlayerNameType& SkinName)
+{
+	if (!IsValid(GetWorld()))
+	{
+		return;
+	}
+	
+	UEDGameDataSubsystem* EDGameDataSubsystem=UEDGameDataSubsystem::Get(GetWorld());
+	if (!IsValid(EDGameDataSubsystem))
+	{
+		return;
+	}
+	
+	FName PlayerSkinCategory= *UEnum::GetDisplayValueAsText(EPlayerDataType::PlayerData).ToString();
+	
+	//타겟 메시 및 애님인스턴스 설정
+	if (GetMesh()==nullptr||GetMesh()->GetAnimInstance()==nullptr)
+	{
+		UEDPlayerDataAsset* TargetSkin = EDGameDataSubsystem->GetData<UEDPlayerDataAsset>(
+		FPrimaryAssetId(
+			PlayerSkinCategory,
+			*UEnum::GetDisplayValueAsText(EPlayerNameType::Basic).ToString()
+			));
+		if (TargetSkin)
+		{
+			GetMesh()->SetSkeletalMesh(TargetSkin->SkeletalMesh.Get());
+			GetMesh()->SetAnimInstanceClass(TargetSkin->AnimationBlueprint.Get());
+		}
+		
+	}
+	
+	
+	//플레이어 스킨 변경
+	UEDPlayerDataAsset* PlayerSkin = EDGameDataSubsystem->GetData<UEDPlayerDataAsset>(
+		FPrimaryAssetId(
+			PlayerSkinCategory,
+			*UEnum::GetDisplayValueAsText(SkinName).ToString()
+			));
+	
+	USkeletalMeshComponent* RetargetMesh=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
+	
+	if (PlayerSkin&&IsValid(RetargetMesh))
+	{
+		RetargetMesh->SetSkeletalMesh(PlayerSkin->SkeletalMesh.Get());
+		RetargetMesh->SetAnimInstanceClass(PlayerSkin->AnimationBlueprint.Get());
+	}
+	
+}
+
 float AEDPlayerCharacter::GetHealth() const
 {
 	if (BaseAttributeSet)
@@ -221,5 +398,40 @@ float AEDPlayerCharacter::GetMaxHealth() const
 		return BaseAttributeSet->GetMaxHealth();
 	}
 	return 0.0f;
+}
+
+// ============================================================
+//  사망 처리
+// ============================================================
+
+void AEDPlayerCharacter::HandleDeath(AController* Killer)
+{
+	if (!HasAuthority() || bIsDead)
+	{
+		return;
+	}
+	bIsDead = true;
+
+	// 이동/충돌 차단 (관전 전환 전에 플레이어가 움직이지 못하게)
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->DisableMovement();
+		MoveComp->StopMovementImmediately();
+	}
+	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	// GA_Death 어빌리티 발동 (몽타주 재생)
+	if (IsValid(AbilitySystemComponent))
+	{
+		FGameplayTagContainer DeathTag;
+		DeathTag.AddTag(FEDGameplayTags::Get().State_Dead);
+		AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
+	}
+
+	// GameMode에 사망 전달 → 관전/부활/탈락 분기
+	if (AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(this)))
+	{
+		GM->HandlePlayerDeath(GetController(), Killer);
+	}
 }
 

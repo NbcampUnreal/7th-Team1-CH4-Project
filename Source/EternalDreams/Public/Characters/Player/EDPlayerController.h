@@ -17,6 +17,7 @@ class UEDCraftingInteractionComponent;
 class UEDLootInteractionComponent;
 
 DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
+DECLARE_MULTICAST_DELEGATE(FOnCraftInputTriggered);
 
 /**
  * 플레이어 컨트롤러 클래스
@@ -43,6 +44,8 @@ protected:
 	virtual void SetupInputComponent() override;
 
 public:
+	FOnCraftInputTriggered& GetOnCraftInputTriggered() { return OnCraftInputTriggered; }
+
 #pragma region Input UI
 	// UI 입력 전용 매핑 컨텍스트
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
@@ -51,6 +54,10 @@ public:
 	// 인벤토리 패널 열기/닫기 입력 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
 	TObjectPtr<UInputAction> ToggleInventoryAction = nullptr;
+
+	// 아이템 제작 패널 열기/닫기 입력 액션
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
+	TObjectPtr<UInputAction> ToggleCraftPanelAction = nullptr;
 
 	// ESC 입력 처리용 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
@@ -68,6 +75,32 @@ public:
 	/** 클라이언트에서 호출 → 서버에서 실행. 다음 페이즈 스킵 요청. (테스트용) */
 	UFUNCTION(Server, Reliable)
 	void Server_RequestSkipPhase();
+
+	// -------------------------------------------------------
+	// 사망 / 부활 RPC
+	// -------------------------------------------------------
+
+	/**
+	 * [서버→클라이언트] 사망 직후 호출.
+	 * 사망 오버레이를 뷰포트에 띄우고 카운트다운 시작.
+	 * bCanRespawn=false면 Eliminated 표시로 전환.
+	 */
+	UFUNCTION(Client, Reliable, Category = "ED|Death")
+	void ClientOnPlayerDied(float CountdownSeconds, bool bCanRespawn);
+
+	/**
+	 * [서버→클라이언트] 사망 후 카운트다운 경과 시 호출.
+	 * RespawnZoneSelect 위젯을 뷰포트에 띄운다. 유저가 구역 선택 전까지 계속 관전.
+	 */
+	UFUNCTION(Client, Reliable, Category = "ED|Death")
+	void ClientOpenZoneSelectWidget();
+
+	/**
+	 * [클라이언트→서버] 유저가 ZoneSelectWidget에서 구역 선택 후 호출.
+	 * 서버가 DesiredZoneId 갱신 후 RestartPlayer를 실행한다.
+	 */
+	UFUNCTION(Server, Reliable, Category = "ED|Death")
+	void Server_RequestRespawn(int32 SelectedZoneId);
 
 public:
 #pragma region Input Player
@@ -109,6 +142,7 @@ public:
 	
 	UFUNCTION()
 	void CameraFocus(const FInputActionValue& value);
+
 #pragma endregion
 #pragma region Spawn Actor
 protected:
@@ -133,6 +167,9 @@ private:
 	// 인벤토리 패널 열기/닫기 입력 처리
 	void HandleToggleInventory();
 
+	// 아이템 제작 패널 열기/닫기 입력 처리
+	void HandleToggleCraftPanel();
+
 	// ESC 입력 시 패널 닫기 또는 Pause 메뉴 열기 처리
 	void HandleUIBack();
 
@@ -141,11 +178,14 @@ private:
 
 	// 애플리케이션 복귀 시 현재 열린 UI 상태에 맞게 입력 모드와 포커스 복구를 요청
 	void HandleApplicationReactivated();
+	
 #pragma endregion 김동주
 
 #pragma region Delegate
 	FOnOtherInput OnCameraScroll;
 	FOnOtherInput OnCameraFocus;
+	FOnCraftInputTriggered OnCraftInputTriggered;
+
 #pragma endregion
 
 	FGenericTeamId CachedTeamId;

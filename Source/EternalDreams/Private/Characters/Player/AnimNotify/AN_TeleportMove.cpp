@@ -36,5 +36,9 @@ void UAN_TeleportMove::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBas
 	{
 		Player->SetActorLocation(TeleportLocation);
 	}
+	else
+	{
+		Player->SetActorLocation(TeleportLocation,true);
+	}
 	
 }
