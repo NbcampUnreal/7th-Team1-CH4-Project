@@ -54,7 +54,11 @@ void AProjectileActor::BeginPlay()
 	{
 		UEDWeaponDataAsset* Arrow = 
 			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(TEXT("WeaponData"), TEXT("DA_Arrow")));
-		ProjectileStaticMesh->SetStaticMesh(Arrow->WeaponStaticMesh.Get());
+		
+		if (IsValid(Arrow))
+		{
+			ProjectileStaticMesh->SetStaticMesh(Arrow->WeaponStaticMesh.Get());
+		}
 	}
 	
 	

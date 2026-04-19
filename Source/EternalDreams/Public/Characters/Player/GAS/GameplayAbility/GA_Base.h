@@ -46,7 +46,7 @@ protected:
 	EPlayerAnimNameType MontageName=EPlayerAnimNameType::NONE;
 	
 	UPROPERTY()
-	UAnimMontage* AnimMontage=nullptr;
+	UAnimMontage* PlayerAnimMontage=nullptr;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
 	TSubclassOf<UGameplayEffect> CoolTimeEffectClass;

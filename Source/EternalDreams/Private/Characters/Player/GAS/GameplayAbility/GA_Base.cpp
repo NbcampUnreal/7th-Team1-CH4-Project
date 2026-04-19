@@ -39,7 +39,10 @@ void UGA_Base::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 			*UEnum::GetDisplayValueAsText(EPlayerDataType::PlayerAnimData).ToString(),
 			*UEnum::GetDisplayValueAsText(MontageName).ToString()
 		));
-		AnimMontage=PlayerAnimData->AnimMontage.Get();
+		if (IsValid(PlayerAnimData))
+		{
+			PlayerAnimMontage=PlayerAnimData->AnimMontage.Get();
+		}
 	}
 	
 	//Play Montage Task(비동기)
@@ -47,7 +50,7 @@ void UGA_Base::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 	UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 	this,
 	NAME_None,
-	AnimMontage,
+	PlayerAnimMontage,
 	1.0f
 	);
 	if (!PlayMontageTask)
