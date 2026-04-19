@@ -47,19 +47,14 @@ public:
 	AEDPlayerState();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	virtual void CopyProperties(APlayerState* PlayerState) override;
 
 	// -------------------------------------------------------
-	// 팀 / 준비 상태
+	// 팀 / 스폰 구역
 	// -------------------------------------------------------
 
 	/** 팀 ID (EDTeam::None = 미배정, 10 = TeamA, 11 = TeamB, 12 = TeamC) */
 	UPROPERTY(Replicated, BlueprintReadWrite, Category = "ED|Player")
 	int32 TeamId = EDTeam::None;
-
-	/** 준비 완료 여부 */
-	UPROPERTY(Replicated, BlueprintReadWrite, Category = "ED|Player")
-	bool bReady = false;
 
 	/** 희망 스폰 구역 ID (1~4). UI에서 선택 후 설정 */
 	UPROPERTY(Replicated, BlueprintReadWrite, Category = "ED|Player")

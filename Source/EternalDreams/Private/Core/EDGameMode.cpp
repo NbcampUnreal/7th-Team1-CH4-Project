@@ -63,7 +63,7 @@ void AEDGameMode::PostLogin(APlayerController* NewPlayer)
 	}
 
 	// FindPlayerStart가 올바른 Zone을 고르려면 Super::PostLogin(→RestartPlayer→FindPlayerStart) 전에
-	// IOCP에서 받은 팀/존 정보를 PlayerState에 먼저 적용해야 한다.
+	// IOCP에서 받은 팀/닉네임과 URL 옵션으로 전달된 Zone을 PlayerState에 먼저 적용해야 한다.
 	if (AEDPlayerState* PS = NewPlayer->GetPlayerState<AEDPlayerState>())
 	{
 		if (UGameInstance* GI = GetGameInstance())
@@ -82,9 +82,25 @@ void AEDGameMode::PostLogin(APlayerController* NewPlayer)
 					if (const auto* Info = DediSub->GetPlayerInfoByToken(Token))
 					{
 						PS->TeamId = Info->TeamId;
-						UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PostLogin — IOCP 팀 배정: %s → Team %d"),
+						PS->SetPlayerName(Info->Nickname);
+						UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PostLogin — IOCP 팀/닉네임: %s → Team %d"),
 							*Info->Nickname, Info->TeamId);
 					}
+				}
+			}
+		}
+
+		// 로비(MainMenu)에서 고른 Zone은 Matchmaking Subsystem이 TravelURL `?zone=` 옵션으로 넘긴다.
+		if (UNetConnection* NetConn = NewPlayer->GetNetConnection())
+		{
+			const FString ZoneOpt = UGameplayStatics::ParseOption(NetConn->RequestURL, TEXT("zone"));
+			if (!ZoneOpt.IsEmpty())
+			{
+				const int32 ZoneId = FCString::Atoi(*ZoneOpt);
+				if (ZoneId > 0)
+				{
+					PS->DesiredZoneId = ZoneId;
+					UE_LOG(LogEDCore, Warning, TEXT("[GameMode] PostLogin — URL Zone: %d"), ZoneId);
 				}
 			}
 		}

@@ -63,8 +63,6 @@ void UEDGameInstance::JoinGame(const FString& ServerIP)
 {
 	UE_LOG(LogEDCore, Warning, TEXT("[GameInstance] JoinGame 호출 — ServerIP: %s"), *ServerIP);
 
-	LastServerIP = ServerIP;
-
 	APlayerController* PC = GetFirstLocalPlayerController();
 	if (!PC)
 	{

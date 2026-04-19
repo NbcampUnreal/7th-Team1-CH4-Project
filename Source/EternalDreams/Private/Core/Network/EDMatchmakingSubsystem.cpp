@@ -345,6 +345,14 @@ void UEDMatchmakingSubsystem::HandleGameStart(const FString& JsonBody)
 			? Json->GetStringField(TEXT("auth_token"))
 			: AuthToken;
 		FString TravelURL = FString::Printf(TEXT("%s:%d?token=%s"), *ServerIP, ServerPort, *GameAuthToken);
+
+		// IOCP 서버에 Zone OpCode가 아직 없으므로 Subsystem이 보유한 로컬 선택값을
+		// URL 옵션으로 하드 트래블에 실어 데디서버 PreLogin/PostLogin에서 복원한다.
+		if (CurrentZoneId > 0)
+		{
+			TravelURL.Appendf(TEXT("?zone=%d"), CurrentZoneId);
+		}
+
 		GI->JoinGame(TravelURL);
 	}
 }

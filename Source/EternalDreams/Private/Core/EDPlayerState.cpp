@@ -12,28 +12,10 @@ void AEDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AEDPlayerState, TeamId);
-	DOREPLIFETIME(AEDPlayerState, bReady);
 	DOREPLIFETIME(AEDPlayerState, DesiredZoneId);
 	DOREPLIFETIME(AEDPlayerState, bIsDead);
 	DOREPLIFETIME(AEDPlayerState, bEliminated);
 	DOREPLIFETIME(AEDPlayerState, RemainingRevives);
 	DOREPLIFETIME(AEDPlayerState, Kills);
 	DOREPLIFETIME(AEDPlayerState, Deaths);
-}
-
-void AEDPlayerState::CopyProperties(APlayerState* PlayerState)
-{
-	Super::CopyProperties(PlayerState);
-
-	if (AEDPlayerState* PS = Cast<AEDPlayerState>(PlayerState))
-	{
-		PS->TeamId = TeamId;
-		PS->bReady = bReady;
-		PS->DesiredZoneId = DesiredZoneId;
-		PS->bIsDead = bIsDead;
-		PS->bEliminated = bEliminated;
-		PS->RemainingRevives = RemainingRevives;
-		PS->Kills = Kills;
-		PS->Deaths = Deaths;
-	}
 }
