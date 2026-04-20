@@ -23,7 +23,7 @@ public:
 	UFUNCTION()
 	FORCEINLINE void SetServerStaticMesh(UStaticMesh* StaticMesh){WeaponStaticMeshComp->SetStaticMesh(StaticMesh);};
 	
-	
+	void ApplyMeshOnServer(UStaticMesh* StaticMesh);
 	
 	UFUNCTION()
 	void OnRep_WeaponStaticMesh();
@@ -33,7 +33,8 @@ public:
 	
 	FORCEINLINE UStaticMeshComponent* GetStaticMeshComp() {return WeaponStaticMeshComp;};
 
-
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastApplyMesh(UStaticMesh* StaticMesh);
 	
 protected:
 	UPROPERTY()
