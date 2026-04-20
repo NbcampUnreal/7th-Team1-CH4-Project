@@ -172,7 +172,6 @@ void UEDGameDataSubsystem::LoadPhase_Monster()
 	AM.GetPrimaryAssetIdList(MonsterAssetType, Ids);
 	if (Ids.IsEmpty())
 	{
-		UE_LOG(LogTemp, Log, TEXT("몬스터 정보 로드 실패"));
 		OnMonsterDataLoaded();
 		return;
 	}
@@ -189,38 +188,43 @@ void UEDGameDataSubsystem::LoadPhase_Player()
 {
 	SetPhase(EDataLoadPhase::LoadingPlayer);
 	UEDAssetManager& AM = UEDAssetManager::Get();
-	
-	// PlayerData, PlayerAnimData, WeaponData 모두 로드
-	TArray<FPrimaryAssetId> PlayerIds;
-	AM.GetPrimaryAssetIdList(PlayerDataAssetType, PlayerIds);
-	
-	TArray<FPrimaryAssetId> PlayerAnimIds;
-	AM.GetPrimaryAssetIdList(PlayerAnimDataAssetType, PlayerAnimIds);
-	
-	TArray<FPrimaryAssetId> WeaponIds;
-	AM.GetPrimaryAssetIdList(WeaponDataAssetType, WeaponIds);
-	
-	// 모든 ID를 하나의 배열로 통합
+
 	TArray<FPrimaryAssetId> AllIds;
-	AllIds.Append(PlayerIds);
-	AllIds.Append(PlayerAnimIds);
-	AllIds.Append(WeaponIds);
-	
+	TArray<FPrimaryAssetId> Temp;
+	AM.GetPrimaryAssetIdList(PlayerDataAssetType, Temp);     AllIds.Append(Temp); Temp.Reset();
+	AM.GetPrimaryAssetIdList(PlayerAnimDataAssetType, Temp); AllIds.Append(Temp); Temp.Reset();
+	AM.GetPrimaryAssetIdList(WeaponDataAssetType, Temp);     AllIds.Append(Temp);
+
 	if (AllIds.IsEmpty())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[EDGameDataSubsystem] 플레이어 관련 데이터 에셋을 찾을 수 없습니다"));
 		OnPlayerDataLoaded();
 		return;
 	}
-
-	// 핸들은 우선 PlayerData로 통일
+	
+	// 1단계: 번들 없이 DA 자체만 먼저 로드
 	TSharedPtr<FStreamableHandle> Handle = AM.LoadPrimaryAssetsAsync(
 		AllIds,
-{PlayerDataAssetType.GetName()},
-		FStreamableDelegate::CreateUObject(this, &UEDGameDataSubsystem::OnPlayerDataLoaded)
+		{},  // 번들 없음
+		FStreamableDelegate::CreateLambda([this, AllIds]()
+		{
+			// 2단계: DA 로드 완료 후 번들 상태 변경으로 TSoft 필드 로드
+			UEDAssetManager& AM2 = UEDAssetManager::Get();
+			TArray<FName> Bundles = {
+				PlayerDataAssetType.GetName(),
+				PlayerAnimDataAssetType.GetName(),
+				WeaponDataAssetType.GetName()
+			};
+
+			AM2.ChangeBundleStateForPrimaryAssets(
+				AllIds,
+				Bundles,   // 추가할 번들
+				{},        // 제거할 번들
+				false,
+				FStreamableDelegate::CreateUObject(this, &UEDGameDataSubsystem::OnPlayerDataLoaded)
+			);
+		})
 	);
 	
-	// 언로드시 키 일치위해서 핸들은 타입별로 저장
 	PhaseHandles.Add(PlayerDataAssetType.GetName(), Handle);
 	PhaseHandles.Add(PlayerAnimDataAssetType.GetName(), Handle);
 	PhaseHandles.Add(WeaponDataAssetType.GetName(), Handle);
