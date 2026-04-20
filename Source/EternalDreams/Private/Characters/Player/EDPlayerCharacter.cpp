@@ -415,6 +415,7 @@ void AEDPlayerCharacter::OnRWeaponMeshLoaded(TSoftObjectPtr<UStaticMesh> MeshPtr
 {
 	if (IsValid(RWeaponActor) && MeshPtr.IsValid())
 	{
+		LWeaponActor->ApplyMeshOnServer(nullptr);
 		RWeaponActor->ApplyMeshOnServer(MeshPtr.Get());
 	}
 }
@@ -423,6 +424,7 @@ void AEDPlayerCharacter::OnLWeaponMeshLoaded(TSoftObjectPtr<UStaticMesh> MeshPtr
 {
 	if (IsValid(LWeaponActor) && MeshPtr.IsValid())
 	{
+		RWeaponActor->ApplyMeshOnServer(nullptr);
 		LWeaponActor->ApplyMeshOnServer(MeshPtr.Get());
 	}
 }
@@ -477,6 +479,7 @@ void AEDPlayerCharacter::ApplyPlayerDataAsset()
 
     if (PlayerData->SkeletalMesh.IsValid())
     {
+    	// 만약 메시가 아직 준비안되었으면 동기로 로드, 정상적인 시퀀스에서는 동기로 호출될일 없음
         USkeletalMesh* SkeletalMesh = PlayerData->SkeletalMesh.IsPending()
             ? PlayerData->SkeletalMesh.LoadSynchronous()
             : PlayerData->SkeletalMesh.Get();
