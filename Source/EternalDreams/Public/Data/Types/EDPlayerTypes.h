@@ -33,7 +33,8 @@ enum class EWeaponNameType : uint8
 	Hammer			UMETA(DisplayName = "DA_Hammer"),		
 	Sword			UMETA(DisplayName = "DA_Sword"),			
 	Bow				UMETA(DisplayName = "DA_Bow"),			
-	Staff			UMETA(DisplayName = "DA_Staff") 				
+	Staff			UMETA(DisplayName = "DA_Staff"),
+	Arrow			UMETA(DisplayName = "DA_Arrow")
 };
 
 //플레이어 애님몽타주 관련 DA 이름
