@@ -27,9 +27,15 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo, 
 		bool bReplicateEndAbility, 
 		bool bWasCancelled) override;
+	virtual void ApplyCooldown(const FGameplayAbilitySpecHandle Handle, 
+		const FGameplayAbilityActorInfo* ActorInfo, 
+		const FGameplayAbilityActivationInfo ActivationInfo) const override;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
 	TObjectPtr<UAnimMontage> SkillMontage;
+	// 쿨타임 GE 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
+	TSubclassOf<UGameplayEffect> CooldownEffectClass;
 	
 private:
 	UFUNCTION()

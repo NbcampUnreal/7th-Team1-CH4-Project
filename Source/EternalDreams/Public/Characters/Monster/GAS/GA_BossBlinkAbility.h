@@ -31,6 +31,10 @@ protected:
 		const FGameplayAbilityActivationInfo ActivationInfo, 
 		bool bReplicateEndAbility, 
 		bool bWasCancelled) override;
+	virtual void ApplyCooldown(const FGameplayAbilitySpecHandle Handle, 
+		const FGameplayAbilityActorInfo* ActorInfo, 
+		const FGameplayAbilityActivationInfo ActivationInfo) const override;
+	
 	// 점멸 목적지까지 오프셋(타겟 뒤쪽)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Blink|Data")
 	float BlinkOffset = 150.f;
@@ -43,6 +47,9 @@ protected:
 	// 범위 데미지 GE
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Blink|Data")
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
+	// 쿨타임 GE
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Blink|Data")
+	TSubclassOf<UGameplayEffect> CooldownEffectClass;
 	// 점멸 목적지 인디케이터 이펙트
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Blink|Effect")
 	TObjectPtr<UNiagaraSystem> IndicatorEffect;

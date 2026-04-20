@@ -54,7 +54,8 @@ void UGA_BossBlinkAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-	
+	// 쿨타임 적용
+	ApplyCooldown(Handle, ActorInfo, ActivationInfo);
 	// 타겟 뒤쪽 점멸 도착 지점 계산
 	FVector ToTarget = (Target->GetActorLocation() - Monster->GetActorLocation()).GetSafeNormal();
 	BlinkDestination = Target->GetActorLocation() + ToTarget * BlinkOffset;
@@ -90,6 +91,22 @@ void UGA_BossBlinkAbility::EndAbility(const FGameplayAbilitySpecHandle Handle,
 		Monster->OnAttackFinished.Broadcast();
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UGA_BossBlinkAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
+{
+	if (IsValid(CooldownEffectClass) == false)
+		return;
+
+	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+	if (IsValid(ASC) == false)
+		return;
+
+	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(CooldownEffectClass, 1.f, Context);
+	if (SpecHandle.IsValid())
+		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 }
 
 void UGA_BossBlinkAbility::OnBlinkDelayFinished()

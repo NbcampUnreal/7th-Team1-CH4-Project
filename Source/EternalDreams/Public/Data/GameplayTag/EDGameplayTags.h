@@ -53,6 +53,8 @@ public:
 	FGameplayTag CoolDown_Skill_Whirlwind;
 	FGameplayTag CoolDown_Skill_Whirllaser;
 	FGameplayTag CoolDown_Skill_BasicKnockBack;
+	FGameplayTag CoolDown_Monster_Skill;
+	FGameplayTag CoolDown_Monster_Blink;
 	//Effect_Debuff
 	FGameplayTag Effect_Debuff_Slow;
 	FGameplayTag Effect_Debuff_Stun;
