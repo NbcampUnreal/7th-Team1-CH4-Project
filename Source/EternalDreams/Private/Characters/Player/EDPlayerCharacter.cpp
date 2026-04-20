@@ -93,14 +93,11 @@ void AEDPlayerCharacter::BeginPlay()
 	CachedDataSubsystem = DataSubsystem;
 	if (DataSubsystem->IsDataReady())
 	{
-		UE_LOG(LogTemp, Log, TEXT("[PlayerChar] 데이터 준비 완료 - 즉시 초기화 실행"));
 		ApplyPlayerDataAsset();
 	} else
 	{
-		UE_LOG(LogTemp, Log, TEXT("[PlayerChar] 데이터 준비 미완료 - 콜백 초기화 실행"));
 		DataSubsystem->OnAllDataLoaded.AddDynamic(this, &AEDPlayerCharacter::ApplyPlayerDataAsset);
 	}
-	
 	
 	//ASC Duration Callback
 	if (!IsValid(AbilitySystemComponent))
@@ -241,7 +238,7 @@ void AEDPlayerCharacter::OnWeaponChanged()
 {
     if (!HasAuthority()) return;
     if (!IsValid(InventoryComponent) || !IsValid(AbilitySystemComponent) || !IsValid(PlayerSkillComponent)) return;
-
+	
     const FEDGameplayTags& EDGameplayTags = FEDGameplayTags::Get();
 	
     const UEDGameDataSubsystem* DataSubsystem = UEDGameDataSubsystem::Get(GetWorld());
@@ -257,14 +254,12 @@ void AEDPlayerCharacter::OnWeaponChanged()
 	// 로드할 메시 소프트 레퍼런스
 	TSoftObjectPtr<UStaticMesh> RWeaponMeshPtr;
 	TSoftObjectPtr<UStaticMesh> LWeaponMeshPtr;
-
 	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Hammer))
 	{
 		UEDWeaponDataAsset* Hammer = DataSubsystem->GetData<UEDWeaponDataAsset>(
 			FPrimaryAssetId(WeaponCategory, *UEnum::GetDisplayValueAsText(EWeaponNameType::Hammer).ToString())
 		);
 		if (Hammer) RWeaponMeshPtr = Hammer->WeaponStaticMesh;
-		// 망치는 한 손 무기 → LWeapon 없음
 
 		WeaponTagToSet = EDGameplayTags.Item_Weapon_Hammer;
 		BasicAttackTagToSet = EDGameplayTags.Player_BasicAttack_Hammer;
@@ -361,71 +356,6 @@ void AEDPlayerCharacter::OnWeaponChanged()
 		if (IsValid(LWeaponActor))
 			LWeaponActor->SetServerStaticMesh(nullptr);
 	}
-	FName WeaponCategory=  *UEnum::GetDisplayValueAsText(EPlayerDataType::WeaponData).ToString();
-	
-	
-	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Bow))
-	{
-		UEDWeaponDataAsset* Bow = 
-			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
-				WeaponCategory, 
-				*UEnum::GetDisplayValueAsText(EWeaponNameType::Bow).ToString()
-				));
-		
-		LWeaponActor->SetServerStaticMesh(Bow->WeaponStaticMesh.Get());
-		RWeaponActor->SetServerStaticMesh(nullptr);
-		
-		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Bow);
-		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Bow);
-		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Bow);
-	}
-	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Hammer))
-	{
-		UEDWeaponDataAsset* Hammer = 
-			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
-				WeaponCategory, 
-				*UEnum::GetDisplayValueAsText(EWeaponNameType::Hammer).ToString()
-				));
-		
-		LWeaponActor->SetServerStaticMesh(nullptr);
-		RWeaponActor->SetServerStaticMesh(Hammer->WeaponStaticMesh.Get());
-		
-		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Hammer);
-		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Hammer);
-		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Hammer);
-	}
-	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Staff))
-	{
-		UEDWeaponDataAsset* Staff = 
-			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
-				WeaponCategory, 
-				*UEnum::GetDisplayValueAsText(EWeaponNameType::Staff).ToString()
-				));
-		
-		LWeaponActor->SetServerStaticMesh(nullptr);
-		RWeaponActor->SetServerStaticMesh(Staff->WeaponStaticMesh.Get());
-		
-		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Staff);
-		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Staff);
-		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Staff);
-	}
-	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Sword))
-	{
-		UEDWeaponDataAsset* Sword = 
-			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
-				WeaponCategory, 
-				*UEnum::GetDisplayValueAsText(EWeaponNameType::Sword).ToString()
-				));
-		
-		LWeaponActor->SetServerStaticMesh(nullptr);
-		RWeaponActor->SetServerStaticMesh(Sword->WeaponStaticMesh.Get());
-		
-		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Sword);
-		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Sword);
-		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Sword);	
-	}
-	
-
 }
 
 void AEDPlayerCharacter::OnPlayerSkinChanged(EPlayerNameType& SkinName)
@@ -492,7 +422,11 @@ void AEDPlayerCharacter::OnLWeaponMeshLoaded(TSoftObjectPtr<UStaticMesh> MeshPtr
 
 void AEDPlayerCharacter::MulticastSetWeaponTags_Implementation(FGameplayTag BasicAttackTag, FGameplayTag EvadeTag, FGameplayTag EvadeCoolTimeTag)
 {
-	if (!IsValid(PlayerSkillComponent)) return;
+	if (!IsValid(PlayerSkillComponent))
+	{
+		UE_LOG(LogTemp, Error, TEXT("[MulticastSetWeaponTags] PlayerSkillComponent NULL!"));
+		return;
+	}
 
 	PlayerSkillComponent->SetBasicAttackTag(BasicAttackTag);
 	PlayerSkillComponent->SetSpaceSkillTag(EvadeTag);
@@ -525,7 +459,6 @@ float AEDPlayerCharacter::GetMaxHealth() const
 void AEDPlayerCharacter::ApplyPlayerDataAsset()
 {
     if (!HasAuthority()) return;
-
     UEDGameDataSubsystem* DataSubsystem = CachedDataSubsystem.Get();
     if (!DataSubsystem) return;
 
@@ -580,7 +513,7 @@ void AEDPlayerCharacter::ApplyPlayerDataAsset()
     GetWorld()->GetTimerManager().SetTimerForNextTick([this]()
     {
         USkeletalMeshComponent* AttachTarget = GetMesh();
-
+    	
         if (IsValid(RWeaponActor))
         {
             RWeaponActor->AttachToComponent(
@@ -601,7 +534,7 @@ void AEDPlayerCharacter::ApplyPlayerDataAsset()
     	if (IsValid(InventoryComponent))
     	{
 			InventoryComponent->RequestEnsureDefaultEquipment();
-		}
+    	}
     });
 }
 
