@@ -318,7 +318,11 @@ void AEDPlayerCharacter::OnWeaponChanged()
 		{
 			// 이미 메모리에 있음 → 바로 적용
 			if (IsValid(RWeaponActor))
+			{
+				LWeaponActor->ApplyMeshOnServer(nullptr);
 				RWeaponActor->ApplyMeshOnServer(RWeaponMeshPtr.Get());
+			}
+				
 		}
 		else
 		{
@@ -332,7 +336,7 @@ void AEDPlayerCharacter::OnWeaponChanged()
 	else
 	{
 		if (IsValid(RWeaponActor))
-			RWeaponActor->SetServerStaticMesh(nullptr);
+			RWeaponActor->ApplyMeshOnServer(nullptr);
 	}
 
 	// LWeapon 비동기 로드
@@ -341,7 +345,10 @@ void AEDPlayerCharacter::OnWeaponChanged()
 		if (LWeaponMeshPtr.IsValid())
 		{
 			if (IsValid(LWeaponActor))
+			{
+				RWeaponActor->ApplyMeshOnServer(nullptr);
 				LWeaponActor->ApplyMeshOnServer(LWeaponMeshPtr.Get());
+			}
 		}
 		else
 		{
@@ -354,7 +361,7 @@ void AEDPlayerCharacter::OnWeaponChanged()
 	else
 	{
 		if (IsValid(LWeaponActor))
-			LWeaponActor->SetServerStaticMesh(nullptr);
+			LWeaponActor->ApplyMeshOnServer(nullptr);
 	}
 }
 
