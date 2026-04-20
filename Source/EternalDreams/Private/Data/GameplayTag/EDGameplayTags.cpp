@@ -23,6 +23,10 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("Ability.Monster.Skill"),
 		FString("몬스터가 스킬 사용 중")
 	);
+	Tags.Ability_Monster_Blink = Manager.AddNativeGameplayTag(
+		FName("Ability.Monster.Blink"),
+		FString("보스 점멸 어빌리티")
+	);
 	//Player_BasicAttack
 	Tags.Player_BasicAttack_Hammer = Manager.AddNativeGameplayTag(
 		FName("Player.BasicAttack.Hammer"),

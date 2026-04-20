@@ -271,6 +271,4 @@ void AEDMonsterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 	
 	if (Data.NewValue <= 0.f)
 		HandleDeath();
-	
-	// TODO: 히트 리액션 추가(필요시)
 }

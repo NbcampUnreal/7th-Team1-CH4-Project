@@ -30,6 +30,7 @@ public:
 	//Ability_Monster
 	FGameplayTag Ability_Monster_Attack;
 	FGameplayTag Ability_Monster_Skill;
+	FGameplayTag Ability_Monster_Blink;
 	//Player_BasicAttack
 	FGameplayTag Player_BasicAttack_Hammer;
 	FGameplayTag Player_BasicAttack_Sword;
