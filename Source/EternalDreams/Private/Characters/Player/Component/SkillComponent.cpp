@@ -10,13 +10,7 @@ void USkillComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	AbilitySystemComponent=GetOwner()->FindComponentByClass<UAbilitySystemComponent>();
-	//Binding
-	if (IsValid(AbilitySystemComponent))
-	{
-		
-		AbilitySystemComponent->RegisterGameplayTagEvent(ESkillCoolTimeTag).AddUObject(this,&USkillComponent::ESkillCoolTime);
-		AbilitySystemComponent->RegisterGameplayTagEvent(SpaceSkillCoolTimeTag).AddUObject(this,&USkillComponent::SpaceSkillCoolTime);
-	}
+
 }
 
 void USkillComponent::SetQSkillCoolTimeTag(const FGameplayTag Tag)

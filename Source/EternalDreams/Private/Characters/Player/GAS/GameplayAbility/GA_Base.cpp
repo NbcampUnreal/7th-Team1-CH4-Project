@@ -7,6 +7,7 @@
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
 #include "Characters/Player/GAS/EDPlayerAttributeSet.h"
 #include "Core/EDGameDataSubsystem.h"
+#include "Core/EDSkillDataSubsystem.h"
 #include "Data/EDPlayerAnimDataAsset.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
 
@@ -70,7 +71,8 @@ void UGA_Base::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 	PlayMontageTask->OnInterrupted.AddDynamic(this, &UGA_Base::OnMontageCancelled);
 	// Task 활성화
 	PlayMontageTask->ReadyForActivation();
-
+	
+	//Anim Notify, 혹은 Projectile 에서 히트 판정이 들어왔을 경우 바인딩
 	UAbilityTask_WaitGameplayEvent* WaitEventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
 		this, FEDGameplayTags::Get().Event_SkillHit, nullptr, false, false);
 
@@ -145,10 +147,29 @@ void UGA_Base::OnNotifyHitEvent(FGameplayEventData HitGameplayEventData)
 	const UEDPlayerAttributeSet* PlayerAttributeSet = Cast<UEDPlayerAttributeSet>(PlayerASC->GetAttributeSet(UEDPlayerAttributeSet::StaticClass()));
 	if (SpecHandle.IsValid() || IsValid(PlayerAttributeSet))
 	{
+		//AssetTag 로 검색
+		const FGameplayTagContainer& AssetTags=GetAssetTags();
+		FGameplayTag AssetTag=AssetTags.GetByIndex(0);
+		
+		const UEDSkillDataSubsystem* EDSkillDataSubsystem=UEDSkillDataSubsystem::Get(GetWorld());
+		
+		if (AssetTag==FGameplayTag::EmptyTag||!IsValid(EDSkillDataSubsystem))
+		{
+			return;
+		}
+		
+		const FSkillMulStatus* SkillMulStaus =EDSkillDataSubsystem->GetSkillData(AssetTag);
+		
+		if (SkillMulStaus==nullptr)
+		{
+			return;
+		}
+		
+		
 		float SkillFinalDamage =
-			PlayerAttributeSet->GetStrength() * DamageStrengthMultiplier +
-			PlayerAttributeSet->GetDexterity() * DamageDexterityMultiplier +
-			PlayerAttributeSet->GetIntelligence() * DamageIntellegenceMultiplier
+			PlayerAttributeSet->GetStrength() * SkillMulStaus->DamageStrengthMultiplier +
+			PlayerAttributeSet->GetDexterity() * SkillMulStaus->DamageDexterityMultiplier +
+			PlayerAttributeSet->GetIntelligence() * SkillMulStaus->DamageIntelligenceMultiplier
 		;
 
 		SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(TEXT("Data.DamageMultiplier")), SkillFinalDamage);

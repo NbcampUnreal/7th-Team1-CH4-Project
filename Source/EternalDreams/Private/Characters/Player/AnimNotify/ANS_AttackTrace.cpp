@@ -94,32 +94,32 @@ void UANS_AttackTrace::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenc
 		{
 			continue;
 		}
-		//피격당한 캐릭터를 메인캐릭터로 형변환
-		AEDPlayerCharacter* HittedPlayer=Cast<AEDPlayerCharacter>(HittedActor);
-		if (HittedPlayer == nullptr)
-		{
-			continue;
-		}
+		
 		//피격당한 목록에 추가
-		Player->HittedCharacterArray.Add(HittedPlayer);
+		Player->HittedCharacterArray.Add(HittedActor);
 		FGameplayEventData HitGameplayEventData;
 		
-		HitGameplayEventData.Target=HittedPlayer;
+		HitGameplayEventData.Target=HittedActor;
 		Player->GetAbilitySystemComponent()->HandleGameplayEvent(FEDGameplayTags::Get().Event_SkillHit,&HitGameplayEventData);
 		
 		
 		//넉백 추가
-		HittedPlayer->GetCharacterMovement()->Velocity=FVector::ZeroVector;
+		ACharacter* HittedCharacter=Cast<ACharacter>(HittedActor);
+		if (!IsValid(HittedCharacter))
+		{
+			return;
+		}
 		
+		HittedCharacter->GetCharacterMovement()->Velocity=FVector::ZeroVector;
 		FVector KnockBackDirection;
 		FVector2D KnockBackDirection2D;
-		KnockBackDirection=(HittedPlayer->GetActorLocation()-Player->GetActorLocation());
+		KnockBackDirection=(HittedActor->GetActorLocation()-Player->GetActorLocation());
 		KnockBackDirection2D=FVector2D(KnockBackDirection.X,KnockBackDirection.Y);
 		//정규화는 XY만 필요할 경우 2D에서 해야 연산량 감소
 		KnockBackDirection2D.Normalize();
 		KnockBackDirection2D*=LaunchPowerXY;
 		KnockBackDirection=FVector(KnockBackDirection2D.X,KnockBackDirection2D.Y,LaunchPowerZ);
-		HittedPlayer->LaunchCharacter(KnockBackDirection,true,true);
+		HittedCharacter->LaunchCharacter(KnockBackDirection,true,true);
 	}
 }
 

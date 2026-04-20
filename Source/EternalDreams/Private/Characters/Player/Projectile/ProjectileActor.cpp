@@ -9,6 +9,7 @@
 #include "Components/SphereComponent.h"
 #include "Core/EDGameDataSubsystem.h"
 #include "Data/EDWeaponDataAsset.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -119,33 +120,11 @@ void AProjectileActor::OnProjectileHit(UPrimitiveComponent* HitComponent, AActor
 	}
 	
 	
-	if (TObjectPtr<AEDPlayerCharacter> HittedCharacter= Cast<AEDPlayerCharacter>(OtherActor))
-	{
-		//맞은 적의 ASI, ASC를 가져온다.
-		IAbilitySystemInterface* TargetASI = Cast<IAbilitySystemInterface>(HittedCharacter);
-		if (TargetASI == nullptr)
-		{
-			return;
-		}
-		UAbilitySystemComponent* TargetASC = TargetASI->GetAbilitySystemComponent();
-		if (TargetASC==nullptr)
-		{
-			return;
-		}
+	FGameplayEventData HitGameplayEventData;
 		
-		//GE 적용
-		FGameplayEffectContextHandle Context = AttackerASC->MakeEffectContext();
-		Context.AddSourceObject(Owner);
-
-		FGameplayEffectSpecHandle SpecHandle = AttackerASC->MakeOutgoingSpec(
-			DamageEffectClass, 1.0f, Context);
-
-		if (SpecHandle.IsValid())
-		{
-			AttackerASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
-		}
-	}
-	UE_LOG(LogTemp,Warning,TEXT("%s Collision Destroy"),*OtherActor->GetName());
+	HitGameplayEventData.Target=OtherActor;
+	AttackerASC->HandleGameplayEvent(FEDGameplayTags::Get().Event_SkillHit,&HitGameplayEventData);
+	
 	Destroy();
 }
 
