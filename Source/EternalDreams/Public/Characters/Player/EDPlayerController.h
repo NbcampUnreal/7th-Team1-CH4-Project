@@ -63,18 +63,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
 	TObjectPtr<UInputAction> UIBackAction = nullptr;
 #pragma endregion 김동주
-	
-	// -------------------------------------------------------
-	// 테스트용 RPC (페이즈)
-	// -------------------------------------------------------
-
-	/** 클라이언트에서 호출 → 서버에서 실행. 페이즈 시퀀스 시작 요청. (테스트용) */
-	UFUNCTION(Server, Reliable)
-	void Server_RequestStartPhaseSequence();
-
-	/** 클라이언트에서 호출 → 서버에서 실행. 다음 페이즈 스킵 요청. (테스트용) */
-	UFUNCTION(Server, Reliable)
-	void Server_RequestSkipPhase();
 
 	// -------------------------------------------------------
 	// 사망 / 부활 RPC

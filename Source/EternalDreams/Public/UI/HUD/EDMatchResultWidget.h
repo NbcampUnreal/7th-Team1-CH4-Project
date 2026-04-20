@@ -4,9 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
+#include "Styling/SlateBrush.h"
 #include "EDMatchResultWidget.generated.h"
 
 class UTextBlock;
+class UImage;
 
 /**
  * 매치 종료 시 Modal 레이어에 올라가는 결과 위젯.
@@ -38,4 +40,16 @@ protected:
 	/** 승리/패배/무승부 제목 텍스트 (Optional: BP에 없으면 스킵) */
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> ResultTitleText;
+
+	/** 승리/패배 이미지 표시용 (Optional: BP에 UImage로 배치 후 BindWidget) */
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UImage> ResultImage;
+
+	/** 승리 시 ResultImage에 세팅할 브러시 (Texture 또는 Material 지정) */
+	UPROPERTY(EditDefaultsOnly, Category = "ED|Match|Image")
+	FSlateBrush VictoryBrush;
+
+	/** 패배 시 ResultImage에 세팅할 브러시 */
+	UPROPERTY(EditDefaultsOnly, Category = "ED|Match|Image")
+	FSlateBrush DefeatBrush;
 };

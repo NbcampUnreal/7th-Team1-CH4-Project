@@ -143,23 +143,7 @@ void AEDGameMode::StartPhaseSequence()
 
 void AEDGameMode::SkipToNextPhase()
 {
-	const int32 NextIndex = CurrentPhaseIndex + 1;
-
-	if (NextIndex >= PhaseSequence.Num())
-	{
-		bPhaseSequenceActive = false;
-		PhaseTimer = 0.f;
-
-		if (AEDGameState* GS = GetGameState<AEDGameState>())
-		{
-			GS->SetPhaseRemainingTime(0.f);
-		}
-
-		OnMatchFinished();
-		return;
-	}
-
-	AdvanceToPhase(NextIndex);
+	AdvanceToPhase(CurrentPhaseIndex + 1);
 }
 
 FGameplayTag AEDGameMode::GetCurrentPhase() const

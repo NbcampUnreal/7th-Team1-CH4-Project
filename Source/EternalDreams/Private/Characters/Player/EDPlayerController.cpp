@@ -319,22 +319,6 @@ void AEDPlayerController::CameraFocus(const FInputActionValue& value)
 	OnCameraFocus.ExecuteIfBound(value);
 }
 
-void AEDPlayerController::Server_RequestStartPhaseSequence_Implementation()
-{
-	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	if (!GM) return;
-
-	GM->StartPhaseSequence();
-}
-
-void AEDPlayerController::Server_RequestSkipPhase_Implementation()
-{
-	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	if (!GM) return;
-
-	GM->SkipToNextPhase();
-}
-
 void AEDPlayerController::ClientOnPlayerDied_Implementation(float CountdownSeconds, bool bCanRespawn)
 {
 	ULocalPlayer* LP = GetLocalPlayer();
