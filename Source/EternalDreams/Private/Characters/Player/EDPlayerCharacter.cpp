@@ -19,9 +19,11 @@
 #include "Components/WidgetComponent.h"
 #include "Core/EDAssetManager.h"
 #include "Core/EDGameDataSubsystem.h"
+#include "Data/EDPlayerDataAsset.h"
 #include "Data/EDWeaponDataAsset.h"
 #include "Data/EDPlayerDataAsset.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
+#include "Data/Types/EDPlayerTypes.h"
 #include "Engine/AssetManager.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
@@ -254,11 +256,17 @@ void AEDPlayerCharacter::OnWeaponChanged()
 	{
 		return;
 	}
+
+	FName WeaponCategory=  *UEnum::GetDisplayValueAsText(EPlayerDataType::WeaponData).ToString();
+	
 	
 	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Bow))
 	{
 		UEDWeaponDataAsset* Bow = 
-			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(TEXT("WeaponData"), TEXT("DA_Bow")));
+			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
+				WeaponCategory, 
+				*UEnum::GetDisplayValueAsText(EWeaponNameType::Bow).ToString()
+				));
 		
 		LWeaponActor->SetServerStaticMesh(Bow->WeaponStaticMesh.Get());
 		RWeaponActor->SetServerStaticMesh(nullptr);
@@ -270,7 +278,10 @@ void AEDPlayerCharacter::OnWeaponChanged()
 	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Hammer))
 	{
 		UEDWeaponDataAsset* Hammer = 
-			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(TEXT("WeaponData"), TEXT("DA_Hammer")));
+			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
+				WeaponCategory, 
+				*UEnum::GetDisplayValueAsText(EWeaponNameType::Hammer).ToString()
+				));
 		
 		LWeaponActor->SetServerStaticMesh(nullptr);
 		RWeaponActor->SetServerStaticMesh(Hammer->WeaponStaticMesh.Get());
@@ -282,7 +293,10 @@ void AEDPlayerCharacter::OnWeaponChanged()
 	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Staff))
 	{
 		UEDWeaponDataAsset* Staff = 
-			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(TEXT("WeaponData"), TEXT("DA_Staff")));
+			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
+				WeaponCategory, 
+				*UEnum::GetDisplayValueAsText(EWeaponNameType::Staff).ToString()
+				));
 		
 		LWeaponActor->SetServerStaticMesh(nullptr);
 		RWeaponActor->SetServerStaticMesh(Staff->WeaponStaticMesh.Get());
@@ -294,7 +308,10 @@ void AEDPlayerCharacter::OnWeaponChanged()
 	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Sword))
 	{
 		UEDWeaponDataAsset* Sword = 
-			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(TEXT("WeaponData"), TEXT("DA_Sword")));
+			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
+				WeaponCategory, 
+				*UEnum::GetDisplayValueAsText(EWeaponNameType::Sword).ToString()
+				));
 		
 		LWeaponActor->SetServerStaticMesh(nullptr);
 		RWeaponActor->SetServerStaticMesh(Sword->WeaponStaticMesh.Get());
@@ -305,6 +322,55 @@ void AEDPlayerCharacter::OnWeaponChanged()
 	}
 	
 
+}
+
+void AEDPlayerCharacter::OnPlayerSkinChanged(EPlayerNameType& SkinName)
+{
+	if (!IsValid(GetWorld()))
+	{
+		return;
+	}
+	
+	UEDGameDataSubsystem* EDGameDataSubsystem=UEDGameDataSubsystem::Get(GetWorld());
+	if (!IsValid(EDGameDataSubsystem))
+	{
+		return;
+	}
+	
+	FName PlayerSkinCategory= *UEnum::GetDisplayValueAsText(EPlayerDataType::PlayerData).ToString();
+	
+	//타겟 메시 및 애님인스턴스 설정
+	if (GetMesh()==nullptr||GetMesh()->GetAnimInstance()==nullptr)
+	{
+		UEDPlayerDataAsset* TargetSkin = EDGameDataSubsystem->GetData<UEDPlayerDataAsset>(
+		FPrimaryAssetId(
+			PlayerSkinCategory,
+			*UEnum::GetDisplayValueAsText(EPlayerNameType::Basic).ToString()
+			));
+		if (TargetSkin)
+		{
+			GetMesh()->SetSkeletalMesh(TargetSkin->SkeletalMesh.Get());
+			GetMesh()->SetAnimInstanceClass(TargetSkin->AnimationBlueprint.Get());
+		}
+		
+	}
+	
+	
+	//플레이어 스킨 변경
+	UEDPlayerDataAsset* PlayerSkin = EDGameDataSubsystem->GetData<UEDPlayerDataAsset>(
+		FPrimaryAssetId(
+			PlayerSkinCategory,
+			*UEnum::GetDisplayValueAsText(SkinName).ToString()
+			));
+	
+	USkeletalMeshComponent* RetargetMesh=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
+	
+	if (PlayerSkin&&IsValid(RetargetMesh))
+	{
+		RetargetMesh->SetSkeletalMesh(PlayerSkin->SkeletalMesh.Get());
+		RetargetMesh->SetAnimInstanceClass(PlayerSkin->AnimationBlueprint.Get());
+	}
+	
 }
 
 float AEDPlayerCharacter::GetHealth() const

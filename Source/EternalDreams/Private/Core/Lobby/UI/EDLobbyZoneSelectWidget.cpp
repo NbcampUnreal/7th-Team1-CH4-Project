@@ -8,7 +8,7 @@
 
 namespace
 {
-	bool IsValidZoneId(const int32 ZoneId)
+	bool IsValidLobbyZoneId(const int32 ZoneId)
 	{
 		return ZoneId >= 1 && ZoneId <= 4;
 	}
@@ -48,18 +48,18 @@ void UEDLobbyZoneSelectWidget::HandleZoneSelected(int32 ZoneId)
 void UEDLobbyZoneSelectWidget::InitializeSelection()
 {
 	AEDPlayerState* PlayerState = GetOwningPlayerState<AEDPlayerState>();
-	const int32 InitialZoneId = (PlayerState && IsValidZoneId(PlayerState->DesiredZoneId))
+	const int32 InitialZoneId = (PlayerState && IsValidLobbyZoneId(PlayerState->DesiredZoneId))
 		? PlayerState->DesiredZoneId
 		: DefaultZoneId;
 
-	if (!IsValidZoneId(InitialZoneId))
+	if (!IsValidLobbyZoneId(InitialZoneId))
 	{
 		return;
 	}
 
 	ZoneSelectorPanel->SetSelectedZone(InitialZoneId, false);
 
-	if (!PlayerState || !IsValidZoneId(PlayerState->DesiredZoneId))
+	if (!PlayerState || !IsValidLobbyZoneId(PlayerState->DesiredZoneId))
 	{
 		CommitZoneSelection(InitialZoneId);
 	}
@@ -67,7 +67,7 @@ void UEDLobbyZoneSelectWidget::InitializeSelection()
 
 void UEDLobbyZoneSelectWidget::CommitZoneSelection(int32 ZoneId) const
 {
-	if (!IsValidZoneId(ZoneId))
+	if (!IsValidLobbyZoneId(ZoneId))
 	{
 		return;
 	}

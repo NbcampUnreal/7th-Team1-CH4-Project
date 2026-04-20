@@ -37,8 +37,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Data", meta=(AssetBundles="PlayerData"))
 	TSoftClassPtr<UAnimInstance> AnimationBlueprint;
 	
-	//오버레이머티리얼
-	//UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Player|Data", meta=(AssetBundles="Player"))
-	//TSoftObjectPtr<UMaterial> PlayerMaterial;
+
 
 };
