@@ -4,7 +4,13 @@
 #include "Characters/Player/Component/SkillComponent.h"
 
 #include "AbilitySystemComponent.h"
+#include "Net/UnrealNetwork.h"
 
+
+USkillComponent::USkillComponent()
+{
+	SetIsReplicatedByDefault(true);
+}
 
 void USkillComponent::BeginPlay()
 {
@@ -13,7 +19,30 @@ void USkillComponent::BeginPlay()
 
 }
 
-void USkillComponent::SetQSkillCoolTimeTag(const FGameplayTag Tag)
+void USkillComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	
+	DOREPLIFETIME(USkillComponent, BasicAttackTag);
+	DOREPLIFETIME(USkillComponent, QSkillTag);
+	DOREPLIFETIME(USkillComponent, QSkillCoolTimeTag);
+	DOREPLIFETIME(USkillComponent, ESkillTag);
+	DOREPLIFETIME(USkillComponent, ESkillCoolTimeTag);
+	DOREPLIFETIME(USkillComponent, SpaceSkillTag);
+	DOREPLIFETIME(USkillComponent, SpaceSkillCoolTimeTag);
+}
+
+void USkillComponent::SetBasicAttackTag_Implementation(const FGameplayTag Tag)
+{
+	BasicAttackTag=Tag;
+}
+
+void USkillComponent::SetQSkillTag_Implementation(const FGameplayTag Tag)
+{
+	{QSkillTag=Tag;}
+}
+
+void USkillComponent::SetQSkillCoolTimeTag_Implementation(const FGameplayTag Tag)
 {
 	if (QSkillCoolTimeTag!=FGameplayTag::EmptyTag)
 	{
@@ -23,7 +52,12 @@ void USkillComponent::SetQSkillCoolTimeTag(const FGameplayTag Tag)
 	QSkillCoolTimeTag=Tag;
 }
 
-void USkillComponent::SetESkillCoolTimeTag(const FGameplayTag Tag)
+void USkillComponent::SetESkillTag_Implementation(const FGameplayTag Tag)
+{
+	ESkillTag=Tag;
+}
+
+void USkillComponent::SetESkillCoolTimeTag_Implementation(const FGameplayTag Tag)
 {
 	if (ESkillCoolTimeTag!=FGameplayTag::EmptyTag)
 	{
@@ -34,7 +68,12 @@ void USkillComponent::SetESkillCoolTimeTag(const FGameplayTag Tag)
 }
 
 
-void USkillComponent::SetSpaceSkillCoolTimeTag(const FGameplayTag Tag)
+void USkillComponent::SetSpaceSkillTag_Implementation(const FGameplayTag Tag)
+{
+	SpaceSkillTag=Tag;
+}
+
+void USkillComponent::SetSpaceSkillCoolTimeTag_Implementation(const FGameplayTag Tag)
 {
 	if (SpaceSkillCoolTimeTag!=FGameplayTag::EmptyTag)
 	{

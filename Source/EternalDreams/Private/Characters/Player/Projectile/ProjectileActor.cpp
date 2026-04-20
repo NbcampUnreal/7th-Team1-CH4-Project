@@ -49,6 +49,7 @@ AProjectileActor::AProjectileActor()
 void AProjectileActor::BeginPlay()
 {
 	Super::BeginPlay();
+	UE_LOG(LogTemp,Warning,TEXT("Projectile"));
 	//로드된 StaticMesh 적용
 	const UEDGameDataSubsystem* EDGameplayDataSubsystem=UEDGameDataSubsystem::Get(GetWorld());
 	if (EDGameplayDataSubsystem)
@@ -58,7 +59,7 @@ void AProjectileActor::BeginPlay()
 		
 		if (IsValid(Arrow))
 		{
-			ProjectileStaticMesh->SetStaticMesh(Arrow->WeaponStaticMesh.Get());
+			ProjectileStaticMesh->SetStaticMesh(Arrow->WeaponStaticMesh.LoadSynchronous());
 		}
 	}
 	
@@ -125,6 +126,8 @@ void AProjectileActor::OnProjectileHit(UPrimitiveComponent* HitComponent, AActor
 	HitGameplayEventData.Target=OtherActor;
 	AttackerASC->HandleGameplayEvent(FEDGameplayTags::Get().Event_SkillHit,&HitGameplayEventData);
 	
+	
+	UE_LOG(LogTemp,Warning,TEXT("%s"),*OtherActor->GetName());
 	Destroy();
 }
 
