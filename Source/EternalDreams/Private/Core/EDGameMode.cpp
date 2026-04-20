@@ -376,14 +376,26 @@ void AEDGameMode::OnMatchFinished()
 	UE_LOG(LogEDCore, Warning, TEXT("[Match] 종료 — 승리팀: %s, %.1f초 후 로비 복귀"),
 		EDTeam::GetTeamName(GS->GetWinnerTeamId()), MatchEndDelay);
 
-	// [UI] 결과 위젯 전송 훅 (ClientShowMatchResult RPC 연결 시 활성화)
-	// for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
-	// {
-	//     if (AEDPlayerController* PC = Cast<AEDPlayerController>(It->Get()))
-	//     {
-	//         PC->ClientShowMatchResult(GS->GetWinnerTeamId());
-	//     }
-	// }
+	// 팀 등수 계산: 1등 = WinnerTeamId, 2등부터 = EliminatedTeams 역순(마지막 탈락 = 2등)
+	TArray<int32> TeamRankings;
+	if (GS->GetWinnerTeamId() != EDTeam::None)
+	{
+		TeamRankings.Add(GS->GetWinnerTeamId());
+	}
+	const TArray<int32>& Eliminated = GS->GetEliminatedTeams();
+	for (int32 i = Eliminated.Num() - 1; i >= 0; --i)
+	{
+		TeamRankings.Add(Eliminated[i]);
+	}
+
+	// 각 PC에 결과 UI 전송
+	for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (AEDPlayerController* PC = Cast<AEDPlayerController>(It->Get()))
+		{
+			PC->ClientShowMatchResult(TeamRankings);
+		}
+	}
 
 	// 결과 UI 표시 시간 후 로비 트래블
 	GetWorldTimerManager().ClearTimer(MatchEndTravelHandle);

@@ -102,6 +102,18 @@ public:
 	UFUNCTION(Server, Reliable, Category = "ED|Death")
 	void Server_RequestRespawn(int32 SelectedZoneId);
 
+	// -------------------------------------------------------
+	// 매치 종료 RPC
+	// -------------------------------------------------------
+
+	/**
+	 * [서버→클라이언트] 매치 종료 시 호출.
+	 * TeamRankings: index 0=1등, 1=2등, ... 순서로 정렬된 팀 ID 배열.
+	 * UIManager의 Panel_MatchResult를 열고 SetResult로 전달.
+	 */
+	UFUNCTION(Client, Reliable, Category = "ED|Match")
+	void ClientShowMatchResult(const TArray<int32>& TeamRankings);
+
 public:
 #pragma region Input Player
 	//IMC_Player
