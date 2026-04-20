@@ -128,16 +128,16 @@ void AEDPlayerController::SetupInputComponent()
 		return;
 	}
 
-	if (ToggleInventoryAction)
+	if (ToggleLootInventoryAction)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: ToggleInventoryAction 바인딩을 완료했습니다. 이름 = %s"),
-		       *ToggleInventoryAction->GetName());
-		EnhancedInputComponent->BindAction(ToggleInventoryAction, ETriggerEvent::Started, this,
-		                                   &AEDPlayerController::HandleToggleInventory);
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: ToggleLootInventoryAction 바인딩을 완료했습니다. 이름 = %s"),
+		       *ToggleLootInventoryAction->GetName());
+		EnhancedInputComponent->BindAction(ToggleLootInventoryAction, ETriggerEvent::Started, this,
+		                                   &AEDPlayerController::HandleToggleLootInventory);
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: ToggleInventoryAction이 설정되지 않았습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: ToggleLootInventoryAction이 설정되지 않았습니다."));
 	}
 
 	if (ToggleCraftPanelAction)
@@ -191,13 +191,13 @@ void AEDPlayerController::SetupInputComponent()
 	);
 }
 
-void AEDPlayerController::HandleToggleInventory()
+void AEDPlayerController::HandleToggleLootInventory()
 {
-	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 인벤토리 토글 입력을 처리합니다."));
+	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 루팅 인벤토리 토글 입력을 처리합니다."));
 
 	if (!LootInteractionComponent)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: LootInteractionComponent가 없어 인벤토리 입력을 처리할 수 없습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: LootInteractionComponent가 없어 루팅 인벤토리 입력을 처리할 수 없습니다."));
 		return;
 	}
 
