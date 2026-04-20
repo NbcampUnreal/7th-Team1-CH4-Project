@@ -167,7 +167,7 @@ void UEDGameDataSubsystem::LoadPhase_Monster()
 		OnMonsterDataLoaded();
 		return;
 	}
-	
+
 	TSharedPtr<FStreamableHandle> Handle = AM.LoadPrimaryAssetsAsync(
 		Ids,
 		{MonsterAssetType.GetName()},

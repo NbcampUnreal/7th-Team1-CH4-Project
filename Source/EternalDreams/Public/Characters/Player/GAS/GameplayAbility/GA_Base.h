@@ -46,7 +46,10 @@ protected:
 	EPlayerAnimNameType MontageName=EPlayerAnimNameType::NONE;
 	
 	UPROPERTY()
-	UAnimMontage* AnimMontage=nullptr;
+	UAnimMontage* PlayerAnimMontage=nullptr;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
 	TSubclassOf<UGameplayEffect> CoolTimeEffectClass;
@@ -64,4 +67,7 @@ protected:
 	
 	UFUNCTION()
 	void OnMontageCancelled();
+	
+	UFUNCTION()
+	void OnNotifyHitEvent(FGameplayEventData HitGameplayEventData);
 };

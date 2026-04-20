@@ -4,18 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
-#include "EDMonsterAttackAbility.generated.h"
+#include "GA_MonsterAttackAbility.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class ETERNALDREAMS_API UEDMonsterAttackAbility : public UGameplayAbility
+class ETERNALDREAMS_API UGA_MonsterAttackAbility : public UGameplayAbility
 {
 	GENERATED_BODY()
 	
 public:
-	UEDMonsterAttackAbility();
+	UGA_MonsterAttackAbility();
 	
 protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, 

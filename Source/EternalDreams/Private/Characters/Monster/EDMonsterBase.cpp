@@ -115,12 +115,16 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	MoveComp->MaxWalkSpeed = Stat.MoveSpeed;
 	MoveComp->bOrientRotationToMovement = true;
 	bUseControllerRotationYaw = false;
+	
+	// DA 초기화 완료 알림
+	OnDataAssetInitialized.Broadcast();
 }
 
 void AEDMonsterBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(AEDMonsterBase, MonsterState);
+	DOREPLIFETIME(AEDMonsterBase, MonsterDataId);
 }
 
 void AEDMonsterBase::OnRep_MonsterState()
@@ -138,6 +142,14 @@ void AEDMonsterBase::OnRep_MonsterState()
 		return;
 	
 	Anim->SetMonsterState(MonsterState);
+}
+
+void AEDMonsterBase::OnRep_MonsterDataId()
+{
+	UEDMonsterDataAsset* DataAsset = GetDataAsset();
+	if (IsValid(DataAsset) == false)
+		return;
+	LoadVisuals(DataAsset);
 }
 
 void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)
