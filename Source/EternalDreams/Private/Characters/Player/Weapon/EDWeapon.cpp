@@ -19,10 +19,22 @@ AEDWeapon::AEDWeapon()
 }
 
 
+void AEDWeapon::ApplyMeshOnServer(UStaticMesh* StaticMesh)
+{
+	if (!HasAuthority()) return;
+	WeaponStaticMesh = StaticMesh;
+	MulticastApplyMesh(StaticMesh);
+}
+
 void AEDWeapon::OnRep_WeaponStaticMesh()
 {
 	WeaponStaticMeshComp->SetStaticMesh(WeaponStaticMesh);
 	UE_LOG(LogTemp,Warning,TEXT("Rep"));
+}
+
+void AEDWeapon::MulticastApplyMesh_Implementation(UStaticMesh* StaticMesh)
+{
+	WeaponStaticMeshComp->SetStaticMesh(StaticMesh);
 }
 
 void AEDWeapon::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const

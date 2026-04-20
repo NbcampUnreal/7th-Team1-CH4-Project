@@ -23,6 +23,7 @@ class UIMCComponent;
 class UZoneDetectorComponent;
 class UEDInventoryComponent;
 class USkillComponent;
+class UEDGameDataSubsystem;
 struct FOnAttributeChangeData;
 
 
@@ -156,7 +157,10 @@ protected:
 	void OnWeaponChanged();
 	UFUNCTION(BlueprintCallable)
 	void OnPlayerSkinChanged(EPlayerNameType& SkinName);
+	void OnRWeaponMeshLoaded(TSoftObjectPtr<UStaticMesh> MeshPtr);
+	void OnLWeaponMeshLoaded(TSoftObjectPtr<UStaticMesh> MeshPtr);
 	
+
 	//Anim Move
 #pragma region Animation Movement
 	//Caching
@@ -204,4 +208,12 @@ public:
 	FORCEINLINE UStaticMeshComponent* GetWeaponMeshComp()
 	{if (LWeaponActor!=nullptr&&RWeaponActor!=nullptr) return RWeaponActor->GetStaticMesh()!=nullptr ? RWeaponActor->GetStaticMeshComp():LWeaponActor->GetStaticMeshComp(); else return nullptr;};
 #pragma endregion
+
+private:
+	// 플레이어 데이터 로드 및 초기화
+	UFUNCTION()
+	void ApplyPlayerDataAsset();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastSetWeaponTags(FGameplayTag BasicAttackTag, FGameplayTag EvadeTag, FGameplayTag EvadeCoolTimeTag);
+	TWeakObjectPtr<UEDGameDataSubsystem> CachedDataSubsystem;
 };
