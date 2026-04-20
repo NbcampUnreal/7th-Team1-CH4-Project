@@ -45,6 +45,12 @@ public:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Tags")
     FGameplayTagContainer ItemSpecialTags;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Tags")
+    FGameplayTagContainer ItemSkillTags;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Tags")
+    FGameplayTagContainer ItemSkillCooldownTags;
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Consumable")
     TSubclassOf<UGameplayEffect> ConsumableEffectClass;
 

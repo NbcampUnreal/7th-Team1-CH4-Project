@@ -47,6 +47,24 @@ FEDEquipmentSlotData* GetEquipmentSlot_Equipment(UEDInventoryComponent* Inventor
     }
 }
 
+FEDSkillSlotData* GetSkillSlot_Equipment(UEDInventoryComponent* InventoryComponent, EEDSkillSlotType SlotType)
+{
+    if (!InventoryComponent)
+    {
+        return nullptr;
+    }
+
+    switch (SlotType)
+    {
+    case EEDSkillSlotType::FirstSkill:
+        return &InventoryComponent->FirstSkillSlot;
+    case EEDSkillSlotType::SecondSkill:
+        return &InventoryComponent->SecondSkillSlot;
+    default:
+        return nullptr;
+    }
+}
+
 bool TryUnequipToInventoryOrDrop(UEDInventoryComponent* InventoryComponent, FEDEquipmentSlotData& EquipmentSlot)
 {
     if (!InventoryComponent || !EquipmentSlot.EquippedItem.IsValid())
@@ -71,6 +89,33 @@ bool TryUnequipToInventoryOrDrop(UEDInventoryComponent* InventoryComponent, FEDE
     InventoryComponent->OnInventoryDropRequested.Broadcast(DropRequest);
 
     EquipmentSlot.EquippedItem = FEDInventoryItemHandle();
+    return true;
+}
+
+bool TryUnequipSkillToInventoryOrDrop(UEDInventoryComponent* InventoryComponent, FEDSkillSlotData& SkillSlot)
+{
+    if (!InventoryComponent || !SkillSlot.EquippedItem.IsValid())
+    {
+        return false;
+    }
+
+    for (FEDInventorySlotData& Slot : InventoryComponent->InventorySlots)
+    {
+        if (Slot.IsEmpty())
+        {
+            Slot.Item = SkillSlot.EquippedItem;
+            SkillSlot.EquippedItem = FEDInventoryItemHandle();
+            return true;
+        }
+    }
+
+    FEDInventoryDropRequest DropRequest;
+    DropRequest.Item = SkillSlot.EquippedItem;
+    DropRequest.SourceOwner = InventoryComponent->GetOwner();
+    DropRequest.Reason = EEDInventoryDropReason::UnequipNoSpace;
+    InventoryComponent->OnInventoryDropRequested.Broadcast(DropRequest);
+
+    SkillSlot.EquippedItem = FEDInventoryItemHandle();
     return true;
 }
 }
@@ -136,6 +181,65 @@ bool FEDInventoryEquipmentService::UnequipBottomArmor(UEDInventoryComponent* Inv
     }
 
     return TryUnequipToInventoryOrDrop(InventoryComponent, InventoryComponent->BottomArmorSlot);
+}
+
+bool FEDInventoryEquipmentService::EquipSkillFromSlot(UEDInventoryComponent* InventoryComponent, int32 FromSlotIndex, EEDSkillSlotType TargetSkillSlotType)
+{
+    if (!InventoryComponent || !InventoryComponent->bUseEquipmentSlots)
+    {
+        return false;
+    }
+
+    if (!InventoryComponent->InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        return false;
+    }
+
+    FEDInventorySlotData& SourceSlot = InventoryComponent->InventorySlots[FromSlotIndex];
+    if (SourceSlot.IsEmpty())
+    {
+        return false;
+    }
+
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Equipment(SourceSlot.Item.ItemId);
+    if (!FEDInventoryValidationService::CanEquipToSkillSlot(ItemData))
+    {
+        return false;
+    }
+
+    FEDSkillSlotData* SkillSlot = GetSkillSlot_Equipment(InventoryComponent, TargetSkillSlotType);
+    if (!SkillSlot)
+    {
+        return false;
+    }
+
+    if (SkillSlot->EquippedItem.IsValid())
+    {
+        const FEDInventoryItemHandle PreviousEquippedItem = SkillSlot->EquippedItem;
+        SkillSlot->EquippedItem = SourceSlot.Item;
+        SourceSlot.Item = PreviousEquippedItem;
+        return true;
+    }
+
+    SkillSlot->EquippedItem = SourceSlot.Item;
+    SourceSlot.Item = FEDInventoryItemHandle();
+    return true;
+}
+
+bool FEDInventoryEquipmentService::UnequipSkillSlot(UEDInventoryComponent* InventoryComponent, EEDSkillSlotType SkillSlotType)
+{
+    if (!InventoryComponent || !InventoryComponent->bUseEquipmentSlots)
+    {
+        return false;
+    }
+
+    FEDSkillSlotData* SkillSlot = GetSkillSlot_Equipment(InventoryComponent, SkillSlotType);
+    if (!SkillSlot)
+    {
+        return false;
+    }
+
+    return TryUnequipSkillToInventoryOrDrop(InventoryComponent, *SkillSlot);
 }
 
 bool FEDInventoryEquipmentService::EnsureDefaultWeapon(UEDInventoryComponent* InventoryComponent)

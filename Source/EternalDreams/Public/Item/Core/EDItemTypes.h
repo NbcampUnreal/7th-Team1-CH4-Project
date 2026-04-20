@@ -9,7 +9,8 @@ enum class EEDInventoryItemType : uint8
 {
 	Equippable,
 	Consumable,
-	Ingredient
+	Ingredient,
+	Skill
 };
 
 UENUM(BlueprintType)
