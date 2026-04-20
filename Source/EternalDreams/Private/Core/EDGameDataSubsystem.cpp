@@ -216,7 +216,7 @@ void UEDGameDataSubsystem::LoadPhase_Player()
 	// 핸들은 우선 PlayerData로 통일
 	TSharedPtr<FStreamableHandle> Handle = AM.LoadPrimaryAssetsAsync(
 		AllIds,
-		{PlayerDataAssetType.GetName()},
+{PlayerDataAssetType.GetName()},
 		FStreamableDelegate::CreateUObject(this, &UEDGameDataSubsystem::OnPlayerDataLoaded)
 	);
 	
