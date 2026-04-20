@@ -110,6 +110,9 @@ void AEDGameMode::Tick(float DeltaSeconds)
 
 	if (!bPhaseSequenceActive) return;
 
+	// 마지막 Phase(Day4 밤, 최종결전)는 타이머 동결 — 팀 전원 탈락으로만 종료
+	if (CurrentPhaseIndex == PhaseSequence.Num() - 1) return;
+
 	PhaseTimer -= DeltaSeconds;
 
 	if (AEDGameState* GS = GetGameState<AEDGameState>())
@@ -352,10 +355,9 @@ void AEDGameMode::OnDay4_DayStarted()
 
 void AEDGameMode::OnDay4_NightStarted()
 {
-	// [최종결전] 안전구역 밟기 판정 시작 — S6 담당
-	//   - 같이 밟으면 시간 동시 감소
-	//   - 한 팀만 밟으면 상대 시간만 감소
-	//   - 시간 많은 팀 승리
+	// 최종결전: 마지막 안전구역 외 전 구역 DoT 활성화 상태.
+	// 이 Phase는 타이머 동결(Tick에서 조기 반환) — 팀 전원 탈락으로만 종료.
+	// 승자 판정은 CheckTeamElimination → OnMatchFinished 흐름.
 }
 
 // ============================================================
@@ -364,8 +366,63 @@ void AEDGameMode::OnDay4_NightStarted()
 
 void AEDGameMode::OnMatchFinished()
 {
-	// [승패] 최종 승패 판정 & 결과 UI 표시 — S3/S6 담당
-	// [세션] 로비 복귀 또는 세션 정리 — S6 담당
+	if (bMatchFinished) return;
+	bMatchFinished = true;
+	bPhaseSequenceActive = false;
+
+	AEDGameState* GS = GetGameState<AEDGameState>();
+	if (!GS) return;
+
+	UE_LOG(LogEDCore, Warning, TEXT("[Match] 종료 — 승리팀: %s, %.1f초 후 로비 복귀"),
+		EDTeam::GetTeamName(GS->GetWinnerTeamId()), MatchEndDelay);
+
+	// [UI] 결과 위젯 전송 훅 (ClientShowMatchResult RPC 연결 시 활성화)
+	// for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+	// {
+	//     if (AEDPlayerController* PC = Cast<AEDPlayerController>(It->Get()))
+	//     {
+	//         PC->ClientShowMatchResult(GS->GetWinnerTeamId());
+	//     }
+	// }
+
+	// 결과 UI 표시 시간 후 로비 트래블
+	GetWorldTimerManager().ClearTimer(MatchEndTravelHandle);
+	GetWorldTimerManager().SetTimer(MatchEndTravelHandle, [this]()
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[Match] ServerTravel → %s"), *LobbyMapPath);
+		GetWorld()->ServerTravel(LobbyMapPath);
+	}, MatchEndDelay, false);
+}
+
+// ============================================================
+//  Logout — 잔여 인원 0명 시 로비 복귀
+// ============================================================
+
+void AEDGameMode::Logout(AController* Exiting)
+{
+	Super::Logout(Exiting);
+
+	// 매치 종료 트래블 진행 중이면 건드리지 않음 (SeamlessTravel 중 Logout 발생 가능)
+	if (bMatchFinished) return;
+
+	const AEDGameState* GS = GetGameState<AEDGameState>();
+	if (!GS) return;
+
+	// PlayerArray에는 아직 나가는 PlayerState가 포함되어 있을 수 있음 → 1 이하면 사실상 0명
+	int32 RemainingPlayers = 0;
+	for (APlayerState* APS : GS->PlayerArray)
+	{
+		if (!APS || APS->IsInactive()) continue;
+		if (Exiting && APS == Exiting->PlayerState) continue;
+		++RemainingPlayers;
+	}
+
+	if (RemainingPlayers <= 0)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[Match] 잔여 인원 0명 — 로비 복귀 ServerTravel → %s"), *LobbyMapPath);
+		bMatchFinished = true;
+		GetWorld()->ServerTravel(LobbyMapPath);
+	}
 }
 
 // ============================================================
@@ -440,8 +497,13 @@ void AEDGameMode::EnterSpectator(AController* Victim)
 		if (APawn* TeammatePawn = Teammate->GetPawn())
 		{
 			PC->SetViewTargetWithBlend(TeammatePawn, 0.5f);
+			return;
 		}
 	}
+
+	// 팀 전원 사망 → SpectatorPawn 자유 관전 (엔진이 Spectating 상태 진입 시 자동 스폰)
+	PC->SetViewTarget(PC);
+	UE_LOG(LogEDCore, Warning, TEXT("[Spectator] Free spectate enabled → %s"), *PC->GetName());
 }
 
 // 
