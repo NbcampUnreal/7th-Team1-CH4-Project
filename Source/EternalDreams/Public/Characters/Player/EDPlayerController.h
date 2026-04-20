@@ -51,9 +51,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
 	TObjectPtr<UInputMappingContext> UIInputMappingContext = nullptr;
 	
-	// 인벤토리 패널 열기/닫기 입력 액션
+	// 루팅 인벤토리 패널 열기/닫기 입력 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
-	TObjectPtr<UInputAction> ToggleInventoryAction = nullptr;
+	TObjectPtr<UInputAction> ToggleLootInventoryAction = nullptr;
 
 	// 아이템 제작 패널 열기/닫기 입력 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
@@ -164,8 +164,8 @@ protected:
 #pragma endregion
 private:
 #pragma region UI 
-	// 인벤토리 패널 열기/닫기 입력 처리
-	void HandleToggleInventory();
+	// 루팅 인벤토리 패널 열기/닫기 입력 처리
+	void HandleToggleLootInventory();
 
 	// 아이템 제작 패널 열기/닫기 입력 처리
 	void HandleToggleCraftPanel();
