@@ -11,9 +11,11 @@
 AEDLightingManager::AEDLightingManager()
 {
 	PrimaryActorTick.bCanEverTick = true;
+	bReplicates = true; 
+	bAlwaysRelevant = true; // 맵 어디에 있든 항상 통신을 받도록 설정
 }
 
-void AEDLightingManager::StartTransition(FName PhaseRowName, float Duration)
+void AEDLightingManager::Multicast_StartTransition_Implementation(FName PhaseRowName, float Duration)
 {
 	if (!LightingDataTable) return;
 
@@ -38,26 +40,28 @@ void AEDLightingManager::Tick(float DeltaTime)
 
 	if (!bIsTransitioning) return;
 
+	//Duration이 0이 되지 않도록 보정
 	TransitionElapsed += DeltaTime;
-	float Alpha = FMath::Clamp(TransitionElapsed / TransitionDuration, 0.0f, 1.0f);
+	float SafeDuration = FMath::Max(TransitionDuration, 0.001f);
+	float Alpha = FMath::Clamp(TransitionElapsed / SafeDuration, 0.0f, 1.0f);
 
 	// Ease-InOut 효과를 주어 더 자연스럽게 만듭니다.
 	float InterpAlpha = FMath::InterpEaseInOut(0.0f, 1.0f, Alpha, 2.0f);
 
 	FEDLightingDataStruct InterpSettings;
-	InterpSettings.DLLightIntensity = FMath::Lerp(StartSettings.DLLightIntensity, TargetSettings.DLLightIntensity,
-	                                              InterpAlpha);
-	InterpSettings.DLColorTemperature = FMath::Lerp(StartSettings.DLColorTemperature, TargetSettings.DLColorTemperature,
-	                                                InterpAlpha);
-	InterpSettings.PPVExposureBias = FMath::Lerp(StartSettings.PPVExposureBias, TargetSettings.PPVExposureBias,
-	                                             InterpAlpha);
+    
+	// FMath::Lerp를 사용하여 시작점부터 끝점까지 부드럽게 계산
+	InterpSettings.DLLightIntensity = FMath::Lerp(StartSettings.DLLightIntensity, TargetSettings.DLLightIntensity, InterpAlpha);
+	InterpSettings.DLColorTemperature = FMath::Lerp(StartSettings.DLColorTemperature, TargetSettings.DLColorTemperature, InterpAlpha);
+	InterpSettings.PPVExposureBias = FMath::Lerp(StartSettings.PPVExposureBias, TargetSettings.PPVExposureBias, InterpAlpha);
 
 	ApplySettings(InterpSettings);
 
-	// 전환 완료
 	if (Alpha >= 1.0f)
 	{
 		bIsTransitioning = false;
+		// 마지막에 타겟 수치를 정확히 꽂아줍니다.
+		ApplySettings(TargetSettings); 
 	}
 }
 
