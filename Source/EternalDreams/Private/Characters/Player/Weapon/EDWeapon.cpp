@@ -29,19 +29,9 @@ void AEDWeapon::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetim
 }
 
 
-void AEDWeapon::SetStaticMeshId(const FPrimaryAssetId& InStaticMeshId)
-{
-	if (HasAuthority())
-	{
-		StaticMeshId=InStaticMeshId;
-		ApplyWeaponMesh();
-	}
-}
 
-void AEDWeapon::OnRep_StaticMeshId()
-{
-	ApplyWeaponMesh();
-}
+
+
 
 void AEDWeapon::ApplyWeaponMesh()
 {

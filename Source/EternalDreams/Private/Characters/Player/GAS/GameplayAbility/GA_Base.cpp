@@ -196,7 +196,7 @@ void UGA_Base::OnNotifyHitEvent(FGameplayEventData HitGameplayEventData)
 			PlayerAttributeSet->GetIntelligence() * SkillMulStaus->DamageIntelligenceMultiplier
 		;
 
-		SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(TEXT("Data.DamageMultiplier")), SkillFinalDamage);
+		SpecHandle.Data->SetSetByCallerMagnitude(FEDGameplayTags::Get().Data_Damage, SkillFinalDamage);
 		PlayerASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 	}
 }

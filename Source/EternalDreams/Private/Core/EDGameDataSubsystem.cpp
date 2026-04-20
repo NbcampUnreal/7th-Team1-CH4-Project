@@ -269,6 +269,18 @@ void UEDGameDataSubsystem::OnPlayerDataLoaded()
 	CacheLoadedAssets(PlayerDataAssetType);
 	CacheLoadedAssets(PlayerAnimDataAssetType);
 	CacheLoadedAssets(WeaponDataAssetType);
+	
+	for (auto it:DataCache)
+	{
+		UE_LOG(LogTemp,Warning,TEXT("%s"),*it.Key.ToString());
+		if (IsValid(it.Value))
+		{
+			UE_LOG(LogTemp,Warning,TEXT("IsValid"));
+		}
+	}
+	
+	
+	
 	SetPhase(EDataLoadPhase::Completed);
 	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem] 플레이어 데이터 로드 완료"));
 	// 완료 신호

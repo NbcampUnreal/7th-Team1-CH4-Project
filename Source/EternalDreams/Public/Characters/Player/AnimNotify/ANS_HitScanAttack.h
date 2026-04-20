@@ -33,9 +33,6 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
 	float AttackDistance=1000.f;
 	
-	//적용할 Damage Effect 클래스
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
-	TSubclassOf<UGameplayEffect> DamageEffectClass;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
 	float ShootActorLifeSpan=2.0f;

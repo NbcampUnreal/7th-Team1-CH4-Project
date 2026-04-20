@@ -180,13 +180,13 @@ protected:
 	
 public:	
 	UFUNCTION()
-	FORCEINLINE void SetTargetMeshId(const FPrimaryAssetId& InTargetMeshId){TargetMeshId=InTargetMeshId; ApplyTargetMesh();}
+	FORCEINLINE void SetTargetMeshId(const FPrimaryAssetId& InTargetMeshId){if (!HasAuthority()){return;} TargetMeshId=InTargetMeshId; ApplyTargetMesh();}
 	UFUNCTION()
-	FORCEINLINE void SetTargetABPId(const FPrimaryAssetId& InTargetABPId){TargetABPId=InTargetABPId; ApplyTargetABP();}
+	FORCEINLINE void SetTargetABPId(const FPrimaryAssetId& InTargetABPId){if (!HasAuthority()){return;} TargetABPId=InTargetABPId; ApplyTargetABP();}
 	UFUNCTION()
-	FORCEINLINE void SetRetargetMeshId(const FPrimaryAssetId& InRetargetMeshId){RetargetMeshId=InRetargetMeshId; ApplyRetargetMesh();}
+	FORCEINLINE void SetRetargetMeshId(const FPrimaryAssetId& InRetargetMeshId){if (!HasAuthority()){return;} RetargetMeshId=InRetargetMeshId; ApplyRetargetMesh();}
 	UFUNCTION()
-	FORCEINLINE void SetRetargetABPId(const FPrimaryAssetId& InRetargetABPId){RetargetABPId=InRetargetABPId; ApplyRetargetABP();}
+	FORCEINLINE void SetRetargetABPId(const FPrimaryAssetId& InRetargetABPId){if (!HasAuthority()){return;} RetargetABPId=InRetargetABPId; ApplyRetargetABP();}
 	
 	UFUNCTION()
 	void ApplyTargetMesh();

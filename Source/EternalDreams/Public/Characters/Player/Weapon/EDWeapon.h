@@ -23,10 +23,10 @@ public:
 	FORCEINLINE UStaticMeshComponent* GetStaticMeshComp() {return WeaponStaticMeshComp;};
 	
 	UFUNCTION()
-	void SetStaticMeshId(const FPrimaryAssetId& InStaticMeshId);
+	void SetStaticMeshId(const FPrimaryAssetId& InStaticMeshId){if (!HasAuthority()){return;} StaticMeshId=InStaticMeshId; ApplyWeaponMesh();};
 	
 	UFUNCTION()
-	void OnRep_StaticMeshId();
+	FORCEINLINE void OnRep_StaticMeshId(){ApplyWeaponMesh();}
 	
 protected:
 	UPROPERTY()

@@ -30,6 +30,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const override;
 	
 	
 public:
@@ -43,14 +44,21 @@ public:
 		);
 	
 	
-	void SetStaticMesh(UStaticMesh* StaticMesh);
-	
 	void LifeTimeEnd();
 	
+	UFUNCTION()
+	 void SetStaticMeshId(const FPrimaryAssetId& InStaticMeshId){if (!HasAuthority()){return;} StaticMeshId=InStaticMeshId; ApplyWeaponMesh();};
+	
+	UPROPERTY(ReplicatedUsing = OnRep_StaticMeshId)
+	FPrimaryAssetId StaticMeshId;
+	
+	UFUNCTION()
+	FORCEINLINE void OnRep_StaticMeshId(){ApplyWeaponMesh();}
+	
+	UFUNCTION()
+	void ApplyWeaponMesh();
+	
 protected:
-	//적용할 Damage Effect 클래스
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
-	TSubclassOf<UGameplayEffect> DamageEffectClass;
 
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UStaticMeshComponent> ProjectileStaticMesh;
@@ -69,6 +77,7 @@ private:
 	TObjectPtr<UProjectileMovementComponent> ProjectileMovement; 
 	
 	FTimerHandle TimerHandle;
+	
 	
 	
 };

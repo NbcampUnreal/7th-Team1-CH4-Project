@@ -39,10 +39,7 @@ protected:
 	//Z방향으로 날리는 힘
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Enemy|Attack")
 	float LaunchPowerZ=0.f;
-	
-	//적용할 Damage Effect 클래스
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
-	TSubclassOf<UGameplayEffect> DamageEffectClass;
+
 	
 private:
 
