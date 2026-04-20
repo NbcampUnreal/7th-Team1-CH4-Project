@@ -28,20 +28,29 @@ protected:
 	//Skill Tags
 	UPROPERTY(EditAnyWhere,Replicated)
 	FGameplayTag BasicAttackTag=FGameplayTag::EmptyTag;
+	
 	UPROPERTY(EditAnyWhere,Replicated)
 	FGameplayTag QSkillTag=FGameplayTag::EmptyTag;
-	UPROPERTY(EditAnyWhere,Replicated)
+	UPROPERTY(EditAnyWhere,ReplicatedUsing=OnRep_QSkillCoolTimeTag)
 	FGameplayTag QSkillCoolTimeTag=FGameplayTag::EmptyTag;
+	UPROPERTY()
+    FGameplayTag PastQSkillCoolTimeTag=FGameplayTag::EmptyTag;
+	
 	UPROPERTY(EditAnyWhere,Replicated)
 	FGameplayTag ESkillTag=FGameplayTag::EmptyTag;
-	UPROPERTY(EditAnyWhere,Replicated)
+	UPROPERTY(EditAnyWhere,ReplicatedUsing=OnRep_ESkillCoolTimeTag)
 	FGameplayTag ESkillCoolTimeTag=FGameplayTag::EmptyTag;
+	UPROPERTY()
+	FGameplayTag PastESkillCoolTimeTag=FGameplayTag::EmptyTag;
+	
 	UPROPERTY(EditAnyWhere,Replicated)
 	FGameplayTag SpaceSkillTag=FGameplayTag::EmptyTag;
-	UPROPERTY(EditAnyWhere,Replicated)
+	UPROPERTY(EditAnyWhere,ReplicatedUsing=OnRep_SpaceSkillCoolTimeTag)
 	FGameplayTag SpaceSkillCoolTimeTag=FGameplayTag::EmptyTag;
+	UPROPERTY()
+	FGameplayTag PastSpaceSkillCoolTimeTag=FGameplayTag::EmptyTag;
 	
-		
+	
 	//Delegates
 	public:
 	UPROPERTY(BlueprintAssignable)
@@ -108,13 +117,13 @@ protected:
 	//Activate Skill
 public:
 	UFUNCTION()
-	void ActivateBasicAttack();
+	FORCEINLINE void ActivateBasicAttack(){ActivateTag(BasicAttackTag);}
 	UFUNCTION()
-	void ActivateQSkill();
+	FORCEINLINE void ActivateQSkill(){ActivateTag(QSkillTag);}
 	UFUNCTION()
-	void ActivateESkill();
+	FORCEINLINE void ActivateESkill(){ActivateTag(ESkillTag);}
 	UFUNCTION()
-	void ActivateSpaceSkill();
+	FORCEINLINE void ActivateSpaceSkill(){ActivateTag(SpaceSkillTag);}
 	
 	
 	//CallBacks
@@ -126,6 +135,13 @@ public:
 	UFUNCTION()
 	void SpaceSkillCoolTime(FGameplayTag Tag, int32 NewCount);
 
+	//Rep
+	UFUNCTION()
+	void OnRep_QSkillCoolTimeTag();
+	UFUNCTION()
+	void OnRep_ESkillCoolTimeTag();
+	UFUNCTION()
+	void OnRep_SpaceSkillCoolTimeTag();
 	
 	
 	//Activate Skill By Tag
@@ -134,7 +150,6 @@ protected:
 	
 	float CalculateCoolTime(FGameplayTag& Tag);
 	float CalculateMaxCoolTime(FGameplayTag& Tag);
-
 	
 	
 };
