@@ -13,6 +13,9 @@ class AEDDroppedItemActor;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEDInventoryChanged);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEDInventoryDropRequested, const FEDInventoryDropRequest&, DropRequest);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnEDWeaponSlotChanged, const FGameplayTagContainer&, MainItemTags, const FGameplayTagContainer&, SpecialItemTags, const FGameplayTagContainer&, SkillItemTags, const FGameplayTagContainer&, SkillCooldownTags);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEDFirstSkillSlotChanged, const FGameplayTagContainer&, SkillItemTags, const FGameplayTagContainer&, SkillCooldownTags);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEDSecondSkillSlotChanged, const FGameplayTagContainer&, SkillItemTags, const FGameplayTagContainer&, SkillCooldownTags);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ETERNALDREAMS_API UEDInventoryComponent : public UActorComponent
@@ -106,6 +109,12 @@ public:
     UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, ReplicatedUsing = OnRep_BottomArmorSlot, Category = "Inventory|Equipment")
     FEDEquipmentSlotData BottomArmorSlot;
 
+    UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, ReplicatedUsing = OnRep_FirstSkillSlot, Category = "Inventory|Skill")
+    FEDSkillSlotData FirstSkillSlot;
+
+    UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, ReplicatedUsing = OnRep_SecondSkillSlot, Category = "Inventory|Skill")
+    FEDSkillSlotData SecondSkillSlot;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Craft")
     bool bAutoRefreshCraftableRecipesCache = true;
 
@@ -123,6 +132,15 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "Inventory")
     FOnEDInventoryDropRequested OnInventoryDropRequested;
+
+    UPROPERTY(BlueprintAssignable, Category = "Inventory|Equipment")
+    FOnEDWeaponSlotChanged OnWeaponSlotChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "Inventory|Skill")
+    FOnEDFirstSkillSlotChanged OnFirstSkillSlotChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "Inventory|Skill")
+    FOnEDSecondSkillSlotChanged OnSecondSkillSlotChanged;
 
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Drop")
@@ -158,12 +176,6 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory|Network")
     bool RequestTransferItemToSlot(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity);
 
-    UFUNCTION(BlueprintCallable, meta = (DeprecatedFunction, DeprecationMessage = "Use PredicateTransferItemAuto + RequestTransferItemAuto"), Category = "Inventory|Network")
-    bool RequestTransferItemAutoDetailed(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure);
-
-    UFUNCTION(BlueprintCallable, meta = (DeprecatedFunction, DeprecationMessage = "Use PredicateTransferItemToSlot + RequestTransferItemToSlot"), Category = "Inventory|Network")
-    bool RequestTransferItemToSlotDetailed(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure);
-
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool PredicateDropAllFromSlot(int32 FromSlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
@@ -188,9 +200,6 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory|Drop")
     bool RequestPickupDroppedItem(AEDDroppedItemActor* DroppedItemActor);
 
-    UFUNCTION(BlueprintCallable, meta = (DeprecatedFunction, DeprecationMessage = "Use PredicatePickupDroppedItem + RequestPickupDroppedItem"), Category = "Inventory|Drop")
-    bool RequestPickupDroppedItemDetailed(AEDDroppedItemActor* DroppedItemActor, EEDInventoryActionFailure& OutFailure);
-    
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
     bool PredicateEquipItemFromSlot(int32 FromSlotIndex, EEDEquippableType TargetSlotType, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
@@ -209,14 +218,29 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory|Equipment")
     bool RequestUnequipBottomArmor();
 
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Skill")
+    bool PredicateEquipSkillFromSlot(int32 FromSlotIndex, EEDSkillSlotType TargetSkillSlotType, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Skill")
+    bool RequestEquipSkillFromSlot(int32 FromSlotIndex, EEDSkillSlotType TargetSkillSlotType);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Skill")
+    bool PredicateUnequipFirstSkill(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Skill")
+    bool RequestUnequipFirstSkill();
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Skill")
+    bool PredicateUnequipSecondSkill(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|Skill")
+    bool RequestUnequipSecondSkill();
+
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool PredicateAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RequestAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity);
-
-    UFUNCTION(BlueprintCallable, meta = (DeprecatedFunction, DeprecationMessage = "Use PredicateAddItemAuto + RequestAddItemAuto"), Category = "Inventory")
-    bool RequestAddItemAutoDetailed(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool PredicateAddItemToSlot(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
@@ -224,17 +248,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool RequestAddItemToSlot(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex);
 
-    UFUNCTION(BlueprintCallable, meta = (DeprecatedFunction, DeprecationMessage = "Use PredicateAddItemToSlot + RequestAddItemToSlot"), Category = "Inventory")
-    bool RequestAddItemToSlotDetailed(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex, EEDInventoryActionFailure& OutFailure);
-
     UFUNCTION(BlueprintCallable, Category = "Inventory|Loot")
     bool PredicateInitializeRandomLoot(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Loot")
     bool RequestInitializeRandomLoot();
-
-    UFUNCTION(BlueprintCallable, meta = (DeprecatedFunction, DeprecationMessage = "Use PredicateInitializeRandomLoot + RequestInitializeRandomLoot"), Category = "Inventory|Loot")
-    bool RequestInitializeRandomLootDetailed(int32 RollCount, int32 MinLootIndex, int32 MaxLootIndex, int32 Seed, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Distribution")
     bool PredicateDistributeInventoryToTargets(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
@@ -242,17 +260,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory|Distribution")
     bool RequestDistributeInventoryToTargets();
 
-    UFUNCTION(BlueprintCallable, meta = (DeprecatedFunction, DeprecationMessage = "Use PredicateDistributeInventoryToTargets + RequestDistributeInventoryToTargets"), Category = "Inventory|Distribution")
-    bool RequestDistributeInventoryToTargetsDetailed(EEDInventoryActionFailure& OutFailure);
-
     UFUNCTION(BlueprintCallable, Category = "Inventory|Craft")
     bool PredicateCraftItem(FName RecipeId, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Craft")
     bool RequestCraftItem(FName RecipeId);
-
-    UFUNCTION(BlueprintCallable, meta = (DeprecatedFunction, DeprecationMessage = "Use PredicateCraftItem + RequestCraftItem"), Category = "Inventory|Craft")
-    bool RequestCraftItemDetailed(FName RecipeId, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Craft")
     void GetCraftableRecipes(TArray<FEDCraftableRecipeEntry>& OutRecipes, EEDCraftableRecipeSortOption SortOption = EEDCraftableRecipeSortOption::ByRowId, bool bDescending = false) const;
@@ -278,8 +290,6 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory|Consumable")
     bool RequestConsumeItemAtSlot(int32 SlotIndex);
 
-    UFUNCTION(BlueprintCallable, meta = (DeprecatedFunction, DeprecationMessage = "Use PredicateConsumeItemAtSlot + RequestConsumeItemAtSlot"), Category = "Inventory|Consumable")
-    bool RequestConsumeItemAtSlotDetailed(int32 SlotIndex, EEDInventoryActionFailure& OutFailure);
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Init")
     bool PredicateEnsureDefaultEquipment(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
@@ -288,21 +298,6 @@ public:
     bool RequestEnsureDefaultEquipment();
 
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-
-
-    UPROPERTY(EditAnywhere, meta = (DeprecatedFunction), BlueprintReadOnly, Category = "Inventory|Debug")
-    bool bGiveDebugItemsOnBeginPlay = false;
-
-    UPROPERTY(EditAnywhere, meta = (DeprecatedFunction), BlueprintReadOnly, Category = "Inventory|Debug")
-    FPrimaryAssetId DebugConsumableItemId;
-
-    UPROPERTY(EditAnywhere, meta = (DeprecatedFunction), BlueprintReadOnly, Category = "Inventory|Debug")
-    FPrimaryAssetId DebugMaterialItemId;
-
-    UPROPERTY(EditAnywhere, meta = (DeprecatedFunction), BlueprintReadOnly, Category = "Inventory|Debug")
-    FPrimaryAssetId DebugEquipItemId;
-    // ---
 
 protected:
     virtual void BeginPlay() override;
@@ -353,6 +348,15 @@ protected:
     void ServerRequestUnequipBottomArmor();
 
     UFUNCTION(Server, Reliable)
+    void ServerRequestEquipSkillFromSlot(int32 FromSlotIndex, EEDSkillSlotType TargetSkillSlotType);
+
+    UFUNCTION(Server, Reliable)
+    void ServerRequestUnequipFirstSkill();
+
+    UFUNCTION(Server, Reliable)
+    void ServerRequestUnequipSecondSkill();
+
+    UFUNCTION(Server, Reliable)
     void ServerRequestCraftItem(FName RecipeId);
 
     UFUNCTION(Server, Reliable)
@@ -373,6 +377,12 @@ protected:
 
     UFUNCTION()
     void OnRep_BottomArmorSlot();
+
+    UFUNCTION()
+    void OnRep_FirstSkillSlot();
+
+    UFUNCTION()
+    void OnRep_SecondSkillSlot();
 
     UFUNCTION()
     void HandleInventoryChangedInternal();
@@ -397,6 +407,22 @@ protected:
     bool SyncEquipEffectForSlot(EEDEquippableType SlotType);
     FGameplayTagContainer* GetAppliedEquipTagsCache(EEDEquippableType SlotType);
     bool SyncEquipTagsForSlot(EEDEquippableType SlotType);
+    FEDSkillSlotData* GetSkillSlotData(EEDSkillSlotType SlotType);
+
+    void BroadcastWeaponSlotChanged();
+    void BroadcastSkillSlotChanged(EEDSkillSlotType SlotType);
+    bool ExtractItemTags(const FEDInventoryItemHandle& ItemHandle, FGameplayTagContainer& OutItemTags, FGameplayTagContainer& OutSpecialTags, FGameplayTagContainer& OutSkillTags, FGameplayTagContainer& OutSkillCooldownTags) const;
+
+    // Internal detailed handlers kept private to avoid exposing deprecated Blueprint API.
+    bool RequestTransferItemAutoDetailed(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure);
+    bool RequestTransferItemToSlotDetailed(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 ToSlotIndex, int32 Quantity, EEDInventoryActionFailure& OutFailure);
+    bool RequestPickupDroppedItemDetailed(AEDDroppedItemActor* DroppedItemActor, EEDInventoryActionFailure& OutFailure);
+    bool RequestAddItemAutoDetailed(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure);
+    bool RequestAddItemToSlotDetailed(FPrimaryAssetId ItemId, int32 Quantity, int32 SlotIndex, EEDInventoryActionFailure& OutFailure);
+    bool RequestInitializeRandomLootDetailed(int32 RollCount, int32 MinLootIndex, int32 MaxLootIndex, int32 Seed, EEDInventoryActionFailure& OutFailure);
+    bool RequestDistributeInventoryToTargetsDetailed(EEDInventoryActionFailure& OutFailure);
+    bool RequestCraftItemDetailed(FName RecipeId, EEDInventoryActionFailure& OutFailure);
+    bool RequestConsumeItemAtSlotDetailed(int32 SlotIndex, EEDInventoryActionFailure& OutFailure);
 
     FActiveGameplayEffectHandle WeaponEquipEffectHandle;
     FActiveGameplayEffectHandle TopArmorEquipEffectHandle;
