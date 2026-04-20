@@ -586,6 +586,8 @@ UEDInventoryComponent::UEDInventoryComponent()
     WeaponSlot.SlotType = EEDEquippableType::Weapon;
     TopArmorSlot.SlotType = EEDEquippableType::TopArmor;
     BottomArmorSlot.SlotType = EEDEquippableType::BottomArmor;
+    FirstSkillSlot.SlotType = EEDSkillSlotType::FirstSkill;
+    SecondSkillSlot.SlotType = EEDSkillSlotType::SecondSkill;
 }
 
 void UEDInventoryComponent::BeginPlay()
@@ -624,7 +626,9 @@ void UEDInventoryComponent::BeginPlay()
     }
 
     RefreshCraftableRecipesCache();
-
+    BroadcastWeaponSlotChanged();
+    BroadcastSkillSlotChanged(EEDSkillSlotType::FirstSkill);
+    BroadcastSkillSlotChanged(EEDSkillSlotType::SecondSkill);
 }
 
 void UEDInventoryComponent::RequestInitializeInventorySlots()
@@ -659,6 +663,19 @@ FEDEquipmentSlotData* UEDInventoryComponent::GetEquipmentSlotData(EEDEquippableT
         return &TopArmorSlot;
     case EEDEquippableType::BottomArmor:
         return &BottomArmorSlot;
+    default:
+        return nullptr;
+    }
+}
+
+FEDSkillSlotData* UEDInventoryComponent::GetSkillSlotData(EEDSkillSlotType SlotType)
+{
+    switch (SlotType)
+    {
+    case EEDSkillSlotType::FirstSkill:
+        return &FirstSkillSlot;
+    case EEDSkillSlotType::SecondSkill:
+        return &SecondSkillSlot;
     default:
         return nullptr;
     }
@@ -730,6 +747,76 @@ bool UEDInventoryComponent::SyncEquipTagsForSlot(EEDEquippableType SlotType)
     AddLooseTags(ASC, DesiredTags);
     *AppliedTagsCache = DesiredTags;
     return true;
+}
+
+bool UEDInventoryComponent::ExtractItemTags(const FEDInventoryItemHandle& ItemHandle, FGameplayTagContainer& OutItemTags, FGameplayTagContainer& OutSpecialTags, FGameplayTagContainer& OutSkillTags, FGameplayTagContainer& OutSkillCooldownTags) const
+{
+    OutItemTags.Reset();
+    OutSpecialTags.Reset();
+    OutSkillTags.Reset();
+    OutSkillCooldownTags.Reset();
+
+    if (!ItemHandle.IsValid())
+    {
+        return false;
+    }
+
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Component(ItemHandle.ItemId);
+    if (!ItemData)
+    {
+        return false;
+    }
+
+    OutItemTags.AppendTags(ItemData->ItemTags);
+    OutSpecialTags.AppendTags(ItemData->ItemSpecialTags);
+    OutSkillTags.AppendTags(ItemData->ItemSkillTags);
+    OutSkillCooldownTags.AppendTags(ItemData->ItemSkillCooldownTags);
+    return true;
+}
+
+void UEDInventoryComponent::BroadcastWeaponSlotChanged()
+{
+    FGameplayTagContainer ItemTags;
+    FGameplayTagContainer SpecialTags;
+    FGameplayTagContainer SkillTags;
+    FGameplayTagContainer SkillCooldownTags;
+    ExtractItemTags(WeaponSlot.EquippedItem, ItemTags, SpecialTags, SkillTags, SkillCooldownTags);
+    OnWeaponSlotChanged.Broadcast(ItemTags, SpecialTags, SkillTags, SkillCooldownTags);
+}
+
+void UEDInventoryComponent::BroadcastSkillSlotChanged(EEDSkillSlotType SlotType)
+{
+    FGameplayTagContainer SkillTags;
+    FGameplayTagContainer SkillCooldownTags;
+    FGameplayTagContainer IgnoredA;
+    FGameplayTagContainer IgnoredB;
+
+    const FEDSkillSlotData* SkillSlot = nullptr;
+    switch (SlotType)
+    {
+    case EEDSkillSlotType::FirstSkill:
+        SkillSlot = &FirstSkillSlot;
+        break;
+    case EEDSkillSlotType::SecondSkill:
+        SkillSlot = &SecondSkillSlot;
+        break;
+    default:
+        break;
+    }
+
+    if (SkillSlot)
+    {
+        ExtractItemTags(SkillSlot->EquippedItem, IgnoredA, IgnoredB, SkillTags, SkillCooldownTags);
+    }
+
+    if (SlotType == EEDSkillSlotType::FirstSkill)
+    {
+        OnFirstSkillSlotChanged.Broadcast(SkillTags, SkillCooldownTags);
+    }
+    else if (SlotType == EEDSkillSlotType::SecondSkill)
+    {
+        OnSecondSkillSlotChanged.Broadcast(SkillTags, SkillCooldownTags);
+    }
 }
 
 bool UEDInventoryComponent::SyncEquipEffectForSlot(EEDEquippableType SlotType)
@@ -1017,6 +1104,83 @@ bool UEDInventoryComponent::PredicateUnequipBottomArmor(EEDInventoryActionFailur
     }
 
     return bAutoRequestIfValid ? RequestUnequipBottomArmor() : true;
+}
+
+bool UEDInventoryComponent::PredicateEquipSkillFromSlot(int32 FromSlotIndex, EEDSkillSlotType TargetSkillSlotType, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner() || !bUseEquipmentSlots)
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidSlot;
+        return false;
+    }
+
+    const FEDInventorySlotData& SourceSlot = InventorySlots[FromSlotIndex];
+    if (SourceSlot.IsEmpty())
+    {
+        OutFailure = EEDInventoryActionFailure::EmptySlot;
+        return false;
+    }
+
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Component(SourceSlot.Item.ItemId);
+    if (!ItemData)
+    {
+        OutFailure = EEDInventoryActionFailure::MissingData;
+        return false;
+    }
+
+    if (!FEDInventoryValidationService::CanEquipToSkillSlot(ItemData))
+    {
+        OutFailure = EEDInventoryActionFailure::SlotConflict;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestEquipSkillFromSlot(FromSlotIndex, TargetSkillSlotType) : true;
+}
+
+bool UEDInventoryComponent::PredicateUnequipFirstSkill(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner() || !bUseEquipmentSlots)
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!FirstSkillSlot.EquippedItem.IsValid())
+    {
+        OutFailure = EEDInventoryActionFailure::EmptySlot;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestUnequipFirstSkill() : true;
+}
+
+bool UEDInventoryComponent::PredicateUnequipSecondSkill(EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
+{
+    OutFailure = EEDInventoryActionFailure::None;
+
+    if (!GetOwner() || !bUseEquipmentSlots)
+    {
+        OutFailure = EEDInventoryActionFailure::InvalidInventory;
+        return false;
+    }
+
+    if (!SecondSkillSlot.EquippedItem.IsValid())
+    {
+        OutFailure = EEDInventoryActionFailure::EmptySlot;
+        return false;
+    }
+
+    return bAutoRequestIfValid ? RequestUnequipSecondSkill() : true;
 }
 
 bool UEDInventoryComponent::PredicateAddItemAuto(FPrimaryAssetId ItemId, int32 Quantity, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid)
@@ -1557,6 +1721,10 @@ bool UEDInventoryComponent::RequestEquipItemFromSlot(int32 FromSlotIndex, EEDEqu
     if (bSucceeded)
     {
         SyncEquipEffectForSlot(TargetSlotType);
+        if (TargetSlotType == EEDEquippableType::Weapon)
+        {
+            BroadcastWeaponSlotChanged();
+        }
         OnInventoryChanged.Broadcast();
     }
 
@@ -1609,6 +1777,92 @@ bool UEDInventoryComponent::RequestUnequipBottomArmor()
     return bSucceeded;
 }
 
+bool UEDInventoryComponent::RequestEquipSkillFromSlot(int32 FromSlotIndex, EEDSkillSlotType TargetSkillSlotType)
+{
+    if (!GetOwner() || !bUseEquipmentSlots)
+    {
+        return false;
+    }
+
+    if (!InventorySlots.IsValidIndex(FromSlotIndex))
+    {
+        return false;
+    }
+
+    const FEDInventorySlotData& SourceSlot = InventorySlots[FromSlotIndex];
+    if (SourceSlot.IsEmpty())
+    {
+        return false;
+    }
+
+    const UEDInventoryItemDataAsset* ItemData = ResolveItemData_Component(SourceSlot.Item.ItemId);
+    if (!FEDInventoryValidationService::CanEquipToSkillSlot(ItemData))
+    {
+        return false;
+    }
+
+    if (!GetOwner()->HasAuthority())
+    {
+        ServerRequestEquipSkillFromSlot(FromSlotIndex, TargetSkillSlotType);
+        return true;
+    }
+
+    const bool bSucceeded = FEDInventoryEquipmentService::EquipSkillFromSlot(this, FromSlotIndex, TargetSkillSlotType);
+    if (bSucceeded)
+    {
+        BroadcastSkillSlotChanged(TargetSkillSlotType);
+        OnInventoryChanged.Broadcast();
+    }
+
+    return bSucceeded;
+}
+
+bool UEDInventoryComponent::RequestUnequipFirstSkill()
+{
+    if (!GetOwner() || !bUseEquipmentSlots)
+    {
+        return false;
+    }
+
+    if (!GetOwner()->HasAuthority())
+    {
+        ServerRequestUnequipFirstSkill();
+        return true;
+    }
+
+    const bool bSucceeded = FEDInventoryEquipmentService::UnequipSkillSlot(this, EEDSkillSlotType::FirstSkill);
+    if (bSucceeded)
+    {
+        BroadcastSkillSlotChanged(EEDSkillSlotType::FirstSkill);
+        OnInventoryChanged.Broadcast();
+    }
+
+    return bSucceeded;
+}
+
+bool UEDInventoryComponent::RequestUnequipSecondSkill()
+{
+    if (!GetOwner() || !bUseEquipmentSlots)
+    {
+        return false;
+    }
+
+    if (!GetOwner()->HasAuthority())
+    {
+        ServerRequestUnequipSecondSkill();
+        return true;
+    }
+
+    const bool bSucceeded = FEDInventoryEquipmentService::UnequipSkillSlot(this, EEDSkillSlotType::SecondSkill);
+    if (bSucceeded)
+    {
+        BroadcastSkillSlotChanged(EEDSkillSlotType::SecondSkill);
+        OnInventoryChanged.Broadcast();
+    }
+
+    return bSucceeded;
+}
+
 bool UEDInventoryComponent::RequestCraftItem(FName RecipeId)
 {
     EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
@@ -1651,6 +1905,7 @@ bool UEDInventoryComponent::RequestCraftItemDetailed(FName RecipeId, EEDInventor
             SyncEquipEffectForSlot(EEDEquippableType::Weapon);
             SyncEquipEffectForSlot(EEDEquippableType::TopArmor);
             SyncEquipEffectForSlot(EEDEquippableType::BottomArmor);
+            BroadcastWeaponSlotChanged();
         }
         OnInventoryChanged.Broadcast();
     }
@@ -1813,6 +2068,7 @@ bool UEDInventoryComponent::RequestEnsureDefaultEquipment()
     if (bSucceeded)
     {
         SyncEquipEffectForSlot(EEDEquippableType::Weapon);
+        BroadcastWeaponSlotChanged();
         OnInventoryChanged.Broadcast();
     }
 
@@ -2460,14 +2716,14 @@ void UEDInventoryComponent::ProcessDeferredDistribution()
     GetWorld()->GetTimerManager().ClearTimer(DeferredDistributionTimerHandle);
 }
 
-void UEDInventoryComponent::ServerRequestMoveItemBetweenSlots_Implementation(int32 FromSlotIndex, int32 ToSlotIndex)
-{
-    RequestMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex);
-}
-
 void UEDInventoryComponent::ServerRequestInitializeInventorySlots_Implementation()
 {
     RequestInitializeInventorySlots();
+}
+
+void UEDInventoryComponent::ServerRequestMoveItemBetweenSlots_Implementation(int32 FromSlotIndex, int32 ToSlotIndex)
+{
+    RequestMoveItemBetweenSlots(FromSlotIndex, ToSlotIndex);
 }
 
 void UEDInventoryComponent::ServerRequestTransferItemAuto_Implementation(UEDInventoryComponent* FromInventory, UEDInventoryComponent* ToInventory, int32 FromSlotIndex, int32 Quantity)
@@ -2516,19 +2772,19 @@ void UEDInventoryComponent::ServerRequestUnequipBottomArmor_Implementation()
     RequestUnequipBottomArmor();
 }
 
-void UEDInventoryComponent::ServerRequestCraftItem_Implementation(FName RecipeId)
+void UEDInventoryComponent::ServerRequestEquipSkillFromSlot_Implementation(int32 FromSlotIndex, EEDSkillSlotType TargetSkillSlotType)
 {
-    RequestCraftItem(RecipeId);
+    RequestEquipSkillFromSlot(FromSlotIndex, TargetSkillSlotType);
 }
 
-void UEDInventoryComponent::ServerRequestConsumeItemAtSlot_Implementation(int32 SlotIndex)
+void UEDInventoryComponent::ServerRequestUnequipFirstSkill_Implementation()
 {
-    RequestConsumeItemAtSlot(SlotIndex);
+    RequestUnequipFirstSkill();
 }
 
-void UEDInventoryComponent::ServerRequestEnsureDefaultEquipment_Implementation()
+void UEDInventoryComponent::ServerRequestUnequipSecondSkill_Implementation()
 {
-    RequestEnsureDefaultEquipment();
+    RequestUnequipSecondSkill();
 }
 
 void UEDInventoryComponent::ServerRequestAddItemAuto_Implementation(FPrimaryAssetId ItemId, int32 Quantity)
@@ -2553,6 +2809,21 @@ void UEDInventoryComponent::ServerRequestDistributeInventoryToTargets_Implementa
     RequestDistributeInventoryToTargetsDetailed(Failure);
 }
 
+void UEDInventoryComponent::ServerRequestCraftItem_Implementation(FName RecipeId)
+{
+    RequestCraftItem(RecipeId);
+}
+
+void UEDInventoryComponent::ServerRequestConsumeItemAtSlot_Implementation(int32 SlotIndex)
+{
+    RequestConsumeItemAtSlot(SlotIndex);
+}
+
+void UEDInventoryComponent::ServerRequestEnsureDefaultEquipment_Implementation()
+{
+    RequestEnsureDefaultEquipment();
+}
+
 void UEDInventoryComponent::OnRep_InventorySlots()
 {
     UE_LOG(LogTemp, Warning, TEXT("InventoryRep: Owner=%s Slots=%d"),
@@ -2563,6 +2834,7 @@ void UEDInventoryComponent::OnRep_InventorySlots()
 
 void UEDInventoryComponent::OnRep_WeaponSlot()
 {
+    BroadcastWeaponSlotChanged();
     OnInventoryChanged.Broadcast();
 }
 
@@ -2573,6 +2845,18 @@ void UEDInventoryComponent::OnRep_TopArmorSlot()
 
 void UEDInventoryComponent::OnRep_BottomArmorSlot()
 {
+    OnInventoryChanged.Broadcast();
+}
+
+void UEDInventoryComponent::OnRep_FirstSkillSlot()
+{
+    BroadcastSkillSlotChanged(EEDSkillSlotType::FirstSkill);
+    OnInventoryChanged.Broadcast();
+}
+
+void UEDInventoryComponent::OnRep_SecondSkillSlot()
+{
+    BroadcastSkillSlotChanged(EEDSkillSlotType::SecondSkill);
     OnInventoryChanged.Broadcast();
 }
 
@@ -2659,4 +2943,7 @@ void UEDInventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
     DOREPLIFETIME(UEDInventoryComponent, WeaponSlot);
     DOREPLIFETIME(UEDInventoryComponent, TopArmorSlot);
     DOREPLIFETIME(UEDInventoryComponent, BottomArmorSlot);
+    DOREPLIFETIME(UEDInventoryComponent, FirstSkillSlot);
+    DOREPLIFETIME(UEDInventoryComponent, SecondSkillSlot);
 }
+

@@ -131,7 +131,7 @@ void UEDLootInteractionComponent::ServerRequestLootTransfer_Implementation(
 	}
 
 	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-	const bool bSuccess = PlayerInventoryComponent->RequestTransferItemAutoDetailed(
+	const bool bSuccess = PlayerInventoryComponent->PredicateTransferItemAuto(
 		FromInventory,
 		PlayerInventoryComponent,
 		FromSlotIndex,
