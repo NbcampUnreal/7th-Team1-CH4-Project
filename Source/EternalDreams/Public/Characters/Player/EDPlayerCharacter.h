@@ -154,7 +154,10 @@ protected:
 	void OnWeaponChanged();
 	UFUNCTION(BlueprintCallable)
 	void OnPlayerSkinChanged(EPlayerNameType& SkinName);
+	void OnRWeaponMeshLoaded(TSoftObjectPtr<UStaticMesh> MeshPtr);
+	void OnLWeaponMeshLoaded(TSoftObjectPtr<UStaticMesh> MeshPtr);
 	
+
 	//Anim Move
 #pragma region Animation Movement
 	//Caching
@@ -206,7 +209,8 @@ public:
 private:
 	// 플레이어 데이터 로드 및 초기화
 	UFUNCTION()
-	void SetupFromPlayerData();
 	void ApplyPlayerDataAsset();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastSetWeaponTags(FGameplayTag BasicAttackTag, FGameplayTag EvadeTag, FGameplayTag EvadeCoolTimeTag);
 	TWeakObjectPtr<UEDGameDataSubsystem> CachedDataSubsystem;
 };
