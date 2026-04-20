@@ -244,11 +244,11 @@ void AEDGameMode::OnPhaseStarted(int32 PhaseIndex, const FGameplayTag& PhaseTag)
 	// ---ksh 낮밤 라이팅 변환 
 	if (CachedLightingManager)
 	{
-		FName RowName = (PhaseIndex % 2 != 0) ? FName("Night") : FName("Day");
-		CachedLightingManager->StartTransition(RowName, 3.0f);
+		FName RowName = (PhaseIndex % 2 == 0) ? FName("Day") : FName("Night");
+		CachedLightingManager->Multicast_StartTransition(RowName, 3.0f);
 	}
 	
-	switch (PhaseIndex)
+	switch (PhaseIndex) 
 	{
 	case 0: OnDay1_DayStarted();   break;
 	case 1: OnDay1_NightStarted(); break;

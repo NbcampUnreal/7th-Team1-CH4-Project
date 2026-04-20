@@ -22,7 +22,8 @@ public:
 	virtual void Tick(float DeltaTime) override; 
 
 	// 페이즈 전환 시 호출할 함수
-	void StartTransition(FName PhaseRowName, float Duration = 5.0f);
+	UFUNCTION(NetMulticast, Reliable)
+	void Multicast_StartTransition(FName PhaseRowName, float Duration = 3.0f);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Lighting")
 	UDataTable* LightingDataTable;
