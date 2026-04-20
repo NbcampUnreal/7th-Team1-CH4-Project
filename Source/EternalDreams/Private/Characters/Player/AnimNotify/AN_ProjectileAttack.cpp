@@ -15,6 +15,8 @@ void UAN_ProjectileAttack::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenc
 {
 	Super::Notify(MeshComp, Animation, EventReference);
 	
+	UE_LOG(LogTemp,Warning,TEXT("AN"));
+	
 	if (MeshComp==nullptr||MeshComp->GetWorld()==nullptr)
 	{
 		return;
@@ -59,6 +61,7 @@ void UAN_ProjectileAttack::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenc
 	{
 		Projectile->SetOwner(MeshComp->GetOwner());
 		Projectile->FinishSpawning(SpawnTransform);
+		UE_LOG(LogTemp,Warning,TEXT("AN"));
 	}
 	
 }

@@ -10,8 +10,10 @@
 #include "Core/EDGameDataSubsystem.h"
 #include "Data/EDWeaponDataAsset.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
+#include "Data/Types/EDPlayerTypes.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Net/UnrealNetwork.h"
 
 
 // Sets default values
@@ -49,20 +51,16 @@ AProjectileActor::AProjectileActor()
 void AProjectileActor::BeginPlay()
 {
 	Super::BeginPlay();
+	UE_LOG(LogTemp,Warning,TEXT("Projectile"));
 	//로드된 StaticMesh 적용
 	const UEDGameDataSubsystem* EDGameplayDataSubsystem=UEDGameDataSubsystem::Get(GetWorld());
 	if (EDGameplayDataSubsystem)
 	{
-		UEDWeaponDataAsset* Arrow = 
-			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(TEXT("WeaponData"), TEXT("DA_Arrow")));
-		
-		if (IsValid(Arrow))
-		{
-			ProjectileStaticMesh->SetStaticMesh(Arrow->WeaponStaticMesh.Get());
-		}
+		SetStaticMeshId(FPrimaryAssetId(
+			*UEnum::GetDisplayValueAsText(EPlayerDataType::WeaponData).ToString(),
+			*UEnum::GetDisplayValueAsText(EWeaponNameType::Arrow).ToString()
+			));
 	}
-	
-	
 	
 	//Projectile 활성화
 	SphereComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
@@ -88,11 +86,17 @@ void AProjectileActor::BeginPlay()
 	}
 
 	
+}
+
+void AProjectileActor::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	
+	DOREPLIFETIME(AProjectileActor,StaticMeshId);
 }
 
 void AProjectileActor::OnProjectileHit(UPrimitiveComponent* HitComponent, AActor* OtherActor,
-	UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+                                       UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
 {
 	if (GetWorld()==nullptr)
 	{
@@ -125,27 +129,39 @@ void AProjectileActor::OnProjectileHit(UPrimitiveComponent* HitComponent, AActor
 	HitGameplayEventData.Target=OtherActor;
 	AttackerASC->HandleGameplayEvent(FEDGameplayTags::Get().Event_SkillHit,&HitGameplayEventData);
 	
+	
+	UE_LOG(LogTemp,Warning,TEXT("%s"),*OtherActor->GetName());
 	Destroy();
 }
 
-void AProjectileActor::SetStaticMesh(UStaticMesh* StaticMesh)
-{
-	if (ProjectileMovement!=nullptr)
-	{
-		ProjectileMovement->InitialSpeed = ProjectileSpeed;
-		ProjectileMovement->bIsHomingProjectile=false;
-
-		if (StaticMesh!=nullptr)
-		{
-			ProjectileStaticMesh->SetStaticMesh(StaticMesh);
-		}
-	}
-}
 
 
 void AProjectileActor::LifeTimeEnd()
 {
 	Destroy();
+}
+
+void AProjectileActor::ApplyWeaponMesh()
+{
+	if (!StaticMeshId.IsValid())
+    	{
+    		ProjectileStaticMesh->SetStaticMesh(nullptr);
+    	}
+    	
+    	const UEDGameDataSubsystem* EDGameplayDataSubsystem=UEDGameDataSubsystem::Get(GetWorld());
+    	if (!EDGameplayDataSubsystem)
+    	{
+    		return;
+    	}
+    	
+    	UEDWeaponDataAsset* Weapon = 
+    			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(StaticMeshId
+    				);
+    		
+    	if (IsValid(Weapon))
+    	{
+    		ProjectileStaticMesh->SetStaticMesh(Weapon->WeaponStaticMesh.LoadSynchronous());
+    	}
 }
 
 

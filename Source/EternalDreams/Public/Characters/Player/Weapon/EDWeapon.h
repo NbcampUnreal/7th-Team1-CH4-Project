@@ -17,24 +17,16 @@ public:
 	
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	
-	UFUNCTION(BlueprintCallable,Server, Reliable)
-	void SetStaticMesh(UStaticMesh* StaticMesh);
-	
-	UFUNCTION()
-	FORCEINLINE void SetServerStaticMesh(UStaticMesh* StaticMesh){WeaponStaticMeshComp->SetStaticMesh(StaticMesh);};
-	
-	void ApplyMeshOnServer(UStaticMesh* StaticMesh);
-	
-	UFUNCTION()
-	void OnRep_WeaponStaticMesh();
-	
 	UFUNCTION()
 	FORCEINLINE UStaticMesh* GetStaticMesh() {return WeaponStaticMeshComp->GetStaticMesh();};
 	
 	FORCEINLINE UStaticMeshComponent* GetStaticMeshComp() {return WeaponStaticMeshComp;};
-
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastApplyMesh(UStaticMesh* StaticMesh);
+	
+	UFUNCTION()
+	void SetStaticMeshId(const FPrimaryAssetId& InStaticMeshId){if (!HasAuthority()){return;} StaticMeshId=InStaticMeshId; ApplyWeaponMesh();};
+	
+	UFUNCTION()
+	FORCEINLINE void OnRep_StaticMeshId(){ApplyWeaponMesh();}
 	
 protected:
 	UPROPERTY()
@@ -43,9 +35,10 @@ protected:
 	UPROPERTY(EditAnywhere)
 	TObjectPtr<UStaticMeshComponent> WeaponStaticMeshComp;
 	
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Static Mesh",ReplicatedUsing=OnRep_WeaponStaticMesh)
-	TObjectPtr<UStaticMesh> WeaponStaticMesh;
+	UPROPERTY(ReplicatedUsing = OnRep_StaticMeshId)
+	FPrimaryAssetId StaticMeshId;
 	
-	
+	UFUNCTION()
+	void ApplyWeaponMesh();
 	
 };

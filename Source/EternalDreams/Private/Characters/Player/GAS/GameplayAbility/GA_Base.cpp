@@ -45,10 +45,34 @@ void UGA_Base::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 				*UEnum::GetDisplayValueAsText(EPlayerDataType::PlayerAnimData).ToString(),
 				*UEnum::GetDisplayValueAsText(MontageName).ToString()
 			));
+		UE_LOG(LogTemp,Warning,TEXT("%s %s"),*UEnum::GetDisplayValueAsText(EPlayerDataType::PlayerAnimData).ToString(),*UEnum::GetDisplayValueAsText(MontageName).ToString());
+		
 		if (IsValid(PlayerAnimData))
 		{
-			PlayerAnimMontage = PlayerAnimData->AnimMontage.Get();
+			UE_LOG(LogTemp,Warning,TEXT("PlayerAnimData Exist"));
+			
+			
+			// 1. 경로 자체가 비어있는지 확인
+			UE_LOG(LogTemp, Log, TEXT("Path: %s"), *PlayerAnimData->AnimMontage.ToString());
+    
+			// 2. 이미 로드된 상태인지(IsPending) 확인
+			bool bIsLoaded = PlayerAnimData->AnimMontage.IsPending() == false;
+			UE_LOG(LogTemp, Log, TEXT("Is Loaded: %s"), bIsLoaded ? TEXT("True") : TEXT("False"));
+
+			PlayerAnimMontage = PlayerAnimData->AnimMontage.LoadSynchronous();
+			PlayerAnimMontage = PlayerAnimData->AnimMontage.LoadSynchronous();
+			if (IsValid(PlayerAnimMontage))
+			{
+				UE_LOG(LogTemp,Warning,TEXT("PlayerAnimMontage Valid"));
+			}
 		}
+		else
+		{
+			{
+				UE_LOG(LogTemp,Warning,TEXT("PlayerAnimData Not"));
+			}
+		}
+		
 	}
 
 	//Play Montage Task(비동기)
@@ -172,7 +196,7 @@ void UGA_Base::OnNotifyHitEvent(FGameplayEventData HitGameplayEventData)
 			PlayerAttributeSet->GetIntelligence() * SkillMulStaus->DamageIntelligenceMultiplier
 		;
 
-		SpecHandle.Data->SetSetByCallerMagnitude(FGameplayTag::RequestGameplayTag(TEXT("Data.DamageMultiplier")), SkillFinalDamage);
+		SpecHandle.Data->SetSetByCallerMagnitude(FEDGameplayTags::Get().Data_Damage, SkillFinalDamage);
 		PlayerASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 	}
 }
