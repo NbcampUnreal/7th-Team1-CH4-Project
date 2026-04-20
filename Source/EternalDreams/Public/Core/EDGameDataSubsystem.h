@@ -56,6 +56,9 @@ public:
 	template<typename T>
 	TArray<T*> GetAllDataOfType(const FPrimaryAssetType& AssetType) const;
 	
+	
+	template<typename T>
+	T* GetDataByType(const FPrimaryAssetType& AssetType) const;
 public:
 	// ================================================================
     // UGameInstanceSubsystem 인터페이스
@@ -209,4 +212,18 @@ TArray<T*> UEDGameDataSubsystem::GetAllDataOfType(const FPrimaryAssetType& Asset
 		}
 	}
 	return Result;
+}
+
+template<typename T>
+T* UEDGameDataSubsystem::GetDataByType(const FPrimaryAssetType& AssetType) const
+{
+	for (const auto& Pair : DataCache)
+	{
+		if (Pair.Key.PrimaryAssetType == AssetType)
+		{
+			if (T* Result = Cast<T>(Pair.Value.Get()))
+				return Result;
+		}
+	}
+	return nullptr;
 }
