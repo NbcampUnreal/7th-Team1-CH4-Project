@@ -19,6 +19,7 @@
 #include "Components/WidgetComponent.h"
 #include "Core/EDAssetManager.h"
 #include "Core/EDGameDataSubsystem.h"
+#include "Data/EDPlayerAnimDataAsset.h"
 #include "Data/EDPlayerDataAsset.h"
 #include "Data/EDWeaponDataAsset.h"
 #include "Data/EDPlayerDataAsset.h"
@@ -93,11 +94,11 @@ void AEDPlayerCharacter::BeginPlay()
 	if (DataSubsystem->IsDataReady())
 	{
 		UE_LOG(LogTemp, Log, TEXT("[PlayerChar] 데이터 준비 완료 - 즉시 초기화 실행"));
-		SetupFromPlayerData();
+		ApplyPlayerDataAsset();
 	} else
 	{
 		UE_LOG(LogTemp, Log, TEXT("[PlayerChar] 데이터 준비 미완료 - 콜백 초기화 실행"));
-		DataSubsystem->OnAllDataLoaded.AddDynamic(this, &AEDPlayerCharacter::SetupFromPlayerData);
+		DataSubsystem->OnAllDataLoaded.AddDynamic(this, &AEDPlayerCharacter::ApplyPlayerDataAsset);
 	}
 	
 	
@@ -183,6 +184,8 @@ void AEDPlayerCharacter::InitializeAbilitySystem()
 
 void AEDPlayerCharacter::GiveDefaultAbilities()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[GiveDefaultAbilities] 기본 어빌리티 부여 시작 - 개수: %d"), DefaultAbilities.Num());
+	
 	for (TSubclassOf<UGameplayAbility>& AbilityClass : DefaultAbilities)
 	{
 		if (AbilityClass)
@@ -190,9 +193,11 @@ void AEDPlayerCharacter::GiveDefaultAbilities()
 			// Ability Spec 생성
 			FGameplayAbilitySpec AbilitySpec(AbilityClass, 1, INDEX_NONE, this);
 			// ASC에 Ability 부여
-			AbilitySystemComponent->GiveAbility(AbilitySpec);
+			FGameplayAbilitySpecHandle Handle = AbilitySystemComponent->GiveAbility(AbilitySpec);
 		}
 	}
+	
+	UE_LOG(LogTemp, Warning, TEXT("[GiveDefaultAbilities] 기본 어빌리티 부여 완료"));
 }
 
 void AEDPlayerCharacter::StartAnimMove(float InDashSpeed, bool InbIsForward, bool InbIsZ)
@@ -240,7 +245,7 @@ void AEDPlayerCharacter::OnWeaponChanged()
 {
 	if (!HasAuthority())
 	{
-		return;
+		return;  // 무기 메시 설정은 서버만 처리
 	}
 	
 	if (!IsValid(InventoryComponent)||
@@ -259,6 +264,11 @@ void AEDPlayerCharacter::OnWeaponChanged()
 
 	FName WeaponCategory=  *UEnum::GetDisplayValueAsText(EPlayerDataType::WeaponData).ToString();
 	
+	// 무기별 태그 결정
+	FGameplayTag WeaponTagToSet = FGameplayTag::EmptyTag;
+	FGameplayTag BasicAttackTagToSet = FGameplayTag::EmptyTag;
+	FGameplayTag EvadeTagToSet = FGameplayTag::EmptyTag;
+	FGameplayTag EvadeCoolTimeTagToSet = FGameplayTag::EmptyTag;
 	
 	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Bow))
 	{
@@ -271,11 +281,12 @@ void AEDPlayerCharacter::OnWeaponChanged()
 		LWeaponActor->SetServerStaticMesh(Bow->WeaponStaticMesh.Get());
 		RWeaponActor->SetServerStaticMesh(nullptr);
 		
-		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Bow);
-		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Bow);
-		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Bow);
+		WeaponTagToSet = EDGameplayTags.Item_Weapon_Bow;
+		BasicAttackTagToSet = EDGameplayTags.Player_BasicAttack_Bow;
+		EvadeTagToSet = EDGameplayTags.Player_Evade_Bow;
+		EvadeCoolTimeTagToSet = EDGameplayTags.CoolDown_Evade_Bow;
 	}
-	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Hammer))
+	else if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Hammer))
 	{
 		UEDWeaponDataAsset* Hammer = 
 			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
@@ -286,11 +297,12 @@ void AEDPlayerCharacter::OnWeaponChanged()
 		LWeaponActor->SetServerStaticMesh(nullptr);
 		RWeaponActor->SetServerStaticMesh(Hammer->WeaponStaticMesh.Get());
 		
-		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Hammer);
-		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Hammer);
-		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Hammer);
+		WeaponTagToSet = EDGameplayTags.Item_Weapon_Hammer;
+		BasicAttackTagToSet = EDGameplayTags.Player_BasicAttack_Hammer;
+		EvadeTagToSet = EDGameplayTags.Player_Evade_Hammer;
+		EvadeCoolTimeTagToSet = EDGameplayTags.CoolDown_Evade_Hammer;
 	}
-	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Staff))
+	else if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Staff))
 	{
 		UEDWeaponDataAsset* Staff = 
 			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
@@ -301,11 +313,12 @@ void AEDPlayerCharacter::OnWeaponChanged()
 		LWeaponActor->SetServerStaticMesh(nullptr);
 		RWeaponActor->SetServerStaticMesh(Staff->WeaponStaticMesh.Get());
 		
-		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Staff);
-		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Staff);
-		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Staff);
+		WeaponTagToSet = EDGameplayTags.Item_Weapon_Staff;
+		BasicAttackTagToSet = EDGameplayTags.Player_BasicAttack_Staff;
+		EvadeTagToSet = EDGameplayTags.Player_Evade_Staff;
+		EvadeCoolTimeTagToSet = EDGameplayTags.CoolDown_Evade_Staff;
 	}
-	if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Sword))
+	else if (AbilitySystemComponent->HasMatchingGameplayTag(EDGameplayTags.Item_Weapon_Sword))
 	{
 		UEDWeaponDataAsset* Sword = 
 			EDGameplayDataSubsystem->GetData<UEDWeaponDataAsset>(FPrimaryAssetId(
@@ -316,12 +329,32 @@ void AEDPlayerCharacter::OnWeaponChanged()
 		LWeaponActor->SetServerStaticMesh(nullptr);
 		RWeaponActor->SetServerStaticMesh(Sword->WeaponStaticMesh.Get());
 		
-		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Sword);
-		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Sword);
-		PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EDGameplayTags.CoolDown_Evade_Sword);	
+		WeaponTagToSet = EDGameplayTags.Item_Weapon_Sword;
+		BasicAttackTagToSet = EDGameplayTags.Player_BasicAttack_Sword;
+		EvadeTagToSet = EDGameplayTags.Player_Evade_Sword;
+		EvadeCoolTimeTagToSet = EDGameplayTags.CoolDown_Evade_Sword;
 	}
 	
+	// 모든 클라이언트에서 태그 설정 (멀티캐스트)
+	if (BasicAttackTagToSet.IsValid())
+	{
+		MulticastSetWeaponTags(BasicAttackTagToSet, EvadeTagToSet, EvadeCoolTimeTagToSet);
+	}
+}
 
+void AEDPlayerCharacter::MulticastSetWeaponTags_Implementation(FGameplayTag BasicAttackTag, FGameplayTag EvadeTag, FGameplayTag EvadeCoolTimeTag)
+{
+	if (!IsValid(PlayerSkillComponent))
+	{
+		return;
+	}
+	
+	// 모든 클라이언트에서 실행됨
+	PlayerSkillComponent->SetBasicAttackTag(BasicAttackTag);
+	PlayerSkillComponent->SetSpaceSkillTag(EvadeTag);
+	PlayerSkillComponent->SetSpaceSkillCoolTimeTag(EvadeCoolTimeTag);
+	
+	UE_LOG(LogTemp, Warning, TEXT("[MulticastSetWeaponTags] 무기 태그 설정 - BasicAttack: %s"), *BasicAttackTag.ToString());
 }
 
 void AEDPlayerCharacter::OnPlayerSkinChanged(EPlayerNameType& SkinName)
@@ -352,9 +385,7 @@ void AEDPlayerCharacter::OnPlayerSkinChanged(EPlayerNameType& SkinName)
 			GetMesh()->SetSkeletalMesh(TargetSkin->SkeletalMesh.Get());
 			GetMesh()->SetAnimInstanceClass(TargetSkin->AnimationBlueprint.Get());
 		}
-		
 	}
-	
 	
 	//플레이어 스킨 변경
 	UEDPlayerDataAsset* PlayerSkin = EDGameDataSubsystem->GetData<UEDPlayerDataAsset>(
@@ -395,126 +426,140 @@ float AEDPlayerCharacter::GetMaxHealth() const
 //  데이터 처리
 // ============================================================
 
-void AEDPlayerCharacter::SetupFromPlayerData()
-{
-	UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - SetupFromPlayerData] 입장"));
-	UEDGameDataSubsystem* GameDataSubsystem = UEDGameDataSubsystem::Get(GetWorld());
-	if (!GameDataSubsystem)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - SetupFromPlayerData] EDGameDataSubsystem을 찾을 수 없습니다"));
-		return;
-	}
-	UEDPlayerDataAsset* PlayerData = GameDataSubsystem->GetData<UEDPlayerDataAsset>(
-		FPrimaryAssetId(TEXT("PlayerData"), TEXT("DA_PlayerData"))
-	);
-
-	if (!PlayerData)
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - SetupFromPlayerData] EDGameDataSubsystem에 캐시된 PlayerData가 없습니다."));
-		return;
-	}
-	UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - SetupFromPlayerData] 끝까지 버팀 ApplyPlayerDataAsset들어가기 직전"));
-	ApplyPlayerDataAsset();
-}
-
-
 void AEDPlayerCharacter::ApplyPlayerDataAsset()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - ApplyPlayerDataAsset] 서버 조건 못 지나서"));
 	// 서버에서만 실행
 	if (!HasAuthority()) return;
 	
-	UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - ApplyPlayerDataAsset] 서버 조건 지나서"));
+	// 중복 호출 방지
+	// if (bPlayerDataAssetApplied)
+	// {
+	// 	return;
+	// }
+	// bPlayerDataAssetApplied = true;
+	
 	UEDGameDataSubsystem* DataSubsystem = CachedDataSubsystem.Get();
 	if (!DataSubsystem) return;
+	
+	FName PlayerDataCategory = *UEnum::GetDisplayValueAsText(EPlayerDataType::PlayerData).ToString();
 	UEDPlayerDataAsset* PlayerData = DataSubsystem->GetData<UEDPlayerDataAsset>(
-		FPrimaryAssetId(TEXT("PlayerData"), TEXT("DA_PlayerData"))
+		FPrimaryAssetId(PlayerDataCategory, *UEnum::GetDisplayValueAsText(EPlayerNameType::Basic).ToString())
 	);
+	
 	if (!PlayerData) return;
 	
-	UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter - ApplyPlayerDataAsset] PlayerData있음"));
 	if (PlayerData->SkeletalMesh.IsValid())
 	{
 		USkeletalMesh* SkeletalMesh = PlayerData->SkeletalMesh.Get();
 		if (!SkeletalMesh)
 		{
-			// 혹시 로드 실패시 동기 로드
+			// 보험용 동기로드
 			SkeletalMesh = PlayerData->SkeletalMesh.LoadSynchronous();
 		}
 		
 		if (SkeletalMesh)
 		{
 			GetMesh()->SetSkeletalMesh(SkeletalMesh);
-			UE_LOG(LogTemp, Log, TEXT("[AEDPlayerCharacter] 스켈레탈 메시 적용: %s"), *SkeletalMesh->GetName());
 		}
 		else
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter] 스켈레탈 메시 로드 실패"));
 		}
 	}
-
+	
 	if (PlayerData->AnimationBlueprint.IsValid())
 	{
 		// 이미 로드됨
 		UClass* AnimBPClass = PlayerData->AnimationBlueprint.Get();
 		if (!AnimBPClass)
 		{
-			// 혹시 로드 실패시 동기 로드
+			// 보험
 			AnimBPClass = PlayerData->AnimationBlueprint.LoadSynchronous();
 		}
 		
 		if (AnimBPClass)
 		{
 			GetMesh()->SetAnimClass(AnimBPClass);
-			UE_LOG(LogTemp, Log, TEXT("[AEDPlayerCharacter] 애니메이션 블루프린트 적용: %s"), *AnimBPClass->GetName());
 		}
 		else
 		{
 			UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter] 애니메이션 블루프린트 로드 실패"));
 		}
 	}
+	
+	FName WeaponCategory = *UEnum::GetDisplayValueAsText(EPlayerDataType::WeaponData).ToString();
+	UEDWeaponDataAsset* HammerData = DataSubsystem->GetData<UEDWeaponDataAsset>(
+		FPrimaryAssetId(WeaponCategory, *UEnum::GetDisplayValueAsText(EWeaponNameType::Hammer).ToString())
+	);
+	
+    if (!IsValid(WeaponClass))
+    {
+        UE_LOG(LogTemp, Error, TEXT("[ApplyPlayerDataAsset] WeaponClass 없음"));
+        return;
+    }
 
-	if (!IsValid(WeaponClass))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter] WeaponClass가 설정되지 않았습니다"));
-		return;
-	}
+    if (!IsValid(RWeaponActor))
+    {
+        RWeaponActor = GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
+        if (IsValid(RWeaponActor))
+        {
+            RWeaponActor->SetOwner(this);
+            GetCapsuleComponent()->IgnoreActorWhenMoving(RWeaponActor, true);
+            // 망치 스태틱 메시 적용
+            if (HammerData)
+            {
+            	UStaticMesh* WeaponMesh = nullptr;
+            	WeaponMesh = HammerData->WeaponStaticMesh.IsPending()
+			? HammerData->WeaponStaticMesh.LoadSynchronous()
+			: HammerData->WeaponStaticMesh.Get();
+                // RWeaponActor->SetServerStaticMesh(HammerData->WeaponStaticMesh.Get());
+            	RWeaponActor->SetServerStaticMesh(WeaponMesh);
+            }
+        }
+    }
 
-	// 오른쪽 무기 스폰
-	if (!IsValid(RWeaponActor))
-	{
-		RWeaponActor = GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
-		if (IsValid(RWeaponActor))
-		{
-			SkeletalMeshComp = Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
-			if (IsValid(SkeletalMeshComp))
-			{
-				RWeaponActor->SetOwner(this);
-				RWeaponActor->AttachToComponent(GetMesh()->GetChildComponent(0), 
-					FAttachmentTransformRules::SnapToTargetNotIncludingScale, RWeaponSocketName);
-				GetCapsuleComponent()->IgnoreActorWhenMoving(RWeaponActor, true);
-				UE_LOG(LogTemp, Log, TEXT("[AEDPlayerCharacter] 오른쪽 무기 장착 완료"));
-			}
-		}
-	}
+    if (!IsValid(LWeaponActor))
+    {
+        LWeaponActor = GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
+        if (IsValid(LWeaponActor))
+        {
+            LWeaponActor->SetOwner(this);
+            GetCapsuleComponent()->IgnoreActorWhenMoving(LWeaponActor, true);
+            LWeaponActor->SetServerStaticMesh(nullptr);
+        }
+    }
 
-	// 왼쪽 무기 스폰
-	if (!IsValid(LWeaponActor))
-	{
-		LWeaponActor = GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
-		if (IsValid(LWeaponActor))
-		{
-			SkeletalMeshComp = Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
-			if (IsValid(SkeletalMeshComp))
-			{
-				LWeaponActor->SetOwner(this);
-				LWeaponActor->AttachToComponent(GetMesh()->GetChildComponent(0), 
-					FAttachmentTransformRules::SnapToTargetNotIncludingScale, LWeaponSocketName);
-				GetCapsuleComponent()->IgnoreActorWhenMoving(LWeaponActor, true);
-				UE_LOG(LogTemp, Log, TEXT("[AEDPlayerCharacter] 왼쪽 무기 장착 완료"));
-			}
-		}
-	}
+    GetWorld()->GetTimerManager().SetTimerForNextTick([this]()
+    {
+        USkeletalMeshComponent* AttachTarget = GetMesh();
+
+        if (IsValid(RWeaponActor))
+        {
+            RWeaponActor->AttachToComponent(
+                AttachTarget,
+                FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+                RWeaponSocketName
+            );
+        }
+
+        if (IsValid(LWeaponActor))
+        {
+            LWeaponActor->AttachToComponent(
+                AttachTarget,
+                FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+                LWeaponSocketName
+            );
+        }
+
+        if (IsValid(AbilitySystemComponent))
+        {
+            const FEDGameplayTags& EDGameplayTags = FEDGameplayTags::Get();
+            // 기본 무기는 Hammer
+            AbilitySystemComponent->AddLooseGameplayTag(EDGameplayTags.Item_Weapon_Hammer);
+        	
+            OnWeaponChanged();
+        }
+    });
 }
 
 // ============================================================
