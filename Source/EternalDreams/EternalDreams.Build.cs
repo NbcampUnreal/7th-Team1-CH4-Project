@@ -15,6 +15,7 @@ public class EternalDreams : ModuleRules
 			"CommonUI",
 			"CommonInput",
 			"GameplayAbilities", 
+			"DeveloperSettings",
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[]

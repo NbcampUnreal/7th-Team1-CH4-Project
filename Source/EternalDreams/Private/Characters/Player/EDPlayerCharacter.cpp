@@ -277,7 +277,10 @@ void AEDPlayerCharacter::OnWeaponChanged()
 				*UEnum::GetDisplayValueAsText(EWeaponNameType::Bow).ToString()
 				));
 		
-		LWeaponActor->SetServerStaticMesh(Bow->WeaponStaticMesh.Get());
+		if (IsValid(Bow))
+		{
+			LWeaponActor->SetServerStaticMesh(Bow->WeaponStaticMesh.Get());
+		}
 		RWeaponActor->SetServerStaticMesh(nullptr);
 		
 		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Bow);
@@ -291,9 +294,11 @@ void AEDPlayerCharacter::OnWeaponChanged()
 				WeaponCategory, 
 				*UEnum::GetDisplayValueAsText(EWeaponNameType::Hammer).ToString()
 				));
-		
 		LWeaponActor->SetServerStaticMesh(nullptr);
-		RWeaponActor->SetServerStaticMesh(Hammer->WeaponStaticMesh.Get());
+		if (IsValid(Hammer))
+		{
+			RWeaponActor->SetServerStaticMesh(Hammer->WeaponStaticMesh.Get());
+		}
 		
 		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Hammer);
 		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Hammer);
@@ -308,7 +313,10 @@ void AEDPlayerCharacter::OnWeaponChanged()
 				));
 		
 		LWeaponActor->SetServerStaticMesh(nullptr);
-		RWeaponActor->SetServerStaticMesh(Staff->WeaponStaticMesh.Get());
+		if (IsValid(Staff))
+		{
+			RWeaponActor->SetServerStaticMesh(Staff->WeaponStaticMesh.Get());
+		}
 		
 		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Staff);
 		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Staff);
@@ -323,7 +331,10 @@ void AEDPlayerCharacter::OnWeaponChanged()
 				));
 		
 		LWeaponActor->SetServerStaticMesh(nullptr);
-		RWeaponActor->SetServerStaticMesh(Sword->WeaponStaticMesh.Get());
+		if (IsValid(Sword))
+		{
+			RWeaponActor->SetServerStaticMesh(Sword->WeaponStaticMesh.Get());
+		}
 		
 		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Sword);
 		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Sword);
@@ -356,7 +367,7 @@ void AEDPlayerCharacter::OnPlayerSkinChanged(EPlayerNameType& SkinName)
 			PlayerSkinCategory,
 			*UEnum::GetDisplayValueAsText(EPlayerNameType::Basic).ToString()
 			));
-		if (TargetSkin)
+		if (IsValid(TargetSkin))
 		{
 			GetMesh()->SetSkeletalMesh(TargetSkin->SkeletalMesh.Get());
 			GetMesh()->SetAnimInstanceClass(TargetSkin->AnimationBlueprint.Get());
@@ -374,7 +385,7 @@ void AEDPlayerCharacter::OnPlayerSkinChanged(EPlayerNameType& SkinName)
 	
 	USkeletalMeshComponent* RetargetMesh=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
 	
-	if (PlayerSkin&&IsValid(RetargetMesh))
+	if (IsValid(PlayerSkin)&&IsValid(RetargetMesh))
 	{
 		RetargetMesh->SetSkeletalMesh(PlayerSkin->SkeletalMesh.Get());
 		RetargetMesh->SetAnimInstanceClass(PlayerSkin->AnimationBlueprint.Get());
