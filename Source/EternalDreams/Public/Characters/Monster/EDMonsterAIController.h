@@ -61,7 +61,8 @@ private:
 	void StartTeamReport(AActor* Target);
 	// BT 비동기 로딩(임시)
 	void OnBTLoaded();
-	
+	// DataAsset 준비
+	void OnDataAssetReady();
 	FGenericTeamId MonsterTeamId;
 	FTimerHandle TeamReportTimerHandle;
 	TWeakObjectPtr<AActor> TeamReportTarget;

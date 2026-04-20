@@ -7,8 +7,8 @@ namespace EDUIWidgetIds
 	// 메인 HUD 레이아웃 ID
 	static const FName HUD_Main(TEXT("HUD.Main"));
 
-	// 인벤토리 패널 ID
-	static const FName Panel_Inventory(TEXT("Panel.Inventory"));
+	// 루팅 인벤토리 패널 ID
+	static const FName Panel_LootInventory(TEXT("Panel.LootInventory"));
 
 	// 아이템 제작 패널 ID
 	static const FName Panel_ItemCrafting(TEXT("Panel.ItemCrafting"));

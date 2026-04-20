@@ -7,6 +7,7 @@
 #include "AbilitySystemInterface.h"
 #include "Characters/Player/EDPlayerCharacter.h"
 #include "Characters/Player/Weapon/EDWeapon.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
 #include "Kismet/KismetSystemLibrary.h"
 
 UANS_HitScanAttack::UANS_HitScanAttack()
@@ -122,40 +123,13 @@ void UANS_HitScanAttack::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequen
 	{
 		return;
 	}
-	//피격당한 캐릭터를 메인캐릭터로 형변환
-	AEDPlayerCharacter* HittedPlayer=Cast<AEDPlayerCharacter>(HittedActor);
-	if (HittedPlayer == nullptr)
-	{
-		return;
-	}
-	
+
+
+	FGameplayEventData HitGameplayEventData;
+    		
+	HitGameplayEventData.Target=HittedActor;
+	Player->GetAbilitySystemComponent()->HandleGameplayEvent(FEDGameplayTags::Get().Event_SkillHit,&HitGameplayEventData);
 		
-	//맞은 적의 ASI, ASC를 가져온다.
-	IAbilitySystemInterface* TargetASI = Cast<IAbilitySystemInterface>(HittedPlayer);
-	if (TargetASI == nullptr)
-	{
-		return;
-	}
-	UAbilitySystemComponent* TargetASC = TargetASI->GetAbilitySystemComponent();
-	if (TargetASC==nullptr)
-	{
-		return;
-	}
-	if (Player->GetAbilitySystemComponent()==nullptr)
-	{
-		return;
-	}
-	
-	//GE 적용
-	FGameplayEffectContextHandle Context = Player->GetAbilitySystemComponent()->MakeEffectContext();
-	Context.AddSourceObject(Player);
 
-	FGameplayEffectSpecHandle SpecHandle =Player->GetAbilitySystemComponent()->MakeOutgoingSpec(
-		DamageEffectClass, 1.0f, Context);
-
-	if (SpecHandle.IsValid())
-	{
-		Player->GetAbilitySystemComponent()->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
-	}
 
 }

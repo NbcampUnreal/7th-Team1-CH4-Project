@@ -51,15 +51,18 @@ public:
 	
 	virtual void PostInitializeComponents() override;
 	
-public:
-	//GAS Getter	
-	UFUNCTION(BlueprintCallable, Category = "Attributes")
-	UEDPlayerAttributeSet* GetPlayerAttributeSet() const { return PlayerAttributeSet; }
-	
-	UFUNCTION(BlueprintCallable, Category = "Attributes")
-	UEDBaseAttributeSet* GetBaseAttributeSet() const { return BaseAttributeSet; }
-	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	
+public:
+	//Getter	
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	FORCEINLINE UEDPlayerAttributeSet* GetPlayerAttributeSet() const { return PlayerAttributeSet; }
+	
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	FORCEINLINE UEDBaseAttributeSet* GetBaseAttributeSet() const { return BaseAttributeSet; }
+	
+	UFUNCTION()
+	FORCEINLINE USkillComponent* GetSkillComponent() const {return PlayerSkillComponent;}
 	
 	
 	//Components

@@ -18,7 +18,6 @@
 #include "Core/EDGameDataSubsystem.h"
 #include "Chaos/Deformable/ChaosDeformableSolverProxy.h"
 
-
 // Sets default values
 AEDMonsterAIController::AEDMonsterAIController()
 {
@@ -114,33 +113,15 @@ void AEDMonsterAIController::OnPossess(APawn* InPawn)
 		return;
 	
 	UEDMonsterDataAsset* DA = Monster->GetDataAsset();
-	if (IsValid(DA) == false)
+	if (IsValid(DA))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] OnPossess: DataAsset 없음"), *GetName());
-		return;
+		// DA가 이미 로드 됐다면 바로 OnDataAssetReady를 이용해 셋팅
+		OnDataAssetReady();
 	}
-	// DA의 DetectRange로 감지 범위 설정
-	const float DetectRange = DA->GetStat().DetectRange;
-	
-	SightConfig->SightRadius = DetectRange;
-	SightConfig->LoseSightRadius = DetectRange * 1.2f;
-	HearingConfig->HearingRange = DetectRange * 0.8f;
-	AIPerceptionComp->ConfigureSense(*SightConfig);
-	AIPerceptionComp->ConfigureSense(*HearingConfig);
-	
-	UBehaviorTree* BT = DA->GetBehaviorTree().Get();
-
-	if (IsValid(BT))
+	else
 	{
-		bool bResult = RunBehaviorTree(BT);
-		UE_LOG(LogTemp, Log, TEXT("[AICtrl][%s] RunBehaviorTree 즉시 실행: %s"), 
-			*GetName(), bResult ? TEXT("성공") : TEXT("실패"));
-	} else
-	{
-		BTLoadHandle = UEDAssetManager::Get().LoadAssetAsync(
-			DA->GetBehaviorTree().ToSoftObjectPath(),
-			FStreamableDelegate::CreateUObject(this, &AEDMonsterAIController::OnBTLoaded)
-		);
+		// DA가 로드되지 않았다면 Monster의 OnDataAssetInitialized를 OnDataAssetReady에 바인드
+		Monster->OnDataAssetInitialized.AddUObject(this, &AEDMonsterAIController::OnDataAssetReady);
 	}
 }
 
@@ -288,6 +269,35 @@ void AEDMonsterAIController::OnBTLoaded()
 	bool bResult = RunBehaviorTree(BT);
 	UE_LOG(LogTemp, Warning, TEXT("[AICtrl][%s] RunBehaviorTree(Async): %s"), *GetName(), bResult ? TEXT("성공") : TEXT("실패"));
 
+}
+
+void AEDMonsterAIController::OnDataAssetReady()
+{
+	AEDMonsterBase* Monster = Cast<AEDMonsterBase>(GetPawn());
+	if (IsValid(Monster) == false || IsValid(Monster->GetDataAsset()) == false)
+		return;
+	// DA의 DetectRange로 감지 범위 설정
+	const float DetectRange = Monster->GetDataAsset()->GetStat().DetectRange;
+	SightConfig->SightRadius = DetectRange;
+	SightConfig->LoseSightRadius = DetectRange * 1.2f;
+	HearingConfig->HearingRange = DetectRange * 0.8f;
+	AIPerceptionComp->ConfigureSense(*SightConfig);
+	AIPerceptionComp->ConfigureSense(*HearingConfig);
+	// BT 실행
+	UBehaviorTree* BT = Monster->GetDataAsset()->GetBehaviorTree().Get();
+	if (IsValid(BT))
+	{
+		bool bResult = RunBehaviorTree(BT);
+		UE_LOG(LogTemp, Log, TEXT("[AICtrl][%s] OnDataAssetReady - RunBT: %s"),
+		   *GetName(), bResult ? TEXT("성공") : TEXT("실패"));
+	}
+	else
+	{
+		BTLoadHandle = UEDAssetManager::Get().LoadAssetAsync(
+			Monster->GetDataAsset()->GetBehaviorTree().ToSoftObjectPath(),
+			FStreamableDelegate::CreateUObject(this, &AEDMonsterAIController::OnBTLoaded )
+			);
+	}
 }
 
 
