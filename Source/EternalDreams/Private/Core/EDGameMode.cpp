@@ -9,6 +9,7 @@
 #include "Environment/EDRestrictedArea.h"
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
+#include "Environment/EDLightingManager.h"
 
 AEDGameMode::AEDGameMode()
 {
@@ -92,6 +93,16 @@ void AEDGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
+
+	// ---ksh 월드에 배치된 EnvManager를 찾아서 캐싱해둡니다. ---
+	TArray<AActor*> FoundManagers;
+	UGameplayStatics::GetAllActorsOfClass(GetWorld(), AEDLightingManager::StaticClass(), FoundManagers);
+	if (FoundManagers.Num() > 0)
+	{
+		CachedLightingManager = Cast<AEDLightingManager>(FoundManagers[0]);
+	}
+	// ============================================================
+	
 	CacheZonePlayerStarts();
 	InitRestrictedZones();
 	
@@ -230,6 +241,13 @@ void AEDGameMode::SetPhase(FGameplayTag NewPhase)
 
 void AEDGameMode::OnPhaseStarted(int32 PhaseIndex, const FGameplayTag& PhaseTag)
 {
+	// ---ksh 낮밤 라이팅 변환 
+	if (CachedLightingManager)
+	{
+		FName RowName = (PhaseIndex % 2 != 0) ? FName("Night") : FName("Day");
+		CachedLightingManager->StartTransition(RowName, 3.0f);
+	}
+	
 	switch (PhaseIndex)
 	{
 	case 0: OnDay1_DayStarted();   break;
