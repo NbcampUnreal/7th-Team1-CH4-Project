@@ -20,7 +20,7 @@ public class EternalDreams : ModuleRules
 
 		PrivateDependencyModuleNames.AddRange(new string[]
 		{
-			"GameplayTags", "GameplayTasks", "MoviePlayer",
+			"GameplayTags", "GameplayTasks", "MoviePlayer", "Niagara",
 		});
 		
 		PublicIncludePaths.AddRange(new string[] { "EternalDreams" });

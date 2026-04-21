@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "Engine/DataTable.h"
 #include "Types/EDMonsterTypes.h"
 #include "Animation/AnimInstance.h"
 #include "BehaviorTree/BehaviorTree.h"
@@ -49,6 +50,13 @@ public:
 	
 	UFUNCTION(BlueprintCallable)
 	TSubclassOf<AEDMonsterBase> GetMonsterClass() const { return MonsterClass; }
+	
+	UFUNCTION(BlueprintCallable)
+	UDataTable* GetLootTable() const { return LootTable; }
+	
+	UFUNCTION(BlueprintCallable)
+	int32 GetLootRollCount() const { return LootRollCount; }
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
 	FText MonsterName;
@@ -67,10 +75,16 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data", meta = (AssetBundles = "MonsterData"))
 	TSoftObjectPtr<UBehaviorTree> BehaviorTree;
-	// TODO
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Data")
 	TSubclassOf<AEDMonsterBase> MonsterClass;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Abilities")
 	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Loot")
+	TObjectPtr<UDataTable> LootTable;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Loot")
+	int32 LootRollCount = 1;
 };

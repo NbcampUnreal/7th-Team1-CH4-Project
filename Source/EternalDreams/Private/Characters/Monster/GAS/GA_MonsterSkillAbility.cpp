@@ -35,6 +35,8 @@ void UGA_MonsterSkillAbility::ActivateAbility(const FGameplayAbilitySpecHandle H
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
+	// 쿨타임 적용
+	ApplyCooldown(Handle, ActorInfo, ActivationInfo);
 	
 	UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 		this, TEXT("Skill"), SkillMontage);
@@ -59,6 +61,23 @@ void UGA_MonsterSkillAbility::EndAbility(const FGameplayAbilitySpecHandle Handle
 		Monster->OnAttackFinished.Broadcast();
 	
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+void UGA_MonsterSkillAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
+{
+	if (IsValid(CooldownEffectClass) == false)
+		return;
+	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+	if (IsValid(ASC) == false)
+		return;
+	
+	FGameplayEffectContextHandle Context = ASC->MakeEffectContext();
+	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(CooldownEffectClass, 1.f, Context);
+	if (SpecHandle.IsValid())
+		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+	
+	Super::ApplyCooldown(Handle, ActorInfo, ActivationInfo);
 }
 
 void UGA_MonsterSkillAbility::OnMontageComplete()

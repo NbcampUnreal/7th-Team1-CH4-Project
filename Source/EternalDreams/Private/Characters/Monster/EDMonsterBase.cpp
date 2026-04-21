@@ -14,6 +14,7 @@
 #include "Core/EDGameDataSubsystem.h"
 #include "Core/EDAssetManager.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
+#include "Inventory/Component/EDInventoryComponent.h"
 
 // Sets default values
 AEDMonsterBase::AEDMonsterBase()
@@ -31,6 +32,12 @@ AEDMonsterBase::AEDMonsterBase()
 	MonsterState = EMonsterState::Idle;
 	
 	BaseAttributeSet = CreateDefaultSubobject<UEDBaseAttributeSet>(TEXT("BaseAttributeSet"));
+	
+	// 몬스터는 장비/기본무기 X
+	InventoryComponent = CreateDefaultSubobject<UEDInventoryComponent>(TEXT("InventoryComponent"));
+	InventoryComponent->bGiveDefaultWeaponOnBeginPlay = false;
+	InventoryComponent->bUseEquipmentSlots = false;
+	InventoryComponent->bAutoInitializeLootOnBeginPlay = false;
 }
 
 // Called when the game starts or when spawned
@@ -115,7 +122,9 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	MoveComp->MaxWalkSpeed = Stat.MoveSpeed;
 	MoveComp->bOrientRotationToMovement = true;
 	bUseControllerRotationYaw = false;
-	
+	// InventoryComponent LootTable 세팅
+	InventoryComponent->RandomLootTable = InDataAsset->GetLootTable();
+	InventoryComponent->RandomLootRollCount = InDataAsset->GetLootRollCount();
 	// DA 초기화 완료 알림
 	OnDataAssetInitialized.Broadcast();
 }
@@ -236,8 +245,15 @@ void AEDMonsterBase::HandleDeath()
 	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
 	// MonsterDeath 브로드 캐스트
 	OnMonsterDeath.Broadcast();
+	// 몬스터 시체에서 랜덤 루팅 아이템 스폰
+	if (IsValid(InventoryComponent))
+	{
+		bool bResult = InventoryComponent->RequestInitializeRandomLoot();
+		UE_LOG(LogTemp, Warning, TEXT("[%s] RandomLoot 요청: %s"), *GetName(), bResult ? TEXT("성공") : TEXT("실패(LootTable 없음)"));
+	}
+		
+	
 	// 20초 뒤에 몬스터 시체 처리 
-	// TODO: 아이템 루팅 기능 부착(예정)
 	GetWorldTimerManager().SetTimer(
 		DestroyMeshTimerHandle,
 		FTimerDelegate::CreateWeakLambda(this,[this]()
@@ -255,6 +271,4 @@ void AEDMonsterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 	
 	if (Data.NewValue <= 0.f)
 		HandleDeath();
-	
-	// TODO: 히트 리액션 추가(필요시)
 }

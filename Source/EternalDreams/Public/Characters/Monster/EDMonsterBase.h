@@ -17,6 +17,7 @@ DECLARE_MULTICAST_DELEGATE(FOnAttackFinished);
 DECLARE_MULTICAST_DELEGATE(FOnDataAssetInitialized);
 
 class UAbilitySystemComponent;
+class UEDInventoryComponent;
 struct FStreamableHandle;
 
 UCLASS()
@@ -68,7 +69,7 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Monster")
 	void SetMonsterState(EMonsterState NewState) { if (HasAuthority()) MonsterState = NewState; }
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "GAS")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 	
 	// 수정 전
@@ -77,6 +78,10 @@ protected:
 	// 수정 후
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_MonsterDataId, Category = "Monster|Data")
 	FPrimaryAssetId MonsterDataId;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Inventory")
+	TObjectPtr<UEDInventoryComponent> InventoryComponent;
+	
 private:
 	// 비동기 로드(임시)
 	void LoadVisuals(UEDMonsterDataAsset* InDataAsset);

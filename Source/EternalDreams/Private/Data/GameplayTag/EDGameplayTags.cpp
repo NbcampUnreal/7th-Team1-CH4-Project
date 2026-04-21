@@ -19,15 +19,23 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("Ability.Monster.Attack"),
 		FString("몬스터가 공격 중")
 	);
+	
 	Tags.Ability_Monster_Skill = Manager.AddNativeGameplayTag(
 		FName("Ability.Monster.Skill"),
 		FString("몬스터가 스킬 사용 중")
 	);
+	
+	Tags.Ability_Monster_Blink = Manager.AddNativeGameplayTag(
+		FName("Ability.Monster.Blink"),
+		FString("보스 점멸 어빌리티")
+	);
+	
 	//Player_BasicAttack
 	Tags.Player_BasicAttack_Hammer = Manager.AddNativeGameplayTag(
 		FName("Player.BasicAttack.Hammer"),
 		FString("해머 기본공격")
 	);
+	
 	Tags.Player_BasicAttack_Sword = Manager.AddNativeGameplayTag(
 		FName("Player.BasicAttack.Sword"),
 		FString("검 기본공격")
@@ -114,6 +122,15 @@ void FEDGameplayTags::InitializeNativeTags()
 	FString("쿨다운: 베이직넉백")
 );
 	
+	Tags.CoolDown_Monster_Skill = Manager.AddNativeGameplayTag(
+	FName("CoolDown.Monster.Skill"),
+	FString("쿨다운: 몬스터 스킬")
+	);
+	
+	Tags.CoolDown_Monster_Blink = Manager.AddNativeGameplayTag(
+		FName("CoolDown.Monster.Blink"),
+		FString("쿨다운: 보스 점멸")
+	);
 	//Effect_Debuff
 	Tags.Effect_Debuff_Slow = Manager.AddNativeGameplayTag(
 		FName("Effect.Debuff.Slow"),
