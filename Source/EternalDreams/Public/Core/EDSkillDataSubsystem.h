@@ -35,14 +35,29 @@ class ETERNALDREAMS_API UEDSkillDataSubsystem : public UGameInstanceSubsystem
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	
-	static const UEDSkillDataSubsystem* Get(UWorld* World);
+	static UEDSkillDataSubsystem* Get(UWorld* World);
 	
 	
 	// 특정 스킬 태그로 데이터를 빠르게 검색
 	const FSkillMulStatus* GetSkillData(FGameplayTag SkillTag) const;
+	
+	UFUNCTION()
+	UMaterial* GetEnemyMat();
+	
+	UFUNCTION()
+	UMaterial* GetTeamMat();
+	
 
 private:
-	
+	UPROPERTY()
 	TMap<FGameplayTag, FSkillMulStatus> SkillMulMap;
+	
+	UPROPERTY()
+	UDataTable* SkillDT;
+	UPROPERTY()
+	UMaterial* EnemyMat;
+	UPROPERTY()
+	UMaterial* TeamMat;
+	
 	
 };

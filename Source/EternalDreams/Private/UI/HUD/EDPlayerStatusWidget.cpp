@@ -125,10 +125,7 @@ void UEDPlayerStatusWidget::BindAttributeDelegates()
 			->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetDefensiveAttribute())
 			.AddUObject(this, &UEDPlayerStatusWidget::HandleDefensiveChanged);
 
-		MaxDefensiveChangedHandle = CachedAbilitySystemComponent
-			->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetMaxDefensiveAttribute())
-			.AddUObject(this, &UEDPlayerStatusWidget::HandleMaxDefensiveChanged);
-
+		
 		WalkSpeedChangedHandle = CachedAbilitySystemComponent
 			->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetWalkSpeedAttribute())
 			.AddUObject(this, &UEDPlayerStatusWidget::HandleWalkSpeedChanged);
@@ -174,13 +171,7 @@ void UEDPlayerStatusWidget::UnbindAttributeDelegates()
 		CachedAbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetDefensiveAttribute()).Remove(DefensiveChangedHandle);
 		DefensiveChangedHandle.Reset();
 	}
-
-	if (MaxDefensiveChangedHandle.IsValid())
-	{
-		CachedAbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetMaxDefensiveAttribute()).Remove(MaxDefensiveChangedHandle);
-		MaxDefensiveChangedHandle.Reset();
-	}
-
+	
 	if (WalkSpeedChangedHandle.IsValid())
 	{
 		CachedAbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetWalkSpeedAttribute()).Remove(WalkSpeedChangedHandle);
@@ -365,10 +356,7 @@ void UEDPlayerStatusWidget::HandleDefensiveChanged(const FOnAttributeChangeData&
 	RefreshDefensiveDisplay();
 }
 
-void UEDPlayerStatusWidget::HandleMaxDefensiveChanged(const FOnAttributeChangeData& Data) const
-{
-	RefreshDefensiveDisplay();
-}
+
 
 void UEDPlayerStatusWidget::HandleWalkSpeedChanged(const FOnAttributeChangeData& Data) const
 {
