@@ -10,6 +10,7 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Environment/EDLightingManager.h"
+#include "Characters/Monster/Spawn/EDMonsterSpawnSubsystem.h"
 
 AEDGameMode::AEDGameMode()
 {
@@ -311,6 +312,11 @@ void AEDGameMode::OnDay2_DayStarted()
 {
 	// [아이템] 에픽 등급 재료 등장 — S4 담당
 	// [부활] 부활키트 사용 가능 시작 — S6 담당
+
+	if (UEDMonsterSpawnSubsystem* Sub = GetWorld()->GetSubsystem<UEDMonsterSpawnSubsystem>())
+	{
+		Sub->TriggerSpawnByGrade(EMonsterGrade::Elite);
+	}
 }
 
 void AEDGameMode::OnDay2_NightStarted()
@@ -330,6 +336,11 @@ void AEDGameMode::OnDay3_DayStarted()
 {
 	// [몬스터] 위클라이너(보스) 스폰 — S2 담당
 	// [아이템] 전설 등급 재료 등장 — S4 담당
+
+	if (UEDMonsterSpawnSubsystem* Sub = GetWorld()->GetSubsystem<UEDMonsterSpawnSubsystem>())
+	{
+		Sub->TriggerSpawnByGrade(EMonsterGrade::Boss);
+	}
 }
 
 void AEDGameMode::OnDay3_NightStarted()
