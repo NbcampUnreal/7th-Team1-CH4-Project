@@ -7,11 +7,17 @@ AEDPlayerState::AEDPlayerState()
 {
 }
 
+void AEDPlayerState::SetDisplayNickname(const FString& InDisplayNickname)
+{
+	DisplayNickname = InDisplayNickname.TrimStartAndEnd();
+}
+
 void AEDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AEDPlayerState, TeamId);
+	DOREPLIFETIME(AEDPlayerState, DisplayNickname);
 	DOREPLIFETIME(AEDPlayerState, bReady);
 	DOREPLIFETIME(AEDPlayerState, DesiredZoneId);
 	DOREPLIFETIME(AEDPlayerState, bIsDead);
@@ -28,6 +34,7 @@ void AEDPlayerState::CopyProperties(APlayerState* PlayerState)
 	if (AEDPlayerState* PS = Cast<AEDPlayerState>(PlayerState))
 	{
 		PS->TeamId = TeamId;
+		PS->DisplayNickname = DisplayNickname;
 		PS->bReady = bReady;
 		PS->DesiredZoneId = DesiredZoneId;
 		PS->bIsDead = bIsDead;

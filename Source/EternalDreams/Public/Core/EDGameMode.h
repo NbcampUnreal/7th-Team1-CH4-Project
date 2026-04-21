@@ -131,6 +131,11 @@ protected:
 
 	/** 모든 Phase 소진 → 매치 종료 */
 	virtual void OnMatchFinished();
+	
+	// ---ksh Env 매니저 (낮밤 라이팅) 변수 추가
+	UPROPERTY()
+	class AEDLightingManager* CachedLightingManager;
+	
 
 	// -------------------------------------------------------
 	// 사망 / 부활 내부 단계
@@ -168,7 +173,7 @@ protected:
 
 	/** 레벨에 배치된 RestrictedArea를 수집하고 활성화 순서를 셔플 */
 	void InitRestrictedZones();
-
+	
 private:
 	// -------------------------------------------------------
 	// Phase 내부 상태

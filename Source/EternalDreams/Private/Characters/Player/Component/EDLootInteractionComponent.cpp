@@ -77,9 +77,9 @@ void UEDLootInteractionComponent::HandleToggleLootPanel()
 		return;
 	}
 
-	if (UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_Inventory))
+	if (UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_LootInventory))
 	{
-		UIManageSubsystem->ClosePanel(EDUIWidgetIds::Panel_Inventory);
+		UIManageSubsystem->ClosePanel(EDUIWidgetIds::Panel_LootInventory);
 		return;
 	}
 
@@ -131,7 +131,7 @@ void UEDLootInteractionComponent::ServerRequestLootTransfer_Implementation(
 	}
 
 	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
-	const bool bSuccess = PlayerInventoryComponent->RequestTransferItemAutoDetailed(
+	const bool bSuccess = PlayerInventoryComponent->PredicateTransferItemAuto(
 		FromInventory,
 		PlayerInventoryComponent,
 		FromSlotIndex,
@@ -247,7 +247,7 @@ void UEDLootInteractionComponent::OpenLootPanelForCurrentTarget()
 		return;
 	}
 
-	UCommonActivatableWidget* OpenedPanel = UIManageSubsystem->OpenPanel(EDUIWidgetIds::Panel_Inventory);
+	UCommonActivatableWidget* OpenedPanel = UIManageSubsystem->OpenPanel(EDUIWidgetIds::Panel_LootInventory);
 	UEDInventoryPanelWidget* InventoryPanel = Cast<UEDInventoryPanelWidget>(OpenedPanel);
 	if (!InventoryPanel)
 	{
@@ -266,9 +266,9 @@ void UEDLootInteractionComponent::CloseLootPanelIfOpen()
 		return;
 	}
 
-	if (UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_Inventory))
+	if (UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_LootInventory))
 	{
-		UIManageSubsystem->ClosePanel(EDUIWidgetIds::Panel_Inventory);
+		UIManageSubsystem->ClosePanel(EDUIWidgetIds::Panel_LootInventory);
 	}
 }
 

@@ -7,6 +7,9 @@ const FPrimaryAssetType UEDGameDataSubsystem::LobbyAssetType = FPrimaryAssetType
 const FPrimaryAssetType UEDGameDataSubsystem::UIAssetType = FPrimaryAssetType(TEXT("UIData"));
 const FPrimaryAssetType UEDGameDataSubsystem::ItemAssetType = FPrimaryAssetType(TEXT("InventoryItem"));
 const FPrimaryAssetType UEDGameDataSubsystem::MonsterAssetType = FPrimaryAssetType(TEXT("MonsterData"));
+const FPrimaryAssetType UEDGameDataSubsystem::PlayerDataAssetType = FPrimaryAssetType(TEXT("PlayerData"));
+const FPrimaryAssetType UEDGameDataSubsystem::PlayerAnimDataAssetType = FPrimaryAssetType(TEXT("PlayerAnimData"));
+const FPrimaryAssetType UEDGameDataSubsystem::WeaponDataAssetType = FPrimaryAssetType(TEXT("WeaponData"));
 
 void UEDGameDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -35,7 +38,7 @@ void UEDGameDataSubsystem::InitializeGameData()
 {
 	if (CurrentPhase != EDataLoadPhase::LobbyReady) return;
 	LoadPhase_UI();
-	UnloadPhaseData(LobbyAssetType, TEXT("Lobby"));
+	UnloadPhaseData(LobbyAssetType, LobbyAssetType.GetName());
 }
 
 // ================================================================
@@ -46,19 +49,25 @@ void UEDGameDataSubsystem::InitializeGameData()
 void UEDGameDataSubsystem::ReturnToLobby()
 {
 	// 게임씬 데이터 언로드
-	UnloadPhaseData(UIAssetType, TEXT("UI"));
-	UnloadPhaseData(ItemAssetType, TEXT("Item"));
-	UnloadPhaseData(MonsterAssetType, TEXT("Monster"));
+	UnloadPhaseData(UIAssetType,            UIAssetType.GetName());
+	UnloadPhaseData(ItemAssetType,          ItemAssetType.GetName());
+	UnloadPhaseData(MonsterAssetType,       MonsterAssetType.GetName());
+	UnloadPhaseData(PlayerDataAssetType,    PlayerDataAssetType.GetName());
+	UnloadPhaseData(PlayerAnimDataAssetType,PlayerAnimDataAssetType.GetName());
+	UnloadPhaseData(WeaponDataAssetType,    WeaponDataAssetType.GetName());
 	LoadPhase_Lobby();
 }
 
 // 게임 완전히 종료
 void UEDGameDataSubsystem::UnloadAllData()
 {
-	UnloadPhaseData(LobbyAssetType, TEXT("Lobby"));
-	UnloadPhaseData(UIAssetType, TEXT("UI"));
-	UnloadPhaseData(ItemAssetType, TEXT("Item"));
-	UnloadPhaseData(MonsterAssetType, TEXT("Monster"));
+	UnloadPhaseData(LobbyAssetType,         LobbyAssetType.GetName());
+	UnloadPhaseData(UIAssetType,            UIAssetType.GetName());
+	UnloadPhaseData(ItemAssetType,          ItemAssetType.GetName());
+	UnloadPhaseData(MonsterAssetType,       MonsterAssetType.GetName());
+	UnloadPhaseData(PlayerDataAssetType,    PlayerDataAssetType.GetName());
+	UnloadPhaseData(PlayerAnimDataAssetType,PlayerAnimDataAssetType.GetName());
+	UnloadPhaseData(WeaponDataAssetType,    WeaponDataAssetType.GetName());
 	SetPhase(EDataLoadPhase::NotStarted);
 }
 
@@ -163,7 +172,6 @@ void UEDGameDataSubsystem::LoadPhase_Monster()
 	AM.GetPrimaryAssetIdList(MonsterAssetType, Ids);
 	if (Ids.IsEmpty())
 	{
-		UE_LOG(LogTemp, Log, TEXT("몬스터 정보 로드 실패"));
 		OnMonsterDataLoaded();
 		return;
 	}
@@ -174,6 +182,52 @@ void UEDGameDataSubsystem::LoadPhase_Monster()
 		FStreamableDelegate::CreateUObject(this, &UEDGameDataSubsystem::OnMonsterDataLoaded)
 	);
 	PhaseHandles.Add(MonsterAssetType.GetName(), Handle);
+}
+
+void UEDGameDataSubsystem::LoadPhase_Player()
+{
+	SetPhase(EDataLoadPhase::LoadingPlayer);
+	UEDAssetManager& AM = UEDAssetManager::Get();
+
+	TArray<FPrimaryAssetId> AllIds;
+	TArray<FPrimaryAssetId> Temp;
+	AM.GetPrimaryAssetIdList(PlayerDataAssetType, Temp);     AllIds.Append(Temp); Temp.Reset();
+	AM.GetPrimaryAssetIdList(PlayerAnimDataAssetType, Temp); AllIds.Append(Temp); Temp.Reset();
+	AM.GetPrimaryAssetIdList(WeaponDataAssetType, Temp);     AllIds.Append(Temp);
+
+	if (AllIds.IsEmpty())
+	{
+		OnPlayerDataLoaded();
+		return;
+	}
+	
+	// 1단계: 번들 없이 DA 자체만 먼저 로드
+	TSharedPtr<FStreamableHandle> Handle = AM.LoadPrimaryAssetsAsync(
+		AllIds,
+		{},  // 번들 없음
+		FStreamableDelegate::CreateLambda([this, AllIds]()
+		{
+			// 2단계: DA 로드 완료 후 번들 상태 변경으로 TSoft 필드 로드
+			UEDAssetManager& AM2 = UEDAssetManager::Get();
+			TArray<FName> Bundles = {
+				PlayerDataAssetType.GetName(),
+				PlayerAnimDataAssetType.GetName(),
+				WeaponDataAssetType.GetName()
+			};
+
+			AM2.ChangeBundleStateForPrimaryAssets(
+				AllIds,
+				Bundles,   // 추가할 번들
+				{},        // 제거할 번들
+				false,
+				FStreamableDelegate::CreateUObject(this, &UEDGameDataSubsystem::OnPlayerDataLoaded)
+			);
+		})
+	);
+	
+	PhaseHandles.Add(PlayerDataAssetType.GetName(), Handle);
+	PhaseHandles.Add(PlayerAnimDataAssetType.GetName(), Handle);
+	PhaseHandles.Add(WeaponDataAssetType.GetName(), Handle);
 }
 
 // ================================================================
@@ -207,8 +261,28 @@ void UEDGameDataSubsystem::OnItemDataLoaded()
 void UEDGameDataSubsystem::OnMonsterDataLoaded()
 {
 	CacheLoadedAssets(MonsterAssetType);
+	LoadPhase_Player();
+}
+
+void UEDGameDataSubsystem::OnPlayerDataLoaded()
+{
+	CacheLoadedAssets(PlayerDataAssetType);
+	CacheLoadedAssets(PlayerAnimDataAssetType);
+	CacheLoadedAssets(WeaponDataAssetType);
+	
+	for (auto it:DataCache)
+	{
+		UE_LOG(LogTemp,Warning,TEXT("%s"),*it.Key.ToString());
+		if (IsValid(it.Value))
+		{
+			UE_LOG(LogTemp,Warning,TEXT("IsValid"));
+		}
+	}
+	
+	
+	
 	SetPhase(EDataLoadPhase::Completed);
-	UE_LOG(LogTemp, Log, TEXT("몬스터 정보 로드 완료"));
+	UE_LOG(LogTemp, Log, TEXT("[EDGameDataSubsystem] 플레이어 데이터 로드 완료"));
 	// 완료 신호
 	OnAllDataLoaded.Broadcast();
 }

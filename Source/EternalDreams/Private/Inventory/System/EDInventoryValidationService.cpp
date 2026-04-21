@@ -36,6 +36,11 @@ bool FEDInventoryValidationService::CanEquipToSlot(const UEDInventoryItemDataAss
     return ItemData->EquippableType == TargetSlot;
 }
 
+bool FEDInventoryValidationService::CanEquipToSkillSlot(const UEDInventoryItemDataAsset* ItemData)
+{
+    return ItemData && ItemData->ItemType == EEDInventoryItemType::Skill;
+}
+
 bool FEDInventoryValidationService::CanConsumeItem(const UEDInventoryItemDataAsset* ItemData, const AActor* OwnerActor, EEDInventoryActionFailure* OutFailure)
 {
     SetFailure_Validation(OutFailure, EEDInventoryActionFailure::None);

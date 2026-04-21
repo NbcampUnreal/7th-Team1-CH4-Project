@@ -90,6 +90,8 @@ const TCHAR* ToItemTypeLabel(EEDInventoryItemType ItemType)
         return TEXT("Consumable");
     case EEDInventoryItemType::Ingredient:
         return TEXT("Ingredient");
+    case EEDInventoryItemType::Skill:
+        return TEXT("Skill");
     default:
         return TEXT("Unknown");
     }
@@ -621,8 +623,3 @@ void UEDTestBlueprintLibrary::PrintCraftTreeDebugTextByItemId(UEDInventoryCompon
 
     UE_LOG(LogTemp, Log, TEXT("%s"), *DebugText);
 }
-
-
-
-
-

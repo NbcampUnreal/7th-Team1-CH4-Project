@@ -5,10 +5,14 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "Components/ActorComponent.h"
+#include "Delegates/IDelegateInstance.h"
 #include "SkillComponent.generated.h"
 
 
+
 class UAbilitySystemComponent;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSkillCoolTime,float,SkillCoolTime,float,MaxSkillCoolTime);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
 class ETERNALDREAMS_API USkillComponent : public UActorComponent
@@ -16,25 +20,47 @@ class ETERNALDREAMS_API USkillComponent : public UActorComponent
 	GENERATED_BODY()
 
 public:
-	
+	USkillComponent();	
 	virtual void BeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps)const override;
 
 protected:
 	//Skill Tags
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY(EditAnyWhere,Replicated)
 	FGameplayTag BasicAttackTag=FGameplayTag::EmptyTag;
-	UPROPERTY(EditAnyWhere)
+	
+	UPROPERTY(EditAnyWhere,Replicated)
 	FGameplayTag QSkillTag=FGameplayTag::EmptyTag;
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY(EditAnyWhere,ReplicatedUsing=OnRep_QSkillCoolTimeTag)
 	FGameplayTag QSkillCoolTimeTag=FGameplayTag::EmptyTag;
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY()
+    FGameplayTag PastQSkillCoolTimeTag=FGameplayTag::EmptyTag;
+	
+	UPROPERTY(EditAnyWhere,Replicated)
 	FGameplayTag ESkillTag=FGameplayTag::EmptyTag;
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY(EditAnyWhere,ReplicatedUsing=OnRep_ESkillCoolTimeTag)
 	FGameplayTag ESkillCoolTimeTag=FGameplayTag::EmptyTag;
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY()
+	FGameplayTag PastESkillCoolTimeTag=FGameplayTag::EmptyTag;
+	
+	UPROPERTY(EditAnyWhere,Replicated)
 	FGameplayTag SpaceSkillTag=FGameplayTag::EmptyTag;
-	UPROPERTY(EditAnyWhere)
+	UPROPERTY(EditAnyWhere,ReplicatedUsing=OnRep_SpaceSkillCoolTimeTag)
 	FGameplayTag SpaceSkillCoolTimeTag=FGameplayTag::EmptyTag;
+	UPROPERTY()
+	FGameplayTag PastSpaceSkillCoolTimeTag=FGameplayTag::EmptyTag;
+	
+	
+	//Delegates
+	public:
+	UPROPERTY(BlueprintAssignable)
+	FOnSkillCoolTime OnQSkillCoolTime;
+	UPROPERTY(BlueprintAssignable)
+	FOnSkillCoolTime OnESkillCoolTime;
+	UPROPERTY(BlueprintAssignable)
+	FOnSkillCoolTime OnSpaceSkillCoolTime;
+	
+	
 	
 	//Caching
 protected:
@@ -44,56 +70,86 @@ protected:
 	
 #pragma region Getter/Setter
 public:
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE void SetBasicAttackTag(const FGameplayTag Tag) {BasicAttackTag=Tag;};
+	UFUNCTION(BlueprintCallable,Server,Reliable)
+	void SetBasicAttackTag(const FGameplayTag Tag);
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetBasicAttackTag() {return BasicAttackTag;};
 
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE void SetQSkillTag(const FGameplayTag Tag) {QSkillTag=Tag;};
+	UFUNCTION(BlueprintCallable,Server,Reliable)
+	FORCEINLINE void SetQSkillTag(const FGameplayTag Tag);
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetQSkillTag() {return QSkillTag;}
 	
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE void SetQSkillCoolTimeTag(const FGameplayTag Tag) {QSkillCoolTimeTag=Tag;};
+	UFUNCTION(BlueprintCallable,Server,Reliable)
+	void SetQSkillCoolTimeTag(const FGameplayTag Tag); 
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetQSkillCoolTimeTag() {return QSkillCoolTimeTag;}
 	
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE void SetESkillTag(const FGameplayTag Tag) {ESkillTag=Tag;};
+	UFUNCTION(BlueprintCallable,Server,Reliable)
+	void SetESkillTag(const FGameplayTag Tag);
 	UFUNCTION()
-	FORCEINLINE FGameplayTag& GetSetESkillTag() {return ESkillTag;};
+	FORCEINLINE FGameplayTag& GetESkillTag() {return ESkillTag;};
 	
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE void SetESkillCoolTimeTag(const FGameplayTag Tag) {ESkillCoolTimeTag=Tag;};
+	UFUNCTION(BlueprintCallable,Server,Reliable)
+	void SetESkillCoolTimeTag(const FGameplayTag Tag) ;
 	UFUNCTION()
-	FORCEINLINE FGameplayTag& GetSetESkillCoolTimeTag() {return ESkillCoolTimeTag;};
+	FORCEINLINE FGameplayTag& GetESkillCoolTimeTag() {return ESkillCoolTimeTag;};
 	
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE void SetSpaceSkillTag(const FGameplayTag Tag) {SpaceSkillTag=Tag;};
+	UFUNCTION(BlueprintCallable,Server,Reliable)
+	void SetSpaceSkillTag(const FGameplayTag Tag) ;
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetSpaceSkillTag() {return SpaceSkillTag;};
 	
-	UFUNCTION(BlueprintCallable)
-	FORCEINLINE void SetSpaceSkillCoolTimeTag(const FGameplayTag Tag) {SpaceSkillCoolTimeTag=Tag;};
+	UFUNCTION(BlueprintCallable,Server,Reliable)
+	void SetSpaceSkillCoolTimeTag(const FGameplayTag Tag);
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetSpaceSkillCoolTimeTag() {return SpaceSkillCoolTimeTag;};
 	
 #pragma endregion
 
+	//Handles
+protected:
+	FDelegateHandle QSkillCoolTimeHandle;
+	FDelegateHandle ESkillCoolTimeHandle;
+	FDelegateHandle SpaceSkillCoolTimeHandle;
+	
+	
 	//Activate Skill
 public:
 	UFUNCTION()
-	void ActivateBasicAttack();
+	FORCEINLINE void ActivateBasicAttack(){ActivateTag(BasicAttackTag);}
 	UFUNCTION()
-	void ActivateQSkill();
+	FORCEINLINE void ActivateQSkill(){ActivateTag(QSkillTag);}
 	UFUNCTION()
-	void ActivateESkill();
+	FORCEINLINE void ActivateESkill(){ActivateTag(ESkillTag);}
 	UFUNCTION()
-	void ActivateSpaceSkill();
+	FORCEINLINE void ActivateSpaceSkill(){ActivateTag(SpaceSkillTag);}
 	
-//Activate Skill By Tag
+	
+	//CallBacks
+public:
+	UFUNCTION()
+	void QSkillCoolTime(FGameplayTag Tag, int32 NewCount);
+	UFUNCTION()
+	void ESkillCoolTime(FGameplayTag Tag, int32 NewCount);
+	UFUNCTION()
+	void SpaceSkillCoolTime(FGameplayTag Tag, int32 NewCount);
+
+	//Rep
+	UFUNCTION()
+	void OnRep_QSkillCoolTimeTag();
+	UFUNCTION()
+	void OnRep_ESkillCoolTimeTag();
+	UFUNCTION()
+	void OnRep_SpaceSkillCoolTimeTag();
+	
+	
+	//Activate Skill By Tag
 protected:
 	void ActivateTag(FGameplayTag& Tag);
+	
+	float CalculateCoolTime(FGameplayTag& Tag);
+	float CalculateMaxCoolTime(FGameplayTag& Tag);
+	
 	
 };

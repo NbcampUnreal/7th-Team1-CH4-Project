@@ -16,6 +16,10 @@ class ETERNALDREAMS_API AEDLobbyPlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
+	/** 로비에서 입력한 닉네임을 서버 PlayerState 이름으로 반영 */
+	UFUNCTION(Server, Reliable)
+	void Server_SetPlayerNickname(const FString& InNickname);
+
 	UFUNCTION(Server, Reliable)
 	void Server_SetReady();
 

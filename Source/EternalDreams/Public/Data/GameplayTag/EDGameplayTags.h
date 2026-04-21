@@ -93,7 +93,8 @@ public:
 	FGameplayTag Data_StatAdd_Dexterity;
 	FGameplayTag Data_StatAdd_Intelligence;
 	FGameplayTag Data_StatMul;
-	
+	//Event
+	FGameplayTag Event_SkillHit;
 	
 	//Inventory-Item
 	FGameplayTag Item_Weapon_Sword;

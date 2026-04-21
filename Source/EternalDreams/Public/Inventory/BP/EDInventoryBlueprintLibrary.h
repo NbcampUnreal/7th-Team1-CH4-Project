@@ -37,10 +37,4 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Inventory|Craft|Viewer")
     static void BuildCraftTreePaths(UEDInventoryComponent* InventoryComponent, FPrimaryAssetId ResultItemId, TArray<FEDCraftTreePath>& OutPaths, bool& bOutCyclePruned, int32 MaxDepth = 8);
-
-    // 제작 UI에서 바로 사용할 수 있는 레시피 목록을 반환
-    // 각 레시피에는 결과 아이템 정보와 재료별 보유 상태가 함께 들어 있음
-    UFUNCTION(BlueprintCallable, Category = "Inventory|Craft|Viewer")
-    static void GetCraftRecipeViewDataList(UEDInventoryComponent* InventoryComponent, TArray<FEDCraftRecipeViewData>& OutRecipes, bool bOnlyCraftable = false, EEDCraftableRecipeSortOption SortOption = EEDCraftableRecipeSortOption::ByRowId, bool bDescending = false);
-
 };

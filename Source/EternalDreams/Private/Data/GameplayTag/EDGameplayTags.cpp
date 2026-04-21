@@ -261,7 +261,10 @@ FString("SetByCaller용 Intelligence + 증가 Tag")
 	FString("SetByCaller용 CoolTime 증가 Tag")
 	);
 	
-	
+	Tags.Event_SkillHit = Manager.AddNativeGameplayTag(
+	FName("Event.SkillHit"),
+	FString("Anim Notify Hit Event용 Tag")
+	);
 	
 	//Inventory-Item
 	Tags.Item_Weapon_Sword = Manager.AddNativeGameplayTag(

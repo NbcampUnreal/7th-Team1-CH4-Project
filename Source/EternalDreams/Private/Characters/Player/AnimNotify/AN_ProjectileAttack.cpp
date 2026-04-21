@@ -15,6 +15,8 @@ void UAN_ProjectileAttack::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenc
 {
 	Super::Notify(MeshComp, Animation, EventReference);
 	
+	UE_LOG(LogTemp,Warning,TEXT("AN"));
+	
 	if (MeshComp==nullptr||MeshComp->GetWorld()==nullptr)
 	{
 		return;
@@ -47,8 +49,7 @@ void UAN_ProjectileAttack::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenc
 	
 	//기존 바라보는 방향대로 타겟
 	FRotator SpawnRotation=MeshComp->GetOwner()->GetActorRotation();
-
-	//TODO: StaticMesh를 Set
+	
 	
 	
 	FTransform SpawnTransform;
@@ -60,6 +61,7 @@ void UAN_ProjectileAttack::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenc
 	{
 		Projectile->SetOwner(MeshComp->GetOwner());
 		Projectile->FinishSpawning(SpawnTransform);
+		UE_LOG(LogTemp,Warning,TEXT("AN"));
 	}
 	
 }

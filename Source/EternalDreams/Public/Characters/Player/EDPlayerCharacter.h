@@ -23,6 +23,7 @@ class UIMCComponent;
 class UZoneDetectorComponent;
 class UEDInventoryComponent;
 class USkillComponent;
+class UEDGameDataSubsystem;
 struct FOnAttributeChangeData;
 
 
@@ -50,15 +51,22 @@ public:
 	
 	virtual void PostInitializeComponents() override;
 	
-public:
-	//GAS Getter	
-	UFUNCTION(BlueprintCallable, Category = "Attributes")
-	UEDPlayerAttributeSet* GetPlayerAttributeSet() const { return PlayerAttributeSet; }
-	
-	UFUNCTION(BlueprintCallable, Category = "Attributes")
-	UEDBaseAttributeSet* GetBaseAttributeSet() const { return BaseAttributeSet; }
-	
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+	
+public:
+	//Getter	
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	FORCEINLINE UEDPlayerAttributeSet* GetPlayerAttributeSet() const { return PlayerAttributeSet; }
+	
+	UFUNCTION(BlueprintCallable, Category = "Attributes")
+	FORCEINLINE UEDBaseAttributeSet* GetBaseAttributeSet() const { return BaseAttributeSet; }
+	
+	UFUNCTION()
+	FORCEINLINE USkillComponent* GetSkillComponent() const {return PlayerSkillComponent;}
+	
+	
 	
 	
 	//Components
@@ -149,11 +157,57 @@ protected:
 	void OnWalkSpeedChanged(const struct FOnAttributeChangeData& Data);
 	UFUNCTION()
 	void OnEquipChanged(FGameplayTag& AttributeDataTag, float Value);
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable,Server, Reliable)
 	void OnWeaponChanged();
-	UFUNCTION(BlueprintCallable)
-	void OnPlayerSkinChanged(EPlayerNameType& SkinName);
+	UFUNCTION(BlueprintCallable,Server, Reliable)
+	void OnPlayerSkinChanged(EPlayerNameType SkinName);
+	UFUNCTION(BlueprintCallable,Server, Reliable)
+	void OnFirstSkillChanged(const FGameplayTagContainer& SkillItemTags, const FGameplayTagContainer& SkillCooldownTags);
+	UFUNCTION(BlueprintCallable,Server, Reliable)
+	void OnSecondSkillChanged(const FGameplayTagContainer& SkillItemTags, const FGameplayTagContainer& SkillCooldownTags);
 	
+	//Skin
+#pragma region Skin
+protected:
+	UPROPERTY(ReplicatedUsing = OnRep_TargetMeshId)
+	FPrimaryAssetId TargetMeshId;
+	UPROPERTY(ReplicatedUsing = OnRep_TargetABPId)
+	FPrimaryAssetId TargetABPId;
+	UPROPERTY(ReplicatedUsing = OnRep_RetargetMeshId)
+	FPrimaryAssetId RetargetMeshId;
+	UPROPERTY(ReplicatedUsing = OnRep_RetargetABPId)
+	FPrimaryAssetId RetargetABPId;
+	
+public:	
+	UFUNCTION()
+	FORCEINLINE void SetTargetMeshId(const FPrimaryAssetId& InTargetMeshId){if (!HasAuthority()){return;} TargetMeshId=InTargetMeshId; ApplyTargetMesh();}
+	UFUNCTION()
+	FORCEINLINE void SetTargetABPId(const FPrimaryAssetId& InTargetABPId){if (!HasAuthority()){return;} TargetABPId=InTargetABPId; ApplyTargetABP();}
+	UFUNCTION()
+	FORCEINLINE void SetRetargetMeshId(const FPrimaryAssetId& InRetargetMeshId){if (!HasAuthority()){return;} RetargetMeshId=InRetargetMeshId; ApplyRetargetMesh();}
+	UFUNCTION()
+	FORCEINLINE void SetRetargetABPId(const FPrimaryAssetId& InRetargetABPId){if (!HasAuthority()){return;} RetargetABPId=InRetargetABPId; ApplyRetargetABP();}
+	
+	UFUNCTION()
+	void ApplyTargetMesh();
+	UFUNCTION()
+	void ApplyTargetABP();
+	UFUNCTION()
+	void ApplyRetargetMesh();
+	UFUNCTION()
+	void ApplyRetargetABP();
+	
+	UFUNCTION()
+	FORCEINLINE void OnRep_TargetMeshId(){ApplyTargetMesh();}
+	UFUNCTION()
+	FORCEINLINE void OnRep_TargetABPId(){ApplyTargetABP();}
+	UFUNCTION()
+	FORCEINLINE void OnRep_RetargetMeshId(){ApplyRetargetMesh();}
+	UFUNCTION()
+	FORCEINLINE void OnRep_RetargetABPId(){ApplyRetargetABP();}
+	
+	
+#pragma endregion
 	//Anim Move
 #pragma region Animation Movement
 	//Caching
@@ -201,4 +255,12 @@ public:
 	FORCEINLINE UStaticMeshComponent* GetWeaponMeshComp()
 	{if (LWeaponActor!=nullptr&&RWeaponActor!=nullptr) return RWeaponActor->GetStaticMesh()!=nullptr ? RWeaponActor->GetStaticMeshComp():LWeaponActor->GetStaticMeshComp(); else return nullptr;};
 #pragma endregion
+
+private:
+	// 플레이어 데이터 로드 및 초기화
+	UFUNCTION()
+	void ApplyPlayerDataAsset();
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastSetWeaponTags(FGameplayTag BasicAttackTag, FGameplayTag EvadeTag, FGameplayTag EvadeCoolTimeTag);
+	TWeakObjectPtr<UEDGameDataSubsystem> CachedDataSubsystem;
 };
