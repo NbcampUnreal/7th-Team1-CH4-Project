@@ -16,6 +16,7 @@
 #include "UI/Types/EDUIWidgetIds.h"
 #include "Misc/CoreDelegates.h"
 #include "Core/EDGameMode.h"
+#include "Core/EDGameInstance.h"
 #include "Core/EDPlayerState.h"
 #include "InputMappingContext.h"
 #include "Kismet/GameplayStatics.h"
@@ -66,6 +67,15 @@ void AEDPlayerController::BeginPlay()
 
 	if (IsLocalController())
 	{
+		if (UEDGameInstance* GI = GetGameInstance<UEDGameInstance>())
+		{
+			const FString Nickname = GI->LocalPlayerNickname.TrimStartAndEnd();
+			if (!Nickname.IsEmpty())
+			{
+				Server_SetPlayerNickname(Nickname);
+			}
+		}
+
 		// Game + UI 입력 모드 설정 (로비 UIOnly → 인게임 전환)
 
 
@@ -112,6 +122,24 @@ void AEDPlayerController::BeginPlay()
 
 	FCoreDelegates::ApplicationHasReactivatedDelegate.AddUObject(
 		this, &AEDPlayerController::HandleApplicationReactivated);
+}
+
+void AEDPlayerController::Server_SetPlayerNickname_Implementation(const FString& InNickname)
+{
+	AEDPlayerState* PS = GetPlayerState<AEDPlayerState>();
+	if (!PS)
+	{
+		return;
+	}
+
+	const FString TrimmedNickname = InNickname.TrimStartAndEnd();
+	if (TrimmedNickname.IsEmpty())
+	{
+		return;
+	}
+
+	PS->SetDisplayNickname(TrimmedNickname);
+	PS->SetPlayerName(TrimmedNickname);
 }
 
 

@@ -49,6 +49,9 @@ public:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	virtual void CopyProperties(APlayerState* PlayerState) override;
 
+	void SetDisplayNickname(const FString& InDisplayNickname);
+	const FString& GetDisplayNickname() const { return DisplayNickname; }
+
 	// -------------------------------------------------------
 	// 팀 / 준비 상태
 	// -------------------------------------------------------
@@ -56,6 +59,10 @@ public:
 	/** 팀 ID (EDTeam::None = 미배정, 10 = TeamA, 11 = TeamB, 12 = TeamC) */
 	UPROPERTY(Replicated, BlueprintReadWrite, Category = "ED|Player")
 	int32 TeamId = EDTeam::None;
+
+	/** 로비에서 입력한 플레이어 표시 이름 */
+	UPROPERTY(Replicated, BlueprintReadOnly, Category = "ED|Player")
+	FString DisplayNickname;
 
 	/** 준비 완료 여부 */
 	UPROPERTY(Replicated, BlueprintReadWrite, Category = "ED|Player")
@@ -89,4 +96,3 @@ public:
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "ED|Score")
 	int32 Deaths = 0;
 };
-
