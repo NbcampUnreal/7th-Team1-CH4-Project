@@ -108,8 +108,8 @@ void AEDMonsterSpawner::SpawnMonster()
 	}
 	
 	// DA 적용
-	Monster->InitializeFromDataAsset(MonsterDataAsset);
 	Monster->FinishSpawning(FTransform(GetActorRotation(), GetActorLocation()));
+	Monster->InitializeFromDataAsset(MonsterDataAsset);
 		
 	SpawnedMonster = Monster;
 	// 서브시스템에 등록

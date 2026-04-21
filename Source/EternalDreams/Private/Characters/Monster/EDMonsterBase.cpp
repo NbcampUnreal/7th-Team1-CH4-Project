@@ -44,7 +44,7 @@ AEDMonsterBase::AEDMonsterBase()
 	InventoryComponent = CreateDefaultSubobject<UEDInventoryComponent>(TEXT("InventoryComponent"));
 	InventoryComponent->bGiveDefaultWeaponOnBeginPlay = false;
 	InventoryComponent->bUseEquipmentSlots = false;
-	InventoryComponent->bAutoInitializeLootOnBeginPlay = false;
+
 	
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 }
@@ -68,7 +68,7 @@ void AEDMonsterBase::BeginPlay()
 	LoadVisuals(DataAsset);
 	
 	//InitializeFromDataAsset(DataAsset);
-	
+
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetHealthAttribute())
 	.AddUObject(this, &AEDMonsterBase::OnHealthChanged);
 	
@@ -81,6 +81,8 @@ void AEDMonsterBase::BeginPlay()
 			continue;
 		AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityClass));
 	}
+	
+
 }
 
 void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
@@ -133,6 +135,7 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	// InventoryComponent LootTable 세팅
 	InventoryComponent->RandomLootTable = InDataAsset->GetLootTable();
 	InventoryComponent->RandomLootRollCount = InDataAsset->GetLootRollCount();
+	
 	// DA 초기화 완료 알림
 	OnDataAssetInitialized.Broadcast();
 }
@@ -235,7 +238,8 @@ void AEDMonsterBase::HandleDeath()
 	OnRep_MonsterState();
 	
 	// 몬스터 시체에서 랜덤 루팅 아이템 스폰
-	if (IsValid(InventoryComponent) && InventoryComponent->RequestInitializeRandomLoot())
+	EEDInventoryActionFailure ActionFailure;
+	if (IsValid(InventoryComponent) && InventoryComponent->PredicateInitializeRandomLoot(ActionFailure))
 	{
 		// 루팅 상호작용 활성화
 		LootTargetComponent = NewObject<UEDLootTargetComponent>(this, TEXT("LootTargetComponent"));
