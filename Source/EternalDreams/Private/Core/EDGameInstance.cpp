@@ -18,6 +18,16 @@ UEDGameInstance::UEDGameInstance()
 {
 }
 
+void UEDGameInstance::SetLocalPlayerNickname(const FString& InNickname)
+{
+	LocalPlayerNickname = InNickname.TrimStartAndEnd();
+}
+
+FString UEDGameInstance::GetLocalPlayerNickname() const
+{
+	return LocalPlayerNickname;
+}
+
 void UEDGameInstance::Init()
 {
 	Super::Init();
