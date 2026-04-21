@@ -46,6 +46,9 @@ protected:
 public:
 	FOnCraftInputTriggered& GetOnCraftInputTriggered() { return OnCraftInputTriggered; }
 
+	UFUNCTION(Server, Reliable)
+	void Server_SetPlayerNickname(const FString& InNickname);
+
 #pragma region Input UI
 	// UI 입력 전용 매핑 컨텍스트
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")

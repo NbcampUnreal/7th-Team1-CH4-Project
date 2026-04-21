@@ -37,6 +37,12 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category = "ED|GameInstance")
 	FString LocalPlayerNickname;
 
+	UFUNCTION(BlueprintCallable, Category = "ED|GameInstance")
+	void SetLocalPlayerNickname(const FString& InNickname);
+
+	UFUNCTION(BlueprintPure, Category = "ED|GameInstance")
+	FString GetLocalPlayerNickname() const;
+
 	/** 희망 팀 ID (EDTeam::None = 미배정) */
 	UPROPERTY(BlueprintReadWrite, Category = "ED|GameInstance")
 	int32 DesiredTeamID = -1;  // EDTeam::None

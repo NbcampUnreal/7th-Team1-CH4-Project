@@ -23,6 +23,7 @@ class ETERNALDREAMS_API UEDPlayerStatusWidget : public UCommonUserWidget
 public:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 protected:
 	// 플레이어 이름 표시용 텍스트
@@ -97,6 +98,14 @@ private:
 
 	// 현재 로컬 플레이어 기준으로 캐릭터/스테이트/ASC를 찾음
 	void InitializePlayerReferences();
+
+	// Pawn / PlayerState / ASC / AttributeSet 참조가 바뀌면 현재 HUD가 들고 있는 참조와
+	// 델리게이트 바인딩을 다시 잡아, 지연 초기화나 재스폰 이후에도 상태 표시를 유지
+	void RefreshPlayerReferencesIfNeeded();
+
+	// 같은 PlayerState 인스턴스를 유지한 채 PlayerName 복제가 늦게 들어오는 경우를 대비해
+	// 현재 표시 중인 이름과 실제 PlayerState 이름이 다르면 화면 표시를 다시 갱신
+	void RefreshDeferredDisplayIfNeeded() const;
 
 	// ASC Attribute 변화 델리게이트를 구독
 	void BindAttributeDelegates();

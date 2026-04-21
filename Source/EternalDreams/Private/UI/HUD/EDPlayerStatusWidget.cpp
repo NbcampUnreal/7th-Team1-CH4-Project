@@ -8,6 +8,7 @@
 #include "Components/Image.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
+#include "Core/EDGameInstance.h"
 #include "Core/EDPlayerState.h"
 
 namespace
@@ -18,6 +19,11 @@ FText FormatCurrentMaxText(float CurrentValue, float MaxValue)
 		NSLOCTEXT("PlayerStatus", "CurrentMaxFormat", "{0} / {1}"),
 		FText::AsNumber(FMath::RoundToInt(CurrentValue)),
 		FText::AsNumber(FMath::RoundToInt(MaxValue)));
+}
+
+FText GetUnavailableText()
+{
+	return FText::FromString(TEXT("-"));
 }
 }
 
@@ -37,6 +43,14 @@ void UEDPlayerStatusWidget::NativeDestruct()
 	Super::NativeDestruct();
 }
 
+void UEDPlayerStatusWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	RefreshPlayerReferencesIfNeeded();
+	RefreshDeferredDisplayIfNeeded();
+}
+
 void UEDPlayerStatusWidget::InitializePlayerReferences()
 {
 	CachedPlayerCharacter = Cast<AEDPlayerCharacter>(GetOwningPlayerPawn());
@@ -44,6 +58,48 @@ void UEDPlayerStatusWidget::InitializePlayerReferences()
 	CachedAbilitySystemComponent = CachedPlayerCharacter ? CachedPlayerCharacter->GetAbilitySystemComponent() : nullptr;
 	CachedBaseAttributeSet = CachedPlayerCharacter ? CachedPlayerCharacter->GetBaseAttributeSet() : nullptr;
 	CachedPlayerAttributeSet = CachedPlayerCharacter ? CachedPlayerCharacter->GetPlayerAttributeSet() : nullptr;
+}
+
+void UEDPlayerStatusWidget::RefreshPlayerReferencesIfNeeded()
+{
+	AEDPlayerCharacter* CurrentPlayerCharacter = Cast<AEDPlayerCharacter>(GetOwningPlayerPawn());
+	AEDPlayerState* CurrentPlayerState = CurrentPlayerCharacter ? CurrentPlayerCharacter->GetPlayerState<AEDPlayerState>() : nullptr;
+	UAbilitySystemComponent* CurrentAbilitySystemComponent = CurrentPlayerCharacter ? CurrentPlayerCharacter->GetAbilitySystemComponent() : nullptr;
+	UEDBaseAttributeSet* CurrentBaseAttributeSet = CurrentPlayerCharacter ? CurrentPlayerCharacter->GetBaseAttributeSet() : nullptr;
+	UEDPlayerAttributeSet* CurrentPlayerAttributeSet = CurrentPlayerCharacter ? CurrentPlayerCharacter->GetPlayerAttributeSet() : nullptr;
+
+	if (CachedPlayerCharacter == CurrentPlayerCharacter &&
+		CachedPlayerState == CurrentPlayerState &&
+		CachedAbilitySystemComponent == CurrentAbilitySystemComponent &&
+		CachedBaseAttributeSet == CurrentBaseAttributeSet &&
+		CachedPlayerAttributeSet == CurrentPlayerAttributeSet)
+	{
+		return;
+	}
+
+	UnbindAttributeDelegates();
+	InitializePlayerReferences();
+	BindAttributeDelegates();
+	RefreshAllDisplay();
+}
+
+void UEDPlayerStatusWidget::RefreshDeferredDisplayIfNeeded() const
+{
+	if (!PlayerNameText || !CachedPlayerState)
+	{
+		return;
+	}
+
+	const FString CurrentPlayerName = CachedPlayerState->GetPlayerName();
+	if (CurrentPlayerName.IsEmpty())
+	{
+		return;
+	}
+
+	if (PlayerNameText->GetText().ToString() != CurrentPlayerName)
+	{
+		RefreshPlayerName();
+	}
 }
 
 void UEDPlayerStatusWidget::BindAttributeDelegates()
@@ -168,10 +224,31 @@ void UEDPlayerStatusWidget::RefreshPlayerName() const
 		return;
 	}
 
+	if (const UEDGameInstance* GI = GetGameInstance<UEDGameInstance>())
+	{
+		const FString Nickname = GI->LocalPlayerNickname.TrimStartAndEnd();
+		if (!Nickname.IsEmpty())
+		{
+			PlayerNameText->SetText(FText::FromString(Nickname));
+			return;
+		}
+	}
+
 	if (CachedPlayerState)
 	{
-		PlayerNameText->SetText(FText::FromString(CachedPlayerState->GetPlayerName()));
-		return;
+		const FString DisplayNickname = CachedPlayerState->GetDisplayNickname().TrimStartAndEnd();
+		if (!DisplayNickname.IsEmpty())
+		{
+			PlayerNameText->SetText(FText::FromString(DisplayNickname));
+			return;
+		}
+
+		const FString PlayerName = CachedPlayerState->GetPlayerName().TrimStartAndEnd();
+		if (!PlayerName.IsEmpty())
+		{
+			PlayerNameText->SetText(FText::FromString(PlayerName));
+			return;
+		}
 	}
 
 	if (CachedPlayerCharacter)
@@ -211,12 +288,16 @@ void UEDPlayerStatusWidget::RefreshHealthDisplay() const
 
 void UEDPlayerStatusWidget::RefreshDefensiveDisplay() const
 {
-	const float CurrentDefensive = CachedBaseAttributeSet ? CachedBaseAttributeSet->GetDefensive() : 0.0f;
-	const float MaxDefensive = CachedBaseAttributeSet ? CachedBaseAttributeSet->GetMaxDefensive() : 0.0f;
-
 	if (DefensiveValueText)
 	{
-		DefensiveValueText->SetText(FormatCurrentMaxText(CurrentDefensive, MaxDefensive));
+		if (!CachedBaseAttributeSet)
+		{
+			DefensiveValueText->SetText(GetUnavailableText());
+			return;
+		}
+
+		const float CurrentDefensive = CachedBaseAttributeSet->GetDefensive();
+		DefensiveValueText->SetText(FText::AsNumber(FMath::RoundToInt(CurrentDefensive)));
 	}
 }
 
@@ -227,29 +308,37 @@ void UEDPlayerStatusWidget::RefreshMoveSpeedDisplay() const
 		return;
 	}
 
-	const float WalkSpeed = CachedBaseAttributeSet ? CachedBaseAttributeSet->GetWalkSpeed() : 0.0f;
+	if (!CachedBaseAttributeSet)
+	{
+		MoveSpeedValueText->SetText(GetUnavailableText());
+		return;
+	}
+
+	const float WalkSpeed = CachedBaseAttributeSet->GetWalkSpeed();
 	MoveSpeedValueText->SetText(FText::AsNumber(FMath::RoundToInt(WalkSpeed)));
 }
 
 void UEDPlayerStatusWidget::RefreshStatDisplay() const
 {
-	const int32 Strength = CachedPlayerAttributeSet ? FMath::RoundToInt(CachedPlayerAttributeSet->GetStrength()) : 0;
-	const int32 Dexterity = CachedPlayerAttributeSet ? FMath::RoundToInt(CachedPlayerAttributeSet->GetDexterity()) : 0;
-	const int32 Intelligence = CachedPlayerAttributeSet ? FMath::RoundToInt(CachedPlayerAttributeSet->GetIntelligence()) : 0;
-
 	if (StrengthValueText)
 	{
-		StrengthValueText->SetText(FText::AsNumber(Strength));
+		StrengthValueText->SetText(CachedPlayerAttributeSet
+			                           ? FText::AsNumber(FMath::RoundToInt(CachedPlayerAttributeSet->GetStrength()))
+			                           : GetUnavailableText());
 	}
 
 	if (DexterityValueText)
 	{
-		DexterityValueText->SetText(FText::AsNumber(Dexterity));
+		DexterityValueText->SetText(CachedPlayerAttributeSet
+			                            ? FText::AsNumber(FMath::RoundToInt(CachedPlayerAttributeSet->GetDexterity()))
+			                            : GetUnavailableText());
 	}
 
 	if (IntelligenceValueText)
 	{
-		IntelligenceValueText->SetText(FText::AsNumber(Intelligence));
+		IntelligenceValueText->SetText(CachedPlayerAttributeSet
+			                               ? FText::AsNumber(FMath::RoundToInt(CachedPlayerAttributeSet->GetIntelligence()))
+			                               : GetUnavailableText());
 	}
 }
 
@@ -257,7 +346,7 @@ void UEDPlayerStatusWidget::RefreshAttackSpeedDisplay() const
 {
 	if (AttackSpeedValueText)
 	{
-		AttackSpeedValueText->SetText(FText::GetEmpty());
+		AttackSpeedValueText->SetText(GetUnavailableText());
 	}
 }
 
