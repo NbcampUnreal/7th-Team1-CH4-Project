@@ -4,20 +4,20 @@
 
 #include "CoreMinimal.h"
 #include "CommonActivatableWidget.h"
-#include "Styling/SlateBrush.h"
 #include "EDMatchResultWidget.generated.h"
 
 class UTextBlock;
-class UImage;
+class UWidgetSwitcher;
 
 /**
  * 매치 종료 시 Modal 레이어에 올라가는 결과 위젯.
  * UIManager의 OpenPanel(Panel_MatchResult)로 열린다.
  *
  * 서버에서 계산된 팀 등수 배열(index 0 = 1등)과 로컬 플레이어의 TeamId를
- * SetResult로 전달받아 승리/패배 + 등수 순위를 표시한다.
+ * SetResult로 전달받아 승리/패배 분기 + 내 팀 등수만 표시한다.
  *
- * 세부 레이아웃(등수 리스트, 팀 이름 색상 등)은 BP의 OnResultSet 이벤트에서 구성.
+ * 승/패 분기는 ResultSwitcher(Index 0=Victory, 1=Defeat)로 처리.
+ * 내 순위는 MyRankText에 "#N" 형태로 세팅.
  */
 UCLASS()
 class ETERNALDREAMS_API UEDMatchResultWidget : public UCommonActivatableWidget
@@ -26,30 +26,22 @@ class ETERNALDREAMS_API UEDMatchResultWidget : public UCommonActivatableWidget
 
 public:
 	/**
-	 * @param TeamRankings  index 0 = 1등 팀 ID, index 1 = 2등 팀 ID, ...
+	 * @param TeamRankings  index 0 = 1등 팀 ID, index 1 = 2등, ...
 	 * @param MyTeamId      로컬 플레이어의 팀 ID. 1등과 같으면 승리.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "ED|Match")
 	void SetResult(const TArray<int32>& TeamRankings, int32 MyTeamId);
 
 protected:
-	/** BP에서 등수 리스트 레이아웃 및 연출 구성. C++은 제목 텍스트만 세팅. */
+	/** BP에서 추가 연출(애니 등) 구성. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "ED|Match")
-	void OnResultSet(bool bIsVictory, int32 MyRank, const TArray<int32>& TeamRankings);
+	void OnResultSet(bool bIsVictory, int32 MyRank);
 
-	/** 승리/패배/무승부 제목 텍스트 (Optional: BP에 없으면 스킵) */
+	/** 승/패 분기용 WidgetSwitcher. Index 0 = Victory, Index 1 = Defeat */
+	UPROPERTY(meta = (BindWidget))
+	TObjectPtr<UWidgetSwitcher> ResultSwitcher;
+
+	/** 내 팀 등수 텍스트. "#1" 형태로 세팅 */
 	UPROPERTY(meta = (BindWidgetOptional))
-	TObjectPtr<UTextBlock> ResultTitleText;
-
-	/** 승리/패배 이미지 표시용 (Optional: BP에 UImage로 배치 후 BindWidget) */
-	UPROPERTY(meta = (BindWidgetOptional))
-	TObjectPtr<UImage> ResultImage;
-
-	/** 승리 시 ResultImage에 세팅할 브러시 (Texture 또는 Material 지정) */
-	UPROPERTY(EditDefaultsOnly, Category = "ED|Match|Image")
-	FSlateBrush VictoryBrush;
-
-	/** 패배 시 ResultImage에 세팅할 브러시 */
-	UPROPERTY(EditDefaultsOnly, Category = "ED|Match|Image")
-	FSlateBrush DefeatBrush;
+	TObjectPtr<UTextBlock> MyRankText;
 };

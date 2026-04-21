@@ -2,9 +2,8 @@
 
 #include "UI/HUD/EDMatchResultWidget.h"
 
-#include "Components/Image.h"
 #include "Components/TextBlock.h"
-#include "Core/EDPlayerState.h"
+#include "Components/WidgetSwitcher.h"
 
 void UEDMatchResultWidget::SetResult(const TArray<int32>& TeamRankings, int32 MyTeamId)
 {
@@ -21,17 +20,15 @@ void UEDMatchResultWidget::SetResult(const TArray<int32>& TeamRankings, int32 My
 
 	const bool bIsVictory = (MyRank == 1);
 
-	if (ResultTitleText)
+	if (ResultSwitcher)
 	{
-		ResultTitleText->SetText(bIsVictory
-			? NSLOCTEXT("EDMatch", "Victory", "승리!")
-			: NSLOCTEXT("EDMatch", "Defeat", "패배"));
+		ResultSwitcher->SetActiveWidgetIndex(bIsVictory ? 0 : 1);
 	}
 
-	if (ResultImage)
+	if (MyRankText && MyRank != INDEX_NONE)
 	{
-		ResultImage->SetBrush(bIsVictory ? VictoryBrush : DefeatBrush);
+		MyRankText->SetText(FText::FromString(FString::Printf(TEXT("#%d"), MyRank)));
 	}
 
-	OnResultSet(bIsVictory, MyRank, TeamRankings);
+	OnResultSet(bIsVictory, MyRank);
 }
