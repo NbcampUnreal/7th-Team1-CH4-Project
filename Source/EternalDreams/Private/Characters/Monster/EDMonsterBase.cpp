@@ -62,27 +62,15 @@ void AEDMonsterBase::BeginPlay()
 	
 	CachedDataSubsystem = UEDGameDataSubsystem::Get(this);
 	
-	UEDMonsterDataAsset* DataAsset = GetDataAsset();
-	if (IsValid(DataAsset) == false)
-		return;
-	LoadVisuals(DataAsset);
-	
-	//InitializeFromDataAsset(DataAsset);
-
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetHealthAttribute())
 	.AddUObject(this, &AEDMonsterBase::OnHealthChanged);
 	
-	if (HasAuthority() == false)
-		return;
-	
-	for (const TSubclassOf<UGameplayAbility>& AbilityClass : DataAsset->GetDefaultAbilities())
-	{
-		if (IsValid(AbilityClass) == false)
-			continue;
-		AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityClass));
-	}
-	
-
+	// UEDMonsterDataAsset* DataAsset = GetDataAsset();
+	// if (IsValid(DataAsset) == false)
+	// 	return;
+	// LoadVisuals(DataAsset);
+	//
+	// InitializeFromDataAsset(DataAsset);
 }
 
 void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
@@ -115,6 +103,14 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	
 	if (HasAuthority() == false)
 		return;
+	// 어빌리티 부여
+	for (const TSubclassOf<UGameplayAbility>& AbilityClass : InDataAsset->GetDefaultAbilities())
+	{
+		if (IsValid(AbilityClass) == false)
+			continue;
+		AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityClass));
+	}
+	
 	// AttributeSet에 DA의 Stat 적용
 	const FMonsterStatRow& Stat = InDataAsset->GetStat();
 	UE_LOG(LogTemp, Warning, TEXT("[%s] InitializeFromDataAsset - MaxHP: %.1f, Atk: %.1f"),
@@ -243,6 +239,7 @@ void AEDMonsterBase::HandleDeath()
 	{
 		// 루팅 상호작용 활성화
 		LootTargetComponent = NewObject<UEDLootTargetComponent>(this, TEXT("LootTargetComponent"));
+		LootTargetComponent->SetIsReplicated(true);
 		LootTargetComponent->RegisterComponent();
 	}
 	

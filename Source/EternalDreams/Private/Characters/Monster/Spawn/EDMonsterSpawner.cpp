@@ -70,6 +70,12 @@ void AEDMonsterSpawner::OnDataLoadedResponse()
 	SpawnMonster();
 }
 
+void AEDMonsterSpawner::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	GetWorldTimerManager().ClearAllTimersForObject(this);
+	Super::EndPlay(EndPlayReason);
+}
+
 void AEDMonsterSpawner::SpawnMonster()
 {
 	// 데이터 로드가 안 되었으면 스폰 차단
