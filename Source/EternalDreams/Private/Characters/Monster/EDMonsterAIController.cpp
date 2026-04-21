@@ -91,6 +91,8 @@ ETeamAttitude::Type AEDMonsterAIController::GetTeamAttitudeTowards(const AActor&
 		const AEDPlayerState* PS = OtherPawn->GetPlayerState<AEDPlayerState>();
 		if (IsValid(PS) && EDTeam::IsPlayerTeam(PS->TeamId))
 			return ETeamAttitude::Hostile;
+		
+		return ETeamAttitude::Neutral;
 	}
 	
 	return MonsterTeamId == OtherTeam->GetGenericTeamId() 

@@ -61,11 +61,14 @@ void UGA_BossBlinkAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	BlinkDestination = Target->GetActorLocation() + ToTarget * BlinkOffset;
 	// 벽 체크 - 도착 지점이 막혀있으면 히트 지점 직전으로 조정
 	FHitResult HitResult;
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(Monster);
 	bool bBlocked = Monster->GetWorld()->LineTraceSingleByChannel(
 		HitResult,
 		Monster->GetActorLocation(),
 		BlinkDestination,
-		ECC_WorldStatic);
+		ECC_WorldStatic,
+		Params);
 	if (bBlocked)
 		BlinkDestination =  HitResult.Location - ToTarget * 50.f;
 	// NavMesh 위로 높이 보정
