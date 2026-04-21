@@ -1,13 +1,15 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 #include "Characters/Player/Component/EDLootInteractionComponent.h"
 
-#include "Core/EDAssetManager.h"
 #include "CommonActivatableWidget.h"
+#include "Core/EDAssetManager.h"
 #include "Engine/LocalPlayer.h"
+#include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
+#include "TimerManager.h"
 #include "UI/Message/EDUserFacingMessage.h"
 #include "UI/Panel/EDInventoryPanelWidget.h"
 #include "UI/Subsystem/EDUIManageSubsystem.h"
@@ -73,9 +75,14 @@ void UEDLootInteractionComponent::HandleToggleLootPanel()
 	UEDUIManageSubsystem* UIManageSubsystem = GetUIManageSubsystem();
 	if (!UIManageSubsystem)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDLootInteractionComponent: UIManageSubsystem이 없어 루팅 패널을 처리할 수 없습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDLootInteractionComponent: UIManageSubsystem이 없어 루팅 패널 입력을 처리할 수 없습니다."));
 		return;
 	}
+
+	UE_LOG(LogTemp, Warning, TEXT("EDLootInteractionComponent: HandleToggleLootPanel CurrentTarget=%s Inventory=%s PanelOpen=%s"),
+		CurrentLootTarget.IsValid() ? *CurrentLootTarget->GetName() : TEXT("None"),
+		ResolveCurrentLootInventoryComponent() ? TEXT("Valid") : TEXT("Null"),
+		UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_LootInventory) ? TEXT("true") : TEXT("false"));
 
 	if (UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_LootInventory))
 	{
@@ -85,6 +92,21 @@ void UEDLootInteractionComponent::HandleToggleLootPanel()
 
 	if (!CanOpenLootPanel())
 	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(this, [this]()
+			{
+				UE_LOG(LogTemp, Warning, TEXT("EDLootInteractionComponent: Retry HandleToggleLootPanel CurrentTarget=%s Inventory=%s"),
+					CurrentLootTarget.IsValid() ? *CurrentLootTarget->GetName() : TEXT("None"),
+					ResolveCurrentLootInventoryComponent() ? TEXT("Valid") : TEXT("Null"));
+
+				if (CanOpenLootPanel())
+				{
+					OpenLootPanelForCurrentTarget();
+				}
+			}));
+		}
+
 		UE_LOG(LogTemp, Warning, TEXT("EDLootInteractionComponent: 현재 루팅 가능한 대상이 없습니다."));
 		return;
 	}
@@ -247,11 +269,16 @@ void UEDLootInteractionComponent::OpenLootPanelForCurrentTarget()
 		return;
 	}
 
+	UE_LOG(LogTemp, Warning, TEXT("EDLootInteractionComponent: OpenLootPanelForCurrentTarget Target=%s InventoryOwner=%s"),
+		CurrentLootTarget.IsValid() ? *CurrentLootTarget->GetName() : TEXT("None"),
+		LootInventoryComponent->GetOwner() ? *LootInventoryComponent->GetOwner()->GetName() : TEXT("None"));
+
 	UCommonActivatableWidget* OpenedPanel = UIManageSubsystem->OpenPanel(EDUIWidgetIds::Panel_LootInventory);
 	UEDInventoryPanelWidget* InventoryPanel = Cast<UEDInventoryPanelWidget>(OpenedPanel);
 	if (!InventoryPanel)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDLootInteractionComponent: InventoryPanel 캐스팅에 실패했습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDLootInteractionComponent: InventoryPanel Cast Failed OpenedPanel=%s"),
+			OpenedPanel ? *OpenedPanel->GetClass()->GetName() : TEXT("None"));
 		return;
 	}
 
