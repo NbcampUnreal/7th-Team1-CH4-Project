@@ -35,7 +35,7 @@ void UEDSkillDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	}
 }
 
-const UEDSkillDataSubsystem* UEDSkillDataSubsystem::Get(UWorld* World)
+UEDSkillDataSubsystem* UEDSkillDataSubsystem::Get(UWorld* World)
 {
 	return World->GetGameInstance()->GetSubsystem<UEDSkillDataSubsystem>();
 }
@@ -43,4 +43,46 @@ const UEDSkillDataSubsystem* UEDSkillDataSubsystem::Get(UWorld* World)
 const FSkillMulStatus* UEDSkillDataSubsystem::GetSkillData(FGameplayTag SkillTag) const
 {
 	return SkillMulMap.Find(SkillTag);
+}
+
+UMaterial* UEDSkillDataSubsystem::GetEnemyMat()
+{
+	if (IsValid(EnemyMat))
+	{
+		return EnemyMat;
+	}
+	const UEDSkillDeveloperSettings* SkillSettings = GetDefault<UEDSkillDeveloperSettings>();
+	if(!IsValid(SkillSettings))
+	{
+		UE_LOG(LogTemp,Warning,TEXT("SkillSettings Nullptr"));
+		return nullptr;	
+	}
+	if (SkillSettings->EnemyOverlayMat.IsValid())
+	{
+		EnemyMat=SkillSettings->EnemyOverlayMat.LoadSynchronous();
+		return EnemyMat;
+	}
+	UE_LOG(LogTemp,Warning,TEXT("EDSkillDataSubsystem : EnemyMatNotLoaded"));
+	return nullptr;
+}
+
+UMaterial* UEDSkillDataSubsystem::GetTeamMat()
+{
+	if (IsValid(TeamMat))
+	{
+		return TeamMat;
+	}
+	const UEDSkillDeveloperSettings* SkillSettings = GetDefault<UEDSkillDeveloperSettings>();
+	if(!IsValid(SkillSettings))
+	{
+		UE_LOG(LogTemp,Warning,TEXT("SkillSettings nullptr"));
+		return nullptr;	
+	}
+	if (SkillSettings->TeamOverlayMat.IsValid())
+	{
+		TeamMat=SkillSettings->TeamOverlayMat.LoadSynchronous();
+		return TeamMat;
+	}
+	UE_LOG(LogTemp,Warning,TEXT("EDSkillDataSubsystem : TeamMatNotLoaded"));
+	return nullptr;
 }

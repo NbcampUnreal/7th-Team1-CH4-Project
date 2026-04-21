@@ -97,7 +97,7 @@ void UGA_Base::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 			this,
 			NAME_None,
 			PlayerAnimMontage,
-			1.0f/PlayerAttributeSet->GetAttackSpeed()
+			PlayerAttributeSet->GetAttackSpeed()
 		);
 	if (!PlayMontageTask)
 	{

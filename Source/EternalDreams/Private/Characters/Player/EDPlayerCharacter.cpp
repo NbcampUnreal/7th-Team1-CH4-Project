@@ -20,6 +20,7 @@
 #include "Core/EDAssetManager.h"
 #include "Core/EDGameDataSubsystem.h"
 #include "Core/EDPlayerState.h"
+#include "Core/EDSkillDataSubsystem.h"
 #include "Data/EDPlayerAnimDataAsset.h"
 #include "Data/EDPlayerDataAsset.h"
 #include "Data/EDWeaponDataAsset.h"
@@ -177,18 +178,18 @@ void AEDPlayerCharacter::OnRep_PlayerState()
 				if (GetMesh()&&GetMesh()->GetChildComponent(0))
 				{
 					USkeletalMeshComponent* RetargetMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
-					const UEDSkillDeveloperSettings* SkillSettings = GetDefault<UEDSkillDeveloperSettings>();
-					if (RetargetMeshComp&&SkillSettings)
+					UEDSkillDataSubsystem* SkillDataSubsystem = UEDSkillDataSubsystem::Get(GetWorld());
+					if (RetargetMeshComp&&SkillDataSubsystem)
 					{
 						//적군 오버레이 머티리얼 설정
 						if (ThisPS->TeamId!=LocalPS->TeamId)
 						{
-							RetargetMeshComp->SetOverlayMaterial(SkillSettings->EnemyOverlayMat.LoadSynchronous());
+							RetargetMeshComp->SetOverlayMaterial(SkillDataSubsystem->GetEnemyMat());
 						}
 						//팀 오버레이 머티리얼 설정
 						else
 						{
-							RetargetMeshComp->SetOverlayMaterial(SkillSettings->TeamOverlayMat.LoadSynchronous());
+							RetargetMeshComp->SetOverlayMaterial(SkillDataSubsystem->GetTeamMat());
 						}
 					}
 				}
