@@ -16,6 +16,7 @@
 #include "Data/GameplayTag/EDGameplayTags.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Interaction/Component/EDLootTargetComponent.h"
+#include "Perception/AIPerceptionComponent.h"
 
 // Sets default values
 AEDMonsterBase::AEDMonsterBase()
@@ -227,9 +228,21 @@ void AEDMonsterBase::OnVisualsLoaded()
 
 void AEDMonsterBase::HandleDeath()
 {
+	if (MonsterState == EMonsterState::Dead)
+		return;
+	
 	// Dead 상태로 전환 (OnRep_MonsterState로 클라이언트에 복제)
 	MonsterState = EMonsterState::Dead;
 	OnRep_MonsterState();
+	
+	// 몬스터 시체에서 랜덤 루팅 아이템 스폰
+	if (IsValid(InventoryComponent) && InventoryComponent->RequestInitializeRandomLoot())
+	{
+		// 루팅 상호작용 활성화
+		LootTargetComponent = NewObject<UEDLootTargetComponent>(this, TEXT("LootTargetComponent"));
+		LootTargetComponent->RegisterComponent();
+	}
+	
 	// AIController BT 중단 및 Focus 해제
 	AAIController* AIController = Cast<AAIController>(GetController());
 	if (IsValid(AIController) == false)
@@ -247,6 +260,9 @@ void AEDMonsterBase::HandleDeath()
 	AIController->StopMovement();
 	// BehaviorTree 중단
 	AIController->BrainComponent->StopLogic(TEXT("Dead"));
+	// Perception 비활성화
+	if (UAIPerceptionComponent* PerceptionComp = AIController->GetPerceptionComponent())
+		PerceptionComp->SetActive(false);
 	UE_LOG(LogTemp, Warning, TEXT("[%s] HandleDeath - 몬스터 사망"), *GetName());
 	// GA_Death 어빌리티 발동
 	FGameplayTagContainer DeathTag;
@@ -254,14 +270,6 @@ void AEDMonsterBase::HandleDeath()
 	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
 	// MonsterDeath 브로드 캐스트
 	OnMonsterDeath.Broadcast();
-	
-	// 몬스터 시체에서 랜덤 루팅 아이템 스폰
-	if (IsValid(InventoryComponent) && InventoryComponent->RequestInitializeRandomLoot())
-	{
-		// 루팅 상호작용 활성화
-		LootTargetComponent = NewObject<UEDLootTargetComponent>(this, TEXT("LootTargetComponent"));
-		LootTargetComponent->RegisterComponent();
-	}
 	
 	// 20초 뒤에 몬스터 시체 처리 
 	GetWorldTimerManager().SetTimer(
