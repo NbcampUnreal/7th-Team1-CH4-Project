@@ -134,6 +134,15 @@ void AEDPlayerCharacter::BeginPlay()
 	.AddUObject(this, &AEDPlayerCharacter::OnWalkSpeedChanged);
 
 	BroadcastFloatingHealthBarSource();
+	if (IsLocallyControlled())
+	{
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(BaseAttributeSet->GetHealthAttribute())
+    .AddUObject(this, &AEDPlayerCharacter::OnHealthChanged);
+	}
+
+	
+	
+	
 }
 
 void AEDPlayerCharacter::Tick(float DeltaSeconds)
@@ -381,6 +390,15 @@ void AEDPlayerCharacter::StopAnimMove()
 void AEDPlayerCharacter::OnWalkSpeedChanged(const FOnAttributeChangeData& Data)
 {
 	GetCharacterMovement()->MaxWalkSpeed=Data.NewValue;
+}
+
+void AEDPlayerCharacter::OnHealthChanged(const struct FOnAttributeChangeData& Data)
+{
+	//Health가 이전 값이 변경된 값보다 크다면 (=체력이 감소했다면)
+	if (Data.OldValue>Data.NewValue)
+	{
+		OnHealthDecreased.Broadcast();
+	}
 }
 
 void AEDPlayerCharacter::OnEquipChanged(FGameplayTag& AttributeDataTag, float Value)

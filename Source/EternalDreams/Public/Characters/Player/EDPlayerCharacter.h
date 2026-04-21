@@ -27,7 +27,7 @@ class UEDGameDataSubsystem;
 class UEDFloatingHealthBarWidgetComponent;
 struct FOnAttributeChangeData;
 
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttributeChanged);
 /*
  * 플레이어 캐릭터 클래스
  */
@@ -162,6 +162,7 @@ protected:
 	
 	//Callback
 	void OnWalkSpeedChanged(const struct FOnAttributeChangeData& Data);
+	void OnHealthChanged(const struct FOnAttributeChangeData& Data);
 	UFUNCTION()
 	void OnEquipChanged(FGameplayTag& AttributeDataTag, float Value);
 	UFUNCTION(BlueprintCallable,Server, Reliable)
@@ -172,6 +173,10 @@ protected:
 	void OnFirstSkillChanged(const FGameplayTagContainer& SkillItemTags, const FGameplayTagContainer& SkillCooldownTags);
 	UFUNCTION(BlueprintCallable,Server, Reliable)
 	void OnSecondSkillChanged(const FGameplayTagContainer& SkillItemTags, const FGameplayTagContainer& SkillCooldownTags);
+	
+
+	
+	
 	
 	//Skin
 #pragma region Skin
@@ -186,6 +191,14 @@ protected:
 	FPrimaryAssetId RetargetABPId;
 	
 public:	
+	//Delegates
+	UPROPERTY(BlueprintAssignable)
+	FOnAttributeChanged OnHealthDecreased;
+	
+	
+public:
+	
+	
 	UFUNCTION()
 	FORCEINLINE void SetTargetMeshId(const FPrimaryAssetId& InTargetMeshId){if (!HasAuthority()){return;} TargetMeshId=InTargetMeshId; ApplyTargetMesh();}
 	UFUNCTION()
