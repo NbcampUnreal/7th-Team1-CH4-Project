@@ -43,6 +43,18 @@ EBTNodeResult::Type UBTTask_ActivateSelectedAbility::ExecuteTask(UBehaviorTreeCo
 	FGameplayTag Tag = FGameplayTag::RequestGameplayTag(TagName, false);
 	if (Tag.IsValid() == false)
 		return EBTNodeResult::Failed;
+	// 어빌리티 등록 확인
+	TArray<FGameplayAbilitySpec*> MatchingAbilities;
+	ASC->GetActivatableGameplayAbilitySpecsByAllMatchingTags(FGameplayTagContainer(Tag), MatchingAbilities);
+	UE_LOG(LogTemp, Warning, TEXT("[ActivateSelectedAbility] 등록된 어빌리티 수: %d"), MatchingAbilities.Num());
+	for (FGameplayAbilitySpec* Spec : MatchingAbilities)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("  - %s | IsActive: %d | 쿨타임여부: %d"),
+			*Spec->Ability->GetName(),
+			Spec->IsActive(),
+			ASC->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(TEXT("Cooldown"), false))
+		);
+	}
 	
 	bool bActivated = ASC->TryActivateAbilitiesByTag(FGameplayTagContainer(Tag));
 	UE_LOG(LogTemp, Warning, TEXT("[ActivateSelectedAbility] Tag: %s → %s"),
