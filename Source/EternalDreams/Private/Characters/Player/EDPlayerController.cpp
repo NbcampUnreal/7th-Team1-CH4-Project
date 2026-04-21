@@ -13,6 +13,7 @@
 #include "UI/Subsystem/EDUIManageSubsystem.h"
 #include "UI/HUD/EDDeathOverlayWidget.h"
 #include "UI/HUD/EDRespawnZoneSelectWidget.h"
+#include "UI/HUD/EDMatchResultWidget.h"
 #include "UI/Types/EDUIWidgetIds.h"
 #include "Misc/CoreDelegates.h"
 #include "Core/EDGameMode.h"
@@ -346,22 +347,6 @@ void AEDPlayerController::CameraFocus(const FInputActionValue& value)
 	OnCameraFocus.ExecuteIfBound(value);
 }
 
-void AEDPlayerController::Server_RequestStartPhaseSequence_Implementation()
-{
-	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	if (!GM) return;
-
-	GM->StartPhaseSequence();
-}
-
-void AEDPlayerController::Server_RequestSkipPhase_Implementation()
-{
-	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	if (!GM) return;
-
-	GM->SkipToNextPhase();
-}
-
 void AEDPlayerController::ClientOnPlayerDied_Implementation(float CountdownSeconds, bool bCanRespawn)
 {
 	ULocalPlayer* LP = GetLocalPlayer();
@@ -408,4 +393,28 @@ void AEDPlayerController::Server_RequestRespawn_Implementation(int32 SelectedZon
 	if (!GM) return;
 
 	GM->HandleRespawnRequest(this, SelectedZoneId);
+}
+
+void AEDPlayerController::ClientShowMatchResult_Implementation(const TArray<int32>& TeamRankings)
+{
+	ULocalPlayer* LP = GetLocalPlayer();
+	if (!LP) return;
+
+	UEDUIManageSubsystem* UIMgr = LP->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIMgr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIManageSubsystem을 찾을 수 없습니다."));
+		return;
+	}
+
+	UCommonActivatableWidget* Panel = UIMgr->OpenPanel(EDUIWidgetIds::Panel_MatchResult);
+	if (UEDMatchResultWidget* ResultWidget = Cast<UEDMatchResultWidget>(Panel))
+	{
+		int32 MyTeamId = EDTeam::None;
+		if (AEDPlayerState* PS = GetPlayerState<AEDPlayerState>())
+		{
+			MyTeamId = PS->TeamId;
+		}
+		ResultWidget->SetResult(TeamRankings, MyTeamId);
+	}
 }
