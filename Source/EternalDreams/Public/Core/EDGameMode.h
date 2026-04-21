@@ -83,6 +83,7 @@ public:
 protected:
 	virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void Logout(AController* Exiting) override;
 	virtual void HandleSeamlessTravelPlayer(AController*& C) override;
 	virtual void BeginPlay() override;
 	virtual void Tick(float DeltaSeconds) override;
@@ -213,6 +214,24 @@ private:
 
 	/** 사망한 플레이어의 ZoneSelect 오픈 타이머 핸들 */
 	TMap<TWeakObjectPtr<AController>, FTimerHandle> RespawnTimers;
+
+	// -------------------------------------------------------
+	// 매치 종료 → 로비 복귀
+	// -------------------------------------------------------
+
+	/** 결과 UI 표시 후 로비 트래블까지 대기 시간(초) */
+	UPROPERTY(EditDefaultsOnly, Category = "ED|Match")
+	float MatchEndDelay = 10.f;
+
+	/** 매치 종료 후 복귀할 로비 맵 경로 */
+	UPROPERTY(EditDefaultsOnly, Category = "ED|Match")
+	FString LobbyMapPath = TEXT("/Game/ED/Levels/L_Lobby");
+
+	/** OnMatchFinished 중복 호출 방지 (CheckTeamElimination ↔ SkipToNextPhase 양쪽에서 호출 가능) */
+	bool bMatchFinished = false;
+
+	/** 매치 종료 → 로비 ServerTravel 타이머 */
+	FTimerHandle MatchEndTravelHandle;
 
 	/**
 	 * [IOCP 전용] 전원 접속 시 Phase 시작.
