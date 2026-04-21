@@ -23,6 +23,11 @@ AEDMonsterBase::AEDMonsterBase()
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
+	
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationRoll = false;
+	
 	// 기본적으로 내부에서 true지만 명시적으로 표시
 	SetReplicateMovement(true);
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
@@ -39,6 +44,8 @@ AEDMonsterBase::AEDMonsterBase()
 	InventoryComponent->bGiveDefaultWeaponOnBeginPlay = false;
 	InventoryComponent->bUseEquipmentSlots = false;
 	InventoryComponent->bAutoInitializeLootOnBeginPlay = false;
+	
+	GetCharacterMovement()->bOrientRotationToMovement = true;
 }
 
 // Called when the game starts or when spawned
@@ -143,8 +150,9 @@ void AEDMonsterBase::OnRep_MonsterState()
 	
 	if (MonsterState == EMonsterState::Dead)
 	{
-		// 캡슐 콜리전 비활성화
-		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		// Pawn채널 콜리전 비활성화
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Ignore);
 	}
 
 	UEDMonsterAnimInstance* Anim = Cast<UEDMonsterAnimInstance>(GetMesh()->GetAnimInstance());
