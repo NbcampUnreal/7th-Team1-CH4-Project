@@ -90,7 +90,6 @@ private:
 	FDelegateHandle HealthChangedHandle;
 	FDelegateHandle MaxHealthChangedHandle;
 	FDelegateHandle DefensiveChangedHandle;
-	FDelegateHandle MaxDefensiveChangedHandle;
 	FDelegateHandle WalkSpeedChangedHandle;
 	FDelegateHandle StrengthChangedHandle;
 	FDelegateHandle DexterityChangedHandle;
@@ -140,7 +139,6 @@ private:
 	void HandleHealthChanged(const FOnAttributeChangeData& Data) const;
 	void HandleMaxHealthChanged(const FOnAttributeChangeData& Data) const;
 	void HandleDefensiveChanged(const FOnAttributeChangeData& Data) const;
-	void HandleMaxDefensiveChanged(const FOnAttributeChangeData& Data) const;
 	void HandleWalkSpeedChanged(const FOnAttributeChangeData& Data) const;
 	void HandleStrengthChanged(const FOnAttributeChangeData& Data) const;
 	void HandleDexterityChanged(const FOnAttributeChangeData& Data) const;

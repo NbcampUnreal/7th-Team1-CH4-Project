@@ -73,13 +73,14 @@ void UEDQuickBarSlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, co
 	}
 
 	// 좌클릭 드래그 시작 시 슬롯 인덱스를 담은 오퍼레이션을 만듦
-	UEDInventoryDragDropOperation* DragOperation = NewObject<UEDInventoryDragDropOperation>();
+	UEDInventoryDragDropOperation* DragOperation = NewObject<UEDInventoryDragDropOperation>(this);
 	if (!DragOperation)
 	{
 		return;
 	}
 
 	DragOperation->SourceSlotIndex = SlotIndex;
+	DragOperation->SourceInventoryComponent = GetSourceInventoryComponent();
 	DragOperation->Pivot = EDragPivot::MouseDown;
 	
 	// 드래그 중 마우스를 따라다닐 비주얼 위젯을 생성
@@ -120,7 +121,7 @@ bool UEDQuickBarSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDra
 	}
 
 	// 다른 슬롯 위에 드롭되면 슬롯 이동 요청을 상위 퀵바로 넘김
-	OnQuickBarSlotDroppedOnSlot.Broadcast(DragOperation->SourceSlotIndex, SlotIndex);
+	OnQuickBarSlotDroppedOnSlot.Broadcast(DragOperation->SourceInventoryComponent, DragOperation->SourceSlotIndex, SlotIndex);
 	return true;
 }
 
