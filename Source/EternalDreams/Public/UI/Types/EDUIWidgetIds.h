@@ -30,4 +30,7 @@ namespace EDUIWidgetIds
 
 	// 부활 구역 선택 패널 ID
 	static const FName Panel_RespawnZoneSelect(TEXT("Panel.RespawnZoneSelect"));
+
+	// 매치 결과 패널 ID (승리/패배 + 팀 등수)
+	static const FName Panel_MatchResult(TEXT("Panel.MatchResult"));
 }

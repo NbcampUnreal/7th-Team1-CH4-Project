@@ -8,7 +8,6 @@
 #include "EDInventoryComponent.generated.h"
 
 class UDataTable;
-class AActor;
 class AEDDroppedItemActor;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEDInventoryChanged);
@@ -80,7 +79,7 @@ public:
     EEDInventoryStackPolicy DistributionStackPolicy = EEDInventoryStackPolicy::Randomize;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Distribution")
-    TArray<TObjectPtr<AActor>> DistributionTargetActors;
+    TArray<FName> DistributionTargetActorTags;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Distribution", meta = (ClampMin = "0.0"))
     float DistributionTargetWaitTimeout = 3.0f;
