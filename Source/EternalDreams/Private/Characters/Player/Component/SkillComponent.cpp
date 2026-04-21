@@ -39,16 +39,11 @@ void USkillComponent::SetBasicAttackTag_Implementation(const FGameplayTag Tag)
 
 void USkillComponent::SetQSkillTag_Implementation(const FGameplayTag Tag)
 {
-	{QSkillTag=Tag;}
+	QSkillTag=Tag;
 }
 
 void USkillComponent::SetQSkillCoolTimeTag_Implementation(const FGameplayTag Tag)
 {
-	if (QSkillCoolTimeTag!=FGameplayTag::EmptyTag)
-	{
-		AbilitySystemComponent->RegisterGameplayTagEvent(QSkillCoolTimeTag).Remove(QSkillCoolTimeHandle);
-	}
-	QSkillCoolTimeHandle=AbilitySystemComponent->RegisterGameplayTagEvent(Tag).AddUObject(this,&USkillComponent::QSkillCoolTime);
 	QSkillCoolTimeTag=Tag;
 }
 
@@ -59,11 +54,6 @@ void USkillComponent::SetESkillTag_Implementation(const FGameplayTag Tag)
 
 void USkillComponent::SetESkillCoolTimeTag_Implementation(const FGameplayTag Tag)
 {
-	if (ESkillCoolTimeTag!=FGameplayTag::EmptyTag)
-	{
-		AbilitySystemComponent->RegisterGameplayTagEvent(ESkillCoolTimeTag).Remove(ESkillCoolTimeHandle);
-	}
-	ESkillCoolTimeHandle=AbilitySystemComponent->RegisterGameplayTagEvent(Tag).AddUObject(this,&USkillComponent::ESkillCoolTime);
 	ESkillCoolTimeTag=Tag;
 }
 
@@ -75,33 +65,9 @@ void USkillComponent::SetSpaceSkillTag_Implementation(const FGameplayTag Tag)
 
 void USkillComponent::SetSpaceSkillCoolTimeTag_Implementation(const FGameplayTag Tag)
 {
-	if (SpaceSkillCoolTimeTag!=FGameplayTag::EmptyTag)
-	{
-		AbilitySystemComponent->RegisterGameplayTagEvent(SpaceSkillCoolTimeTag).Remove(SpaceSkillCoolTimeHandle);
-	}
-	SpaceSkillCoolTimeHandle=AbilitySystemComponent->RegisterGameplayTagEvent(Tag).AddUObject(this,&USkillComponent::SpaceSkillCoolTime);
 	SpaceSkillCoolTimeTag=Tag;
 }
 
-void USkillComponent::ActivateBasicAttack()
-{
-	ActivateTag(BasicAttackTag);
-}
-
-void USkillComponent::ActivateQSkill()
-{
-	ActivateTag(QSkillTag);
-}
-
-void USkillComponent::ActivateESkill()
-{
-	ActivateTag(ESkillTag);
-}
-
-void USkillComponent::ActivateSpaceSkill()
-{
-	ActivateTag(SpaceSkillTag);
-}
 
 void USkillComponent::ActivateTag(FGameplayTag& Tag)
 {
@@ -169,4 +135,34 @@ void USkillComponent::SpaceSkillCoolTime(FGameplayTag Tag, int32 NewCount)
 	{
 		OnSpaceSkillCoolTime.Broadcast(0.f,0.f);
 	}
+}
+
+void USkillComponent::OnRep_QSkillCoolTimeTag()
+{
+	if (PastQSkillCoolTimeTag!=FGameplayTag::EmptyTag)
+	{
+		AbilitySystemComponent->RegisterGameplayTagEvent(PastQSkillCoolTimeTag).Remove(QSkillCoolTimeHandle);
+	}
+	QSkillCoolTimeHandle=AbilitySystemComponent->RegisterGameplayTagEvent(QSkillCoolTimeTag).AddUObject(this,&USkillComponent::QSkillCoolTime);
+	PastQSkillCoolTimeTag=QSkillCoolTimeTag;
+}
+
+void USkillComponent::OnRep_ESkillCoolTimeTag()
+{
+	if (PastESkillCoolTimeTag!=FGameplayTag::EmptyTag)
+	{
+		AbilitySystemComponent->RegisterGameplayTagEvent(PastESkillCoolTimeTag).Remove(ESkillCoolTimeHandle);
+	}
+	ESkillCoolTimeHandle=AbilitySystemComponent->RegisterGameplayTagEvent(ESkillCoolTimeTag).AddUObject(this,&USkillComponent::ESkillCoolTime);
+	PastESkillCoolTimeTag=ESkillCoolTimeTag;
+}
+
+void USkillComponent::OnRep_SpaceSkillCoolTimeTag()
+{
+	if (PastSpaceSkillCoolTimeTag!=FGameplayTag::EmptyTag)
+	{
+		AbilitySystemComponent->RegisterGameplayTagEvent(PastSpaceSkillCoolTimeTag).Remove(SpaceSkillCoolTimeHandle);
+	}
+	SpaceSkillCoolTimeHandle=AbilitySystemComponent->RegisterGameplayTagEvent(SpaceSkillCoolTimeTag).AddUObject(this,&USkillComponent::SpaceSkillCoolTime);
+	PastSpaceSkillCoolTimeTag=SpaceSkillCoolTimeTag;
 }
