@@ -11,7 +11,7 @@
 
 
 class UAbilitySystemComponent;
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSkillSet,FGameplayTag,SkillTag);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSkillCoolTime,float,SkillCoolTime,float,MaxSkillCoolTime);
 
 UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
@@ -29,21 +29,21 @@ protected:
 	UPROPERTY(EditAnyWhere,Replicated)
 	FGameplayTag BasicAttackTag=FGameplayTag::EmptyTag;
 	
-	UPROPERTY(EditAnyWhere,Replicated)
+	UPROPERTY(EditAnyWhere,ReplicatedUsing=OnRep_QSkillTag)
 	FGameplayTag QSkillTag=FGameplayTag::EmptyTag;
 	UPROPERTY(EditAnyWhere,ReplicatedUsing=OnRep_QSkillCoolTimeTag)
 	FGameplayTag QSkillCoolTimeTag=FGameplayTag::EmptyTag;
 	UPROPERTY()
     FGameplayTag PastQSkillCoolTimeTag=FGameplayTag::EmptyTag;
 	
-	UPROPERTY(EditAnyWhere,Replicated)
+	UPROPERTY(EditAnyWhere,ReplicatedUsing=OnRep_ESkillTag)
 	FGameplayTag ESkillTag=FGameplayTag::EmptyTag;
 	UPROPERTY(EditAnyWhere,ReplicatedUsing=OnRep_ESkillCoolTimeTag)
 	FGameplayTag ESkillCoolTimeTag=FGameplayTag::EmptyTag;
 	UPROPERTY()
 	FGameplayTag PastESkillCoolTimeTag=FGameplayTag::EmptyTag;
 	
-	UPROPERTY(EditAnyWhere,Replicated)
+	UPROPERTY(EditAnyWhere,ReplicatedUsing=OnRep_SpaceSkillTag)
 	FGameplayTag SpaceSkillTag=FGameplayTag::EmptyTag;
 	UPROPERTY(EditAnyWhere,ReplicatedUsing=OnRep_SpaceSkillCoolTimeTag)
 	FGameplayTag SpaceSkillCoolTimeTag=FGameplayTag::EmptyTag;
@@ -60,6 +60,12 @@ protected:
 	UPROPERTY(BlueprintAssignable)
 	FOnSkillCoolTime OnSpaceSkillCoolTime;
 	
+	UPROPERTY(BlueprintAssignable)
+	FOnSkillSet OnQSkillSet;
+	UPROPERTY(BlueprintAssignable)
+	FOnSkillSet OnESkillSet;
+	UPROPERTY(BlueprintAssignable)
+	FOnSkillSet OnSpaceSkillSet;
 	
 	
 	//Caching
@@ -136,6 +142,12 @@ public:
 	void SpaceSkillCoolTime(FGameplayTag Tag, int32 NewCount);
 
 	//Rep
+	UFUNCTION()
+	FORCEINLINE void OnRep_QSkillTag(){OnQSkillSet.Broadcast(QSkillTag);}
+	UFUNCTION()
+	void OnRep_ESkillTag(){OnESkillSet.Broadcast(ESkillTag);}
+	UFUNCTION()
+	void OnRep_SpaceSkillTag(){OnSpaceSkillSet.Broadcast(SpaceSkillTag);}
 	UFUNCTION()
 	void OnRep_QSkillCoolTimeTag();
 	UFUNCTION()
