@@ -477,6 +477,7 @@ void UEDUIManageSubsystem::RefreshInputMode()
 	const FName OpenModalPanel = FindOpenPanelInLayer(EEDUILayer::Modal);
 	const FName OpenMenuPanel = FindOpenPanelInLayer(EEDUILayer::Menu);
 	const FName OpenGamePanel = FindOpenPanelInLayer(EEDUILayer::Game);
+	const bool bIsLootInventoryPanelOpen = IsPanelOpen(EDUIWidgetIds::Panel_LootInventory);
 
 	UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: OpenModalPanel = %s"), *OpenModalPanel.ToString());
 	UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: OpenMenuPanel = %s"), *OpenMenuPanel.ToString());
@@ -489,6 +490,25 @@ void UEDUIManageSubsystem::RefreshInputMode()
 		PlayerController->bShowMouseCursor = true;
 
 		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 메뉴 입력 모드로 전환했습니다."));
+		return;
+	}
+
+	if (bIsLootInventoryPanelOpen)
+	{
+		UCommonActivatableWidget* LootInventoryPanel = nullptr;
+		if (const TObjectPtr<UCommonActivatableWidget>* FoundPanel = PanelInstances.Find(EDUIWidgetIds::Panel_LootInventory))
+		{
+			LootInventoryPanel = FoundPanel->Get();
+		}
+
+		UWidgetBlueprintLibrary::SetInputMode_GameAndUIEx(
+			PlayerController,
+			LootInventoryPanel,
+			EMouseLockMode::DoNotLock,
+			false);
+		PlayerController->bShowMouseCursor = true;
+
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 루팅 인벤토리 패널 상호작용을 위해 GameAndUI 입력 모드로 전환했습니다."));
 		return;
 	}
 

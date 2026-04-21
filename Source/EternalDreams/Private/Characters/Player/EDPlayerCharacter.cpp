@@ -430,6 +430,19 @@ void AEDPlayerCharacter::OnWeaponChanged_Implementation()
 		return;
 	}
 	
+	if (!IsValid(LWeaponActor) || !IsValid(RWeaponActor))
+	{
+		// 인벤토리 변경이 무기 액터 생성보다 먼저 들어올 수 있으므로
+		// 현재 플레이어 데이터 적용 경로를 한 번 더 태워 무기 액터 생성을 재시도
+		ApplyPlayerDataAsset();
+
+		// 재시도 이후에도 무기 액터가 없으면 더 진행하지 않음
+		if (!IsValid(LWeaponActor) || !IsValid(RWeaponActor))
+		{
+			return;
+		}
+	}
+	
 	const UEDGameDataSubsystem* DataSubsystem = UEDGameDataSubsystem::Get(GetWorld());
 	if (!DataSubsystem) return;
 
