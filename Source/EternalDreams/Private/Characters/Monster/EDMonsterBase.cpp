@@ -15,6 +15,7 @@
 #include "Core/EDAssetManager.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
 #include "Inventory/Component/EDInventoryComponent.h"
+#include "Interaction/Component/EDLootTargetComponent.h"
 
 // Sets default values
 AEDMonsterBase::AEDMonsterBase()
@@ -245,13 +246,14 @@ void AEDMonsterBase::HandleDeath()
 	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
 	// MonsterDeath 브로드 캐스트
 	OnMonsterDeath.Broadcast();
+	
 	// 몬스터 시체에서 랜덤 루팅 아이템 스폰
-	if (IsValid(InventoryComponent))
+	if (IsValid(InventoryComponent) && InventoryComponent->RequestInitializeRandomLoot())
 	{
-		bool bResult = InventoryComponent->RequestInitializeRandomLoot();
-		UE_LOG(LogTemp, Warning, TEXT("[%s] RandomLoot 요청: %s"), *GetName(), bResult ? TEXT("성공") : TEXT("실패(LootTable 없음)"));
+		// 루팅 상호작용 활성화
+		LootTargetComponent = NewObject<UEDLootTargetComponent>(this, TEXT("LootTargetComponent"));
+		LootTargetComponent->RegisterComponent();
 	}
-		
 	
 	// 20초 뒤에 몬스터 시체 처리 
 	GetWorldTimerManager().SetTimer(
