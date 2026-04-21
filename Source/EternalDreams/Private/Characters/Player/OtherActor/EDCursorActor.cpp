@@ -27,7 +27,7 @@ void AEDCursorActor::BeginPlay()
 	Super::BeginPlay();
 	if (CursorWidget!=nullptr)
 	{
-		CursorWidget->AddToViewport();
+		CursorWidget->AddToViewport(999);
 	}
 
 }

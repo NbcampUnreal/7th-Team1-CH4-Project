@@ -6,6 +6,7 @@
 #include "Net/UnrealNetwork.h"
 #include"GameplayEffect.h"
 #include"GameplayEffectExtension.h"
+#include "Characters/Base/GAS/EDBaseAttributeSet.h"
 #include "Engine/Engine.h"
 
 UEDPlayerAttributeSet::UEDPlayerAttributeSet()
@@ -14,6 +15,7 @@ UEDPlayerAttributeSet::UEDPlayerAttributeSet()
 	InitStrength(10.0f);
 	InitDexterity(10.0f);
 	InitIntelligence(10.0f);
+	InitAttackSpeed(1.f);
 	
 	//KSH --- 금지구역시간 초기화 (필요시 수치 변경)
 	InitSurvivalTime(30.0f);
@@ -27,6 +29,7 @@ void UEDPlayerAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	DOREPLIFETIME(UEDPlayerAttributeSet,Strength);
 	DOREPLIFETIME(UEDPlayerAttributeSet,Dexterity);
 	DOREPLIFETIME(UEDPlayerAttributeSet,Intelligence);
+	DOREPLIFETIME(UEDPlayerAttributeSet,AttackSpeed);
 	
 	// KSH --- 금지구역 시간 복제 
 	DOREPLIFETIME_CONDITION_NOTIFY(UEDPlayerAttributeSet, SurvivalTime, COND_None, REPNOTIFY_Always);
@@ -49,6 +52,11 @@ void UEDPlayerAttributeSet::OnRep_Intelligence(const FGameplayAttributeData& Old
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDPlayerAttributeSet, Intelligence, OldIntelligence);
 }
 
+void UEDPlayerAttributeSet::OnRep_AttackSpeed(const FGameplayAttributeData& OldAttackSpeed)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDPlayerAttributeSet, AttackSpeed, OldAttackSpeed);
+}
+
 // KSH --- 금지구역 콜백 함수 구현
 void UEDPlayerAttributeSet::OnRep_SurvivalTime(const FGameplayAttributeData& OldSurvivalTime)
 {
@@ -66,7 +74,10 @@ void UEDPlayerAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribu
 	Super::PreAttributeChange(Attribute, NewValue);
 
 	//Clamp
-	if (Attribute == GetStrengthAttribute()||Attribute==GetDexterityAttribute()||Attribute==GetIntelligenceAttribute())
+	if (Attribute == GetStrengthAttribute()||
+		Attribute==GetDexterityAttribute()||
+		Attribute==GetIntelligenceAttribute()||
+		Attribute==GetAttackSpeedAttribute())
 	{
 		NewValue = FMath::Clamp(NewValue, 0.0f, MaxAttributeValue);
 	}
@@ -81,21 +92,35 @@ void UEDPlayerAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribu
 void UEDPlayerAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
-
+	//변화량
+	float DeltaValue = Data.EvaluatedData.Magnitude;
+	
+	UAbilitySystemComponent* ASC = GetOwningAbilitySystemComponent();
+	
+	
 	if (Data.EvaluatedData.Attribute == GetStrengthAttribute())
 	{
 		// Strength가 변경되었을 때
 		SetStrength(FMath::Clamp(GetStrength(), 0.0f, MaxAttributeValue));
+		
 	}
 	if (Data.EvaluatedData.Attribute == GetDexterityAttribute())
 	{
 		// Dexterity가 변경되었을 때
 		SetDexterity(FMath::Clamp(GetDexterity(), 0.0f, MaxAttributeValue));
+		
 	}
 	if (Data.EvaluatedData.Attribute == GetIntelligenceAttribute())
 	{
 		// Intelligence가 변경되었을 때
 		SetIntelligence(FMath::Clamp(GetIntelligence(), 0.0f, MaxAttributeValue));
+
+
+	}
+	if (Data.EvaluatedData.Attribute == GetAttackSpeedAttribute())
+	{
+		// AttackSpeed가 변경되었을 때
+		SetAttackSpeed(FMath::Clamp(GetAttackSpeed(), 0.0f, MaxAttributeValue));
 	}
 	
 	// KSH --- 금지구역 생존시간 감소 및 디버그 메시지 처리
