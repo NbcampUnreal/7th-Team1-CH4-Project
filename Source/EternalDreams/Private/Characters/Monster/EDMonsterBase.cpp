@@ -112,8 +112,7 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 		return;
 	BaseAttributeSet->InitMaxHealth(Stat.MaxHP);
 	BaseAttributeSet->InitHealth(Stat.MaxHP);
-	BaseAttributeSet->InitMaxDefensive(Stat.Def);
-	BaseAttributeSet->InitMaxWalkSpeed(Stat.MoveSpeed);
+	BaseAttributeSet->InitDefensive(Stat.Def);
 	BaseAttributeSet->InitWalkSpeed(Stat.MoveSpeed);
 	// 몬스터 이동속도 MovementComponent에 적용
 	UCharacterMovementComponent* MoveComp = GetCharacterMovement();

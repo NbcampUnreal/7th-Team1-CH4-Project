@@ -15,7 +15,15 @@ void UEDSkillDataSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 		return;	
 	}
 	
-	UDataTable* SkillDT = SkillSettings->SkillMulDataTable.LoadSynchronous();
+	SkillDT = SkillSettings->SkillMulDataTable.LoadSynchronous();
+	EnemyMat=SkillSettings->EnemyOverlayMat.LoadSynchronous();
+	TeamMat=SkillSettings->TeamOverlayMat.LoadSynchronous();
+	
+	if (EnemyMat&&TeamMat)
+	{
+		UE_LOG(LogTemp,Warning,TEXT("EDSkillDataSubsystem : LoadComplete"));
+	}
+	
 	
 	if (IsValid(SkillDT))
 	{

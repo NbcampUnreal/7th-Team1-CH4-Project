@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "GameFramework/Actor.h"
 #include "ProjectileActor.generated.h"
 
@@ -78,6 +79,17 @@ private:
 	
 	FTimerHandle TimerHandle;
 	
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
 	
+	UPROPERTY(EditDefaultsOnly)
+	FGameplayTag ProjectileSkillTag;
+	
+	UPROPERTY()
+	float CapturePlayerStrength=0.f;
+	UPROPERTY()
+	float CapturePlayerDexterity=0.f;
+	UPROPERTY()
+	float CapturePlayerIntelligence=0.f;
 	
 };

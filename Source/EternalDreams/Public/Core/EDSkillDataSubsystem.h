@@ -42,7 +42,15 @@ public:
 	const FSkillMulStatus* GetSkillData(FGameplayTag SkillTag) const;
 
 private:
-	
+	UPROPERTY()
 	TMap<FGameplayTag, FSkillMulStatus> SkillMulMap;
+	
+	UPROPERTY()
+	UDataTable* SkillDT;
+	UPROPERTY()
+	UMaterial* EnemyMat;
+	UPROPERTY()
+	UMaterial* TeamMat;
+	
 	
 };
