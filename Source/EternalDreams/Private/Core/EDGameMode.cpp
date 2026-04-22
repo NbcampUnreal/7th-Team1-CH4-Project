@@ -118,10 +118,7 @@ void AEDGameMode::BeginPlay()
 	// 구형 로비 호환: BeginPlay에서 바로 Phase 시작 (테스트용)
 	// [IOCP 전환 시] 아래 블록을 제거하고, PostLogin의 TryStartPhaseSequence()를 활성화
 	// IOCP에서는 기존 맵이 존재 하지 않기 때문에 Phase 시작전 비동기 로드 필요 
-	if (PhaseSequence.Num() > 0)
-	{
-		StartPhaseSequence();
-	}
+	
 }
 
 void AEDGameMode::Tick(float DeltaSeconds)
@@ -959,7 +956,10 @@ void AEDGameMode::OnServerPlayerDataLoaded()
 				{
 					PlayerCharacter->SetPlayer();
 					PC->ClientRPC_LoadComplete();
-					
+					if (PhaseSequence.Num() > 0)
+					{
+						StartPhaseSequence();
+					}
 				}
 			}
 		}
