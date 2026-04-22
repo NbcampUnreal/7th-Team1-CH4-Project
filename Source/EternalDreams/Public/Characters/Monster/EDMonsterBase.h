@@ -8,6 +8,7 @@
 #include "Characters/Base/GAS/EDBaseAttributeSet.h"
 #include "Core/EDGameDataSubsystem.h"
 #include "Data/Types/EDMonsterTypes.h"
+#include "UI/HUD/EDFloatingHealthBarSource.h"
 #include "Data/EDMonsterDataAsset.h"
 #include "EDMonsterBase.generated.h"
 
@@ -19,6 +20,7 @@ DECLARE_MULTICAST_DELEGATE(FOnDataAssetInitialized);
 class UAbilitySystemComponent;
 class UEDInventoryComponent;
 class UEDLootTargetComponent;
+class UEDFloatingHealthBarWidgetComponent;
 struct FStreamableHandle;
 
 UCLASS()
@@ -31,6 +33,8 @@ public:
 	AEDMonsterBase();
 	
 	virtual  UAbilitySystemComponent* GetAbilitySystemComponent() const override { return AbilitySystemComponent; }
+	UFUNCTION(BlueprintCallable, Category = "Monster|GAS")
+	UEDBaseAttributeSet* GetBaseAttributeSet() const { return BaseAttributeSet; }
 	
 	UFUNCTION(BlueprintCallable, Category = "Data")
 	void InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset);
@@ -52,6 +56,7 @@ public:
 	
 	FVector GetOriginLocation() const { return OriginLocation;}
 	void HandleDeath();
+	FORCEINLINE FEDOnFloatingHealthBarSourceChanged& GetOnFloatingHealthBarSourceChanged() { return OnFloatingHealthBarSourceChanged; }
 
 	FOnMonsterDeath OnMonsterDeath;
 	FOnAttackFinished OnAttackFinished;
@@ -83,7 +88,9 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Loot")
 	TObjectPtr<UEDInventoryComponent> InventoryComponent;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Loot")
-	TObjectPtr<UEDLootTargetComponent> LootTargetComponent;	
+	TObjectPtr<UEDLootTargetComponent> LootTargetComponent;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Monster|UI")
+	TObjectPtr<UEDFloatingHealthBarWidgetComponent> FloatingHealthBarWidgetComponent;
 private:
 	// 비동기 로드(임시)
 	void LoadVisuals(UEDMonsterDataAsset* InDataAsset);
@@ -92,6 +99,7 @@ private:
 	
 	// Health 가 0 이하가 됐을때 호출
 	void OnHealthChanged(const FOnAttributeChangeData& Data);
+	void BroadcastFloatingHealthBarSource();
 	
 	UPROPERTY(ReplicatedUsing = OnRep_MonsterState)
 	EMonsterState MonsterState;
@@ -104,5 +112,6 @@ private:
 	
 	TWeakObjectPtr<UEDGameDataSubsystem> CachedDataSubsystem;
 	FTimerHandle DestroyMeshTimerHandle;
+	FEDOnFloatingHealthBarSourceChanged OnFloatingHealthBarSourceChanged;
 	
 };
