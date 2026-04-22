@@ -190,7 +190,6 @@ private:
 // ================================================================
 
 template<typename T>
-UFUNCTION(BludprintCallable)
 T* UEDGameDataSubsystem::GetData(const FPrimaryAssetId& Id) const
 {
 	const TObjectPtr<UObject>* Found = DataCache.Find(Id);
