@@ -50,7 +50,7 @@ void UGA_Death::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGamep
 
 void UGA_Death::OnMontageCompleted()
 {
-	// Montage 완료 후 Ability 종료
-	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+	// Montage 완료 후 Ability 종료 몽타주 마지막 상태로 유지
+	//EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 	
 }

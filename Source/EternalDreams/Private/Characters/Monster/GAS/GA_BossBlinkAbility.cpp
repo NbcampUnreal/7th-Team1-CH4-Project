@@ -12,6 +12,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "AIController.h"
 #include "NavigationSystem.h"
+#include "DrawDebugHelpers.h"
 
 UGA_BossBlinkAbility::UGA_BossBlinkAbility()
 {
@@ -63,12 +64,14 @@ void UGA_BossBlinkAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	FHitResult HitResult;
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(Monster);
+	Params.AddIgnoredActor(Target);
 	bool bBlocked = Monster->GetWorld()->LineTraceSingleByChannel(
 		HitResult,
-		Monster->GetActorLocation(),
+		Target->GetActorLocation(),
 		BlinkDestination,
 		ECC_WorldStatic,
 		Params);
+	
 	if (bBlocked)
 		BlinkDestination =  HitResult.Location - ToTarget * 50.f;
 	// NavMesh 위로 높이 보정
