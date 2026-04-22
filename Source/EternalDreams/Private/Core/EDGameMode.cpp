@@ -10,6 +10,7 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Environment/EDLightingManager.h"
+#include "Characters/Monster/Spawn/EDMonsterSpawnSubsystem.h"
 
 AEDGameMode::AEDGameMode()
 {
@@ -327,6 +328,12 @@ void AEDGameMode::OnDay2_DayStarted()
 {
 	// [아이템] 에픽 등급 재료 등장 — S4 담당
 	// [부활] 부활키트 사용 가능 시작 — S6 담당
+
+	// [몬스터] 엘리트 몬스터 스폰
+	if (UEDMonsterSpawnSubsystem* SpawnSub = GetWorld()->GetSubsystem<UEDMonsterSpawnSubsystem>())
+	{
+		SpawnSub->TriggerSpawnByGrade(EMonsterGrade::Elite);
+	}
 }
 
 void AEDGameMode::OnDay2_NightStarted()
@@ -344,7 +351,12 @@ void AEDGameMode::OnDay2_NightStarted()
 
 void AEDGameMode::OnDay3_DayStarted()
 {
-	// [몬스터] 위클라이너(보스) 스폰 — S2 담당
+	// [몬스터] 위클라이너(보스) 스폰
+	if (UEDMonsterSpawnSubsystem* SpawnSub = GetWorld()->GetSubsystem<UEDMonsterSpawnSubsystem>())
+	{
+		SpawnSub->TriggerSpawnByGrade(EMonsterGrade::Boss);
+	}
+
 	// [아이템] 전설 등급 재료 등장 — S4 담당
 }
 
@@ -612,13 +624,30 @@ void AEDGameMode::HandleRespawnRequest(AController* Victim, int32 SelectedZoneId
 	PS->RemainingRevives--;
 	PS->bIsDead = false;
 
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] Request: Zone=%d, MapHasZone=%d, ZoneStartsNum=%d, PrePawn=%s"),
+		SelectedZoneId,
+		ZonePlayerStartMap.Contains(SelectedZoneId) ? 1 : 0,
+		ZonePlayerStartMap.Contains(SelectedZoneId) ? ZonePlayerStartMap[SelectedZoneId].Num() : -1,
+		*GetNameSafe(Victim->GetPawn()));
+
 	// 관전 해제 및 새 Pawn 스폰
 	if (APlayerController* PC = Cast<APlayerController>(Victim))
 	{
 		PC->ChangeState(NAME_Playing);
 		PC->ClientGotoState(NAME_Playing);
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] ChangeState(Playing) → PC State: %s"), *PC->PlayerState->GetName());
 	}
 	RestartPlayer(Victim);
+
+	if (APawn* NewPawn = Victim->GetPawn())
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] PostRestart: NewPawn=%s @ %s"),
+			*NewPawn->GetName(), *NewPawn->GetActorLocation().ToString());
+	}
+	else
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] PostRestart: NewPawn=NULL (Possess 실패?)"));
+	}
 
 	// 타이머 정리
 	if (FTimerHandle* Handle = RespawnTimers.Find(Victim))
