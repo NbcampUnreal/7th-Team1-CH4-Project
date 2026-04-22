@@ -5,6 +5,7 @@
 #include "Particles/ParticleSystemComponent.h"
 #include "Engine/AssetManager.h"
 #include "Camera/PlayerCameraManager.h"
+#include "Core/EDAssetManager.h"
 #include "Kismet/GameplayStatics.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "Net/UnrealNetwork.h"
@@ -18,17 +19,12 @@ const UEDInventoryItemDataAsset* ResolveItemData_Drop(const FPrimaryAssetId& Ite
         return nullptr;
     }
 
-    UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(ItemId);
-    if (!ItemObject)
+    UEDAssetManager& AM = UEDAssetManager::Get(); 
+    if (UEDInventoryItemDataAsset* CachedAsset = AM.GetPrimaryAsset<UEDInventoryItemDataAsset>(ItemId))
     {
-        const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(ItemId);
-        if (AssetPath.IsValid())
-        {
-            ItemObject = AssetPath.TryLoad();
-        }
+        return CachedAsset;
     }
-
-    return Cast<UEDInventoryItemDataAsset>(ItemObject);
+    return AM.LoadPrimaryAssetSync<UEDInventoryItemDataAsset>(ItemId);
 }
 }
 

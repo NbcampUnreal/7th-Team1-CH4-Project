@@ -134,11 +134,39 @@ void AEDPlayerCharacter::BeginPlay()
 	.AddUObject(this, &AEDPlayerCharacter::OnWalkSpeedChanged);
 
 	BroadcastFloatingHealthBarSource();
+	if (IsLocallyControlled())
+	{
+		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(BaseAttributeSet->GetHealthAttribute())
+    .AddUObject(this, &AEDPlayerCharacter::OnHealthChanged);
+	}
+
+	AbilitySystemComponent->RegisterGameplayTagEvent(FEDGameplayTags::Get().State_Player_Stop,EGameplayTagEventType::NewOrRemoved).
+	AddUObject(this,&AEDPlayerCharacter::OnStopTagChanged);
+	
+	
 }
 
 void AEDPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	
+	FHitResult HitResult;
+	if (UGameplayStatics::GetPlayerController(GetWorld(),0)->GetHitResultUnderCursor(ECC_Visibility,false, HitResult))
+	{
+		if (!bIsStop&&IsLocallyControlled())
+		{
+			FVector TargetLocation = HitResult.ImpactPoint;
+			FVector StartLocation = GetActorLocation();
+		
+			// 방향 Rotator 계산(Yaw만 사용)
+			FRotator LookAtRotation = FRotationMatrix::MakeFromX(TargetLocation - StartLocation).Rotator();
+			LookAtRotation.Pitch = 0.0f;
+			LookAtRotation.Roll = 0.0f;
+		
+			UGameplayStatics::GetPlayerController(GetWorld(),0)->SetControlRotation(LookAtRotation);
+		}
+	}
+	
 	
 	if (!bIsAnimMoving)
 	{
@@ -160,6 +188,8 @@ void AEDPlayerCharacter::Tick(float DeltaSeconds)
 	MoveVector*=DashSpeed*DeltaSeconds;
 	AddActorWorldOffset(MoveVector, true, &Hit,ETeleportType::None);
 }
+
+
 
 void AEDPlayerCharacter::OnRep_PlayerState()
 {
@@ -378,9 +408,30 @@ void AEDPlayerCharacter::StopAnimMove()
 	bIsAnimMoving=false;
 }
 
+void AEDPlayerCharacter::OnStopTagChanged(const FGameplayTag Tag, int32 NewCount)
+{
+	if (NewCount>0)
+	{
+		bIsStop=true;
+	}
+	else
+	{
+		bIsStop=false;
+	}
+}
+
 void AEDPlayerCharacter::OnWalkSpeedChanged(const FOnAttributeChangeData& Data)
 {
 	GetCharacterMovement()->MaxWalkSpeed=Data.NewValue;
+}
+
+void AEDPlayerCharacter::OnHealthChanged(const struct FOnAttributeChangeData& Data)
+{
+	//Health가 이전 값이 변경된 값보다 크다면 (=체력이 감소했다면)
+	if (Data.OldValue>Data.NewValue)
+	{
+		OnHealthDecreased.Broadcast();
+	}
 }
 
 void AEDPlayerCharacter::OnEquipChanged(FGameplayTag& AttributeDataTag, float Value)

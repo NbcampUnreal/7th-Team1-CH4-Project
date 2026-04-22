@@ -135,22 +135,6 @@ void UIMCComponent::PlayerLook(const FInputActionValue& value)
 		return;
 	}
 	
-	FHitResult HitResult;
-	if (PlayerController->GetHitResultUnderCursor(ECC_Visibility,false, HitResult))
-	{
-		FVector TargetLocation = HitResult.ImpactPoint;
-		FVector StartLocation = PlayerCharacter->GetActorLocation();
-
-		
-		// 방향 Rotator 계산(Yaw만 사용)
-		FRotator LookAtRotation = FRotationMatrix::MakeFromX(TargetLocation - StartLocation).Rotator();
-		LookAtRotation.Pitch = 0.0f;
-		LookAtRotation.Roll = 0.0f;
-		
-		PlayerController->SetControlRotation(LookAtRotation);
-		
-	}
-	
 }
 
 void UIMCComponent::PlayerBasicAttack(const FInputActionValue& value)

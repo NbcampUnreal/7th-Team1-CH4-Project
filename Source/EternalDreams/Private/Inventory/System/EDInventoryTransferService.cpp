@@ -1,5 +1,6 @@
 #include "Inventory/System/EDInventoryTransferService.h"
 
+#include "Core/EDAssetManager.h"
 #include "Engine/AssetManager.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
@@ -18,17 +19,12 @@ const UEDInventoryItemDataAsset* ResolveItemData_Transfer(const FPrimaryAssetId&
         return nullptr;
     }
 
-    UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(ItemId);
-    if (!ItemObject)
+    UEDAssetManager& AM = UEDAssetManager::Get(); 
+    if (UEDInventoryItemDataAsset* CachedAsset = AM.GetPrimaryAsset<UEDInventoryItemDataAsset>(ItemId))
     {
-        const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(ItemId);
-        if (AssetPath.IsValid())
-        {
-            ItemObject = AssetPath.TryLoad();
-        }
+        return CachedAsset;
     }
-
-    return Cast<UEDInventoryItemDataAsset>(ItemObject);
+    return AM.LoadPrimaryAssetSync<UEDInventoryItemDataAsset>(ItemId);
 }
 
 int32 GetItemMaxStack_Transfer(const FPrimaryAssetId& ItemId)

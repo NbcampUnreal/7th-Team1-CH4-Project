@@ -1,5 +1,6 @@
 #include "Inventory/System/EDInventoryEquipmentService.h"
 
+#include "Core/EDAssetManager.h"
 #include "Engine/AssetManager.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Inventory/System/EDInventoryValidationService.h"
@@ -14,17 +15,12 @@ const UEDInventoryItemDataAsset* ResolveItemData_Equipment(const FPrimaryAssetId
         return nullptr;
     }
 
-    UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(ItemId);
-    if (!ItemObject)
+    UEDAssetManager& AM = UEDAssetManager::Get(); 
+    if (UEDInventoryItemDataAsset* CachedAsset = AM.GetPrimaryAsset<UEDInventoryItemDataAsset>(ItemId))
     {
-        const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(ItemId);
-        if (AssetPath.IsValid())
-        {
-            ItemObject = AssetPath.TryLoad();
-        }
+        return CachedAsset;
     }
-
-    return Cast<UEDInventoryItemDataAsset>(ItemObject);
+    return AM.LoadPrimaryAssetSync<UEDInventoryItemDataAsset>(ItemId);
 }
 
 FEDEquipmentSlotData* GetEquipmentSlot_Equipment(UEDInventoryComponent* InventoryComponent, EEDEquippableType SlotType)
