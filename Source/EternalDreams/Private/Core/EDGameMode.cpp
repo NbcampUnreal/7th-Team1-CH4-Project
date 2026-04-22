@@ -474,7 +474,20 @@ void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 	UE_LOG(LogEDCore, Warning, TEXT("[Death] %s 사망 (Day %d, Revives %d)"),
 		*VictimPS->GetPlayerName(), GetCurrentDay(), VictimPS->RemainingRevives);
 
-	EnterSpectator(Victim);
+	// 사망 몽타주 재생 시간을 위해 UnPossess/Spectator 전환을 지연
+	{
+		FTimerHandle& SpectatorHandle = SpectatorEnterTimers.FindOrAdd(Victim);
+		GetWorldTimerManager().ClearTimer(SpectatorHandle);
+
+		TWeakObjectPtr<AController> WeakVictim(Victim);
+		GetWorldTimerManager().SetTimer(SpectatorHandle, [this, WeakVictim]()
+		{
+			if (AController* C = WeakVictim.Get())
+			{
+				EnterSpectator(C);
+			}
+		}, DeathMontageDelay, false);
+	}
 
 	const int32 Day = GetCurrentDay();
 	const bool bCanRevive = (Day >= 1 && Day <= 2) && VictimPS->RemainingRevives > 0;
@@ -503,7 +516,7 @@ void AEDGameMode::EnterSpectator(AController* Victim)
 	if (APawn* OldPawn = Victim->GetPawn())
 	{
 		Victim->UnPossess();
-		OldPawn->SetLifeSpan(10.f);
+		OldPawn->SetLifeSpan(DeathPawnLifeSpan);
 	}
 
 	APlayerController* PC = Cast<APlayerController>(Victim);
