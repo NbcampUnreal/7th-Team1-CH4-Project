@@ -379,20 +379,25 @@ void AEDPlayerController::CameraFocus(const FInputActionValue& value)
 
 void AEDPlayerController::ClientOnPlayerDied_Implementation(float CountdownSeconds, bool bCanRespawn)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Client] ClientOnPlayerDied 수신 PC=%s Countdown=%.2f CanRespawn=%d"),
+		*GetName(), CountdownSeconds, bCanRespawn ? 1 : 0);
+
 	ULocalPlayer* LP = GetLocalPlayer();
 	if (!LP)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Client] ClientOnPlayerDied: LocalPlayer NULL"));
 		return;
 	}
 
 	UEDUIManageSubsystem* UIMgr = LP->GetSubsystem<UEDUIManageSubsystem>();
 	if (!UIMgr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIManageSubsystem을 찾을 수 없습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Client] ClientOnPlayerDied: UIManageSubsystem NULL"));
 		return;
 	}
 
 	UCommonActivatableWidget* Panel = UIMgr->OpenPanel(EDUIWidgetIds::Panel_DeathOverlay);
+	UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Client] DeathOverlay Panel=%s"), *GetNameSafe(Panel));
 	if (UEDDeathOverlayWidget* Overlay = Cast<UEDDeathOverlayWidget>(Panel))
 	{
 		Overlay->StartCountdown(CountdownSeconds, bCanRespawn);
@@ -401,26 +406,37 @@ void AEDPlayerController::ClientOnPlayerDied_Implementation(float CountdownSecon
 
 void AEDPlayerController::ClientOpenZoneSelectWidget_Implementation()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Client] ClientOpenZoneSelectWidget 수신 PC=%s"), *GetName());
+
 	ULocalPlayer* LP = GetLocalPlayer();
 	if (!LP)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Client] ClientOpenZoneSelectWidget: LocalPlayer NULL"));
 		return;
 	}
 
 	UEDUIManageSubsystem* UIMgr = LP->GetSubsystem<UEDUIManageSubsystem>();
 	if (!UIMgr)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIManageSubsystem을 찾을 수 없습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Client] ClientOpenZoneSelectWidget: UIManageSubsystem NULL"));
 		return;
 	}
 
-	UIMgr->OpenPanel(EDUIWidgetIds::Panel_RespawnZoneSelect);
+	UCommonActivatableWidget* Panel = UIMgr->OpenPanel(EDUIWidgetIds::Panel_RespawnZoneSelect);
+	UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Client] ZoneSelect Panel=%s"), *GetNameSafe(Panel));
 }
 
 void AEDPlayerController::Server_RequestRespawn_Implementation(int32 SelectedZoneId)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Server] Server_RequestRespawn 수신 PC=%s Zone=%d HasAuth=%d"),
+		*GetName(), SelectedZoneId, HasAuthority() ? 1 : 0);
+
 	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	if (!GM) return;
+	if (!GM)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Server] Server_RequestRespawn: GameMode 캐스트 실패"));
+		return;
+	}
 
 	GM->HandleRespawnRequest(this, SelectedZoneId);
 }

@@ -10,19 +10,19 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Environment/EDLightingManager.h"
+#include "Characters/Monster/Spawn/EDMonsterSpawnSubsystem.h"
 
 AEDGameMode::AEDGameMode()
 {
-	GameStateClass = AEDGameState::StaticClass();
-	PlayerStateClass = AEDPlayerState::StaticClass();
+	GameStateClass        = AEDGameState::StaticClass();
+	PlayerStateClass      = AEDPlayerState::StaticClass();
 	PlayerControllerClass = AEDPlayerController::StaticClass();
 
 	PrimaryActorTick.bCanEverTick = true;
 	bUseSeamlessTravel = true;
 }
 
-void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId,
-                           FString& ErrorMessage)
+void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 {
 	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
 	// ============================================================
@@ -110,10 +110,10 @@ void AEDGameMode::BeginPlay()
 		CachedLightingManager = Cast<AEDLightingManager>(FoundManagers[0]);
 	}
 	// ============================================================
-
+	
 	CacheZonePlayerStarts();
 	InitRestrictedZones();
-
+	
 	// 구형 로비 호환: BeginPlay에서 바로 Phase 시작 (테스트용)
 	// [IOCP 전환 시] 아래 블록을 제거하고, PostLogin의 TryStartPhaseSequence()를 활성화
 	// IOCP에서는 기존 맵이 존재 하지 않기 때문에 Phase 시작전 비동기 로드 필요 
@@ -242,25 +242,17 @@ void AEDGameMode::OnPhaseStarted(int32 PhaseIndex, const FGameplayTag& PhaseTag)
 		FName RowName = (PhaseIndex % 2 == 0) ? FName("Day") : FName("Night");
 		CachedLightingManager->Multicast_StartTransition(RowName, 3.0f);
 	}
-
-	switch (PhaseIndex)
+	
+	switch (PhaseIndex) 
 	{
-	case 0: OnDay1_DayStarted();
-		break;
-	case 1: OnDay1_NightStarted();
-		break;
-	case 2: OnDay2_DayStarted();
-		break;
-	case 3: OnDay2_NightStarted();
-		break;
-	case 4: OnDay3_DayStarted();
-		break;
-	case 5: OnDay3_NightStarted();
-		break;
-	case 6: OnDay4_DayStarted();
-		break;
-	case 7: OnDay4_NightStarted();
-		break;
+	case 0: OnDay1_DayStarted();   break;
+	case 1: OnDay1_NightStarted(); break;
+	case 2: OnDay2_DayStarted();   break;
+	case 3: OnDay2_NightStarted(); break;
+	case 4: OnDay3_DayStarted();   break;
+	case 5: OnDay3_NightStarted(); break;
+	case 6: OnDay4_DayStarted();   break;
+	case 7: OnDay4_NightStarted(); break;
 	default: break;
 	}
 }
@@ -327,6 +319,12 @@ void AEDGameMode::OnDay2_DayStarted()
 {
 	// [아이템] 에픽 등급 재료 등장 — S4 담당
 	// [부활] 부활키트 사용 가능 시작 — S6 담당
+
+	// [몬스터] 엘리트 몬스터 스폰
+	if (UEDMonsterSpawnSubsystem* SpawnSub = GetWorld()->GetSubsystem<UEDMonsterSpawnSubsystem>())
+	{
+		SpawnSub->TriggerSpawnByGrade(EMonsterGrade::Elite);
+	}
 }
 
 void AEDGameMode::OnDay2_NightStarted()
@@ -344,7 +342,12 @@ void AEDGameMode::OnDay2_NightStarted()
 
 void AEDGameMode::OnDay3_DayStarted()
 {
-	// [몬스터] 위클라이너(보스) 스폰 — S2 담당
+	// [몬스터] 위클라이너(보스) 스폰
+	if (UEDMonsterSpawnSubsystem* SpawnSub = GetWorld()->GetSubsystem<UEDMonsterSpawnSubsystem>())
+	{
+		SpawnSub->TriggerSpawnByGrade(EMonsterGrade::Boss);
+	}
+
 	// [아이템] 전설 등급 재료 등장 — S4 담당
 }
 
@@ -392,7 +395,7 @@ void AEDGameMode::OnMatchFinished()
 	if (!GS) return;
 
 	UE_LOG(LogEDCore, Warning, TEXT("[Match] 종료 — 승리팀: %s, %.1f초 후 로비 복귀"),
-	       EDTeam::GetTeamName(GS->GetWinnerTeamId()), MatchEndDelay);
+		EDTeam::GetTeamName(GS->GetWinnerTeamId()), MatchEndDelay);
 
 	// 팀 등수 계산: 1등 = WinnerTeamId, 2등부터 = EliminatedTeams 역순(마지막 탈락 = 2등)
 	TArray<int32> TeamRankings;
@@ -475,20 +478,31 @@ void AEDGameMode::Logout(AController* Exiting)
 	}
 }
 
-
 // ============================================================
 //  사망 / 부활 / 승패
 // ============================================================
 
 void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 {
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] HandlePlayerDeath 진입 Victim=%s Killer=%s HasAuth=%d"),
+		*GetNameSafe(Victim), *GetNameSafe(Killer), HasAuthority() ? 1 : 0);
+
 	if (!HasAuthority() || !Victim) return;
 
 	AEDPlayerState* VictimPS = Victim->GetPlayerState<AEDPlayerState>();
-	if (!VictimPS) return;
+	if (!VictimPS)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] VictimPS NULL → abort"));
+		return;
+	}
 
 	// 이미 사망 처리된 경우 중복 방지
-	if (VictimPS->bIsDead) return;
+	if (VictimPS->bIsDead)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] 이미 bIsDead=true → 중복 호출 차단 %s"),
+			*VictimPS->GetPlayerName());
+		return;
+	}
 
 	VictimPS->bIsDead = true;
 	VictimPS->Deaths++;
@@ -502,7 +516,7 @@ void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 	}
 
 	UE_LOG(LogEDCore, Warning, TEXT("[Death] %s 사망 (Day %d, Revives %d)"),
-	       *VictimPS->GetPlayerName(), GetCurrentDay(), VictimPS->RemainingRevives);
+		*VictimPS->GetPlayerName(), GetCurrentDay(), VictimPS->RemainingRevives);
 
 	// 사망 몽타주 재생 시간을 위해 UnPossess/Spectator 전환을 지연
 	{
@@ -522,10 +536,17 @@ void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 	const int32 Day = GetCurrentDay();
 	const bool bCanRevive = (Day >= 1 && Day <= 2) && VictimPS->RemainingRevives > 0;
 
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] Day=%d Revives=%d → bCanRevive=%d"),
+		Day, VictimPS->RemainingRevives, bCanRevive ? 1 : 0);
+
 	// 클라에 사망 UI 트리거 (오버레이 + 카운트다운)
 	if (AEDPlayerController* PC = Cast<AEDPlayerController>(Victim))
 	{
 		PC->ClientOnPlayerDied(bCanRevive ? RespawnZoneSelectDelay : 0.f, bCanRevive);
+	}
+	else
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] Victim이 PlayerController 아님 → Client RPC 스킵"));
 	}
 
 	if (bCanRevive)
@@ -534,6 +555,7 @@ void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 	}
 	else
 	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] Revive 불가 → EliminatePlayer"));
 		EliminatePlayer(Victim);
 	}
 }
@@ -541,6 +563,9 @@ void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 void AEDGameMode::EnterSpectator(AController* Victim)
 {
 	if (!Victim) return;
+
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] EnterSpectator Victim=%s OldPawn=%s"),
+		*GetNameSafe(Victim), *GetNameSafe(Victim->GetPawn()));
 
 	// 기존 Pawn 제거
 	if (APawn* OldPawn = Victim->GetPawn())
@@ -554,6 +579,8 @@ void AEDGameMode::EnterSpectator(AController* Victim)
 
 	PC->ChangeState(NAME_Spectating);
 	PC->ClientGotoState(NAME_Spectating);
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] EnterSpectator 완료 StateName=%s"),
+		*PC->GetStateName().ToString());
 
 	// 살아있는 팀원 시점으로 전환
 	if (AController* Teammate = FindLivingTeammate(Victim))
@@ -575,6 +602,9 @@ void AEDGameMode::SchedulePlayerRespawn(AController* Victim)
 {
 	if (!Victim) return;
 
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] SchedulePlayerRespawn Victim=%s Delay=%.2f"),
+		*GetNameSafe(Victim), RespawnZoneSelectDelay);
+
 	FTimerHandle& Handle = RespawnTimers.FindOrAdd(Victim);
 	GetWorldTimerManager().ClearTimer(Handle);
 
@@ -582,12 +612,20 @@ void AEDGameMode::SchedulePlayerRespawn(AController* Victim)
 	GetWorldTimerManager().SetTimer(Handle, [this, WeakVictim]()
 	{
 		AController* C = WeakVictim.Get();
-		if (!C) return;
+		if (!C)
+		{
+			UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] Respawn 타이머 발화 했으나 Victim 소멸"));
+			return;
+		}
 		if (AEDPlayerController* PC = Cast<AEDPlayerController>(C))
 		{
+			UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] Respawn 타이머 발화 → ClientOpenZoneSelectWidget 호출 PC=%s"),
+				*PC->GetName());
 			PC->ClientOpenZoneSelectWidget();
-			UE_LOG(LogEDCore, Warning, TEXT("[Death] ZoneSelectWidget 오픈 RPC → %s"),
-			       *PC->GetName());
+		}
+		else
+		{
+			UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] Respawn 타이머 발화했으나 PC 캐스트 실패"));
 		}
 	}, RespawnZoneSelectDelay, false);
 }
@@ -595,16 +633,35 @@ void AEDGameMode::SchedulePlayerRespawn(AController* Victim)
 // 스폰 처리
 void AEDGameMode::HandleRespawnRequest(AController* Victim, int32 SelectedZoneId)
 {
-	if (!HasAuthority() || !Victim) return;
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] HandleRespawnRequest 진입 Victim=%s Zone=%d"),
+		*GetNameSafe(Victim), SelectedZoneId);
+
+	if (!HasAuthority() || !Victim)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] 권한 없음 또는 Victim NULL → abort"));
+		return;
+	}
 
 	AEDPlayerState* PS = Victim->GetPlayerState<AEDPlayerState>();
-	if (!PS || !PS->bIsDead || PS->bEliminated) return;
-	if (PS->RemainingRevives <= 0) return;
+	if (!PS || !PS->bIsDead || PS->bEliminated)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] PS 체크 실패 PS=%s bIsDead=%d bEliminated=%d"),
+			PS ? *PS->GetPlayerName() : TEXT("NULL"),
+			PS ? (PS->bIsDead ? 1 : 0) : -1,
+			PS ? (PS->bEliminated ? 1 : 0) : -1);
+		return;
+	}
+	if (PS->RemainingRevives <= 0)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] RemainingRevives=%d → abort"), PS->RemainingRevives);
+		return;
+	}
 
 	// Zone 유효성 검증
 	if (!ZonePlayerStartMap.Contains(SelectedZoneId))
 	{
-		UE_LOG(LogEDCore, Warning, TEXT("[Respawn] 잘못된 ZoneId: %d"), SelectedZoneId);
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] 잘못된 ZoneId: %d (MapKeys=%d)"),
+			SelectedZoneId, ZonePlayerStartMap.Num());
 		return;
 	}
 
@@ -612,13 +669,42 @@ void AEDGameMode::HandleRespawnRequest(AController* Victim, int32 SelectedZoneId
 	PS->RemainingRevives--;
 	PS->bIsDead = false;
 
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] Request: Zone=%d, MapHasZone=%d, ZoneStartsNum=%d, PrePawn=%s"),
+		SelectedZoneId,
+		ZonePlayerStartMap.Contains(SelectedZoneId) ? 1 : 0,
+		ZonePlayerStartMap.Contains(SelectedZoneId) ? ZonePlayerStartMap[SelectedZoneId].Num() : -1,
+		*GetNameSafe(Victim->GetPawn()));
+
 	// 관전 해제 및 새 Pawn 스폰
-	if (APlayerController* PC = Cast<APlayerController>(Victim))
+	APlayerController* PC = Cast<APlayerController>(Victim);
+	if (PC)
 	{
 		PC->ChangeState(NAME_Playing);
 		PC->ClientGotoState(NAME_Playing);
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] ChangeState(Playing) → PC State: %s StartSpot=%s"),
+			*PC->PlayerState->GetName(), *GetNameSafe(Victim->StartSpot.Get()));
+
+		// StartSpot 재사용 방지 (부활 시 ChoosePlayerStart가 확실히 돌도록)
+		Victim->StartSpot = nullptr;
 	}
 	RestartPlayer(Victim);
+
+	if (APawn* NewPawn = Victim->GetPawn())
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] PostRestart: NewPawn=%s @ %s"),
+			*NewPawn->GetName(), *NewPawn->GetActorLocation().ToString());
+
+		// 카메라는 EDCameraActor가 Tick에서 자체 재탈환 + Pawn 캐시 갱신하도록 처리
+		if (PC)
+		{
+			UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] PostRestart ControlledPawn=%s (카메라는 CameraActor가 처리)"),
+				*GetNameSafe(PC->GetPawn()));
+		}
+	}
+	else
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] PostRestart: NewPawn=NULL (Possess 실패?)"));
+	}
 
 	// 타이머 정리
 	if (FTimerHandle* Handle = RespawnTimers.Find(Victim))
@@ -628,7 +714,7 @@ void AEDGameMode::HandleRespawnRequest(AController* Victim, int32 SelectedZoneId
 	}
 
 	UE_LOG(LogEDCore, Warning, TEXT("[Respawn] %s → Zone %d (남은 부활 %d)"),
-	       *PS->GetPlayerName(), SelectedZoneId, PS->RemainingRevives);
+		*PS->GetPlayerName(), SelectedZoneId, PS->RemainingRevives);
 }
 
 // 탈락 처리
@@ -652,7 +738,7 @@ void AEDGameMode::CheckTeamElimination()
 	if (!GS) return;
 
 	// 팀별 생존/탈락 집계
-	TMap<int32, int32> TeamAliveCount; // 살아있음(Eliminated == false)
+	TMap<int32, int32> TeamAliveCount;   // 살아있음(Eliminated == false)
 	TMap<int32, int32> TeamTotalCount;
 
 	for (APlayerState* APS : GS->PlayerArray)
@@ -757,6 +843,8 @@ void AEDGameMode::CacheZonePlayerStarts()
 
 AActor* AEDGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] ChoosePlayerStart 진입 Player=%s"), *GetNameSafe(Player));
+
 	if (!Player)
 	{
 		return Super::ChoosePlayerStart_Implementation(Player);
@@ -764,6 +852,8 @@ AActor* AEDGameMode::ChoosePlayerStart_Implementation(AController* Player)
 
 	const AEDPlayerState* PS = Player->GetPlayerState<AEDPlayerState>();
 	const int32 ZoneId = PS ? PS->DesiredZoneId : 0;
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] ChoosePlayerStart DesiredZoneId=%d StartSpot=%s"),
+		ZoneId, *GetNameSafe(Player->StartSpot.Get()));
 
 	if (const TArray<AEDPlayerStart*>* ZoneStarts = ZonePlayerStartMap.Find(ZoneId))
 	{
@@ -795,14 +885,14 @@ AActor* AEDGameMode::ChoosePlayerStart_Implementation(AController* Player)
 			}, PlayerStartOccupyDuration, false);
 
 			UE_LOG(LogEDCore, Warning, TEXT("[Spawn] %s → Zone %d, 사용가능 %d/%d, 선택: %s"),
-			       PS ? *PS->GetPlayerName() : TEXT("?"), ZoneId,
-			       Available.Num(), ZoneStarts->Num(), *Chosen->GetName());
+				PS ? *PS->GetPlayerName() : TEXT("?"), ZoneId,
+				Available.Num(), ZoneStarts->Num(), *Chosen->GetName());
 			return Chosen;
 		}
 	}
 
 	UE_LOG(LogEDCore, Warning, TEXT("[Spawn] %s → Zone %d 실패, 기본 폴백"),
-	       PS ? *PS->GetPlayerName() : TEXT("?"), ZoneId);
+		PS ? *PS->GetPlayerName() : TEXT("?"), ZoneId);
 	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
