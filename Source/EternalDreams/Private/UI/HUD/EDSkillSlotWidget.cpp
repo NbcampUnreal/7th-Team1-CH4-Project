@@ -5,6 +5,8 @@
 #include "Components/Image.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
+#include "InputCoreTypes.h"
+#include "UI/EDInventoryDragDropOperation.h"
 
 namespace
 {
@@ -25,6 +27,7 @@ void UEDSkillSlotWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
 
+	// 쿨타임 중일 때만 남은 시간 숫자를 갱신
 	if (!bIsOnCooldown)
 	{
 		return;
@@ -48,8 +51,6 @@ void UEDSkillSlotWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTi
 	{
 		CooldownValueText->SetText(FormatCooldownText(RemainingTime));
 	}
-
-	RefreshCooldownOverlay(MyGeometry.GetLocalSize().Y);
 }
 
 void UEDSkillSlotWidget::SetSlotDisplayData(const FEDSkillSlotDisplayData& InDisplayData)
@@ -60,6 +61,7 @@ void UEDSkillSlotWidget::SetSlotDisplayData(const FEDSkillSlotDisplayData& InDis
 
 	if (SkillIconImage)
 	{
+		SkillIconImage->SetVisibility(CachedIconTexture ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 		SkillIconImage->SetBrushFromTexture(CachedIconTexture);
 	}
 
@@ -83,6 +85,11 @@ void UEDSkillSlotWidget::StartCooldown(float InRemainingTime, float InMaxCooldow
 	CooldownEndWorldTime = CooldownStartWorldTime + InRemainingTime;
 	CooldownDuration = InMaxCooldownTime;
 
+	if (CooldownMaskSizeBox)
+	{
+		CooldownMaskSizeBox->ClearHeightOverride();
+	}
+
 	if (CooldownOverlayBorder)
 	{
 		CooldownOverlayBorder->SetVisibility(ESlateVisibility::Visible);
@@ -93,8 +100,6 @@ void UEDSkillSlotWidget::StartCooldown(float InRemainingTime, float InMaxCooldow
 		CooldownValueText->SetVisibility(ESlateVisibility::Visible);
 		CooldownValueText->SetText(FormatCooldownText(InRemainingTime));
 	}
-
-	RefreshCooldownOverlay(GetCachedGeometry().GetLocalSize().Y);
 }
 
 void UEDSkillSlotWidget::ClearCooldown()
@@ -121,20 +126,32 @@ void UEDSkillSlotWidget::ClearCooldown()
 	}
 }
 
-void UEDSkillSlotWidget::RefreshCooldownOverlay(float SlotHeight) const
+void UEDSkillSlotWidget::SetTargetSkillSlotType(EEDSkillSlotType InTargetSkillSlotType)
 {
-	if (!bIsOnCooldown || !CooldownMaskSizeBox)
+	TargetSkillSlotType = InTargetSkillSlotType;
+}
+
+FReply UEDSkillSlotWidget::NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
-		return;
+		OnSkillSlotDoubleClicked.Broadcast();
+		return FReply::Handled();
 	}
 
-	const UWorld* World = GetWorld();
-	if (!World || SlotHeight <= KINDA_SMALL_NUMBER || CooldownDuration <= KINDA_SMALL_NUMBER)
+	return Super::NativeOnMouseButtonDoubleClick(InGeometry, InMouseEvent);
+}
+
+bool UEDSkillSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+{
+	UEDInventoryDragDropOperation* DragOperation = Cast<UEDInventoryDragDropOperation>(InOperation);
+	if (!DragOperation || DragOperation->SourceSlotIndex == INDEX_NONE)
 	{
-		return;
+		return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
 	}
 
-	const float RemainingTime = FMath::Max(0.0f, CooldownEndWorldTime - World->GetTimeSeconds());
-	const float CooldownPercent = FMath::Clamp(RemainingTime / CooldownDuration, 0.0f, 1.0f);
-	CooldownMaskSizeBox->SetHeightOverride(SlotHeight * CooldownPercent);
+	// 인벤토리 슬롯에서 시작한 드래그만 받아 상위 위젯에 장착 요청을 넘김
+	DragOperation->bHandledByDropTarget = true;
+	OnSkillSlotDropped.Broadcast(DragOperation->SourceSlotIndex);
+	return true;
 }

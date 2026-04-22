@@ -15,6 +15,9 @@ void UEDInventorySlotWidget::SetEmptyState()
 {
 	bHasItem = false;
 	CurrentQuantity = 0;
+	CurrentItemName = FText::GetEmpty();
+	CurrentRarity = EEDItemRarity::Normal;
+	CurrentIconTexture = nullptr;
 
 	if (EmptyText)
 	{
@@ -49,6 +52,9 @@ void UEDInventorySlotWidget::SetItemState(const FText& InItemName, int32 InQuant
 {
 	bHasItem = true;
 	CurrentQuantity = InQuantity;
+	CurrentItemName = InItemName;
+	CurrentRarity = InRarity;
+	CurrentIconTexture = InIconTexture;
 
 	if (EmptyText)
 	{
@@ -171,14 +177,24 @@ void UEDInventorySlotWidget::NativeOnDragDetected(
 
 	DragOperation->SourceSlotIndex = SlotIndex;
 	DragOperation->SourceInventoryComponent = SourceInventoryComponent;
+	DragOperation->SourceItemName = CurrentItemName;
+	DragOperation->SourceItemQuantity = CurrentQuantity;
+	DragOperation->SourceItemRarity = CurrentRarity;
+	DragOperation->SourceIconTexture = CurrentIconTexture;
 	DragOperation->Pivot = EDragPivot::MouseDown;
 
-	if (SlotDragVisualWidgetClass)
+	// 드래그 비주얼은 현재 슬롯 위젯 클래스를 그대로 사용한다.
+	if (UUserWidget* DragVisual = CreateWidget<UUserWidget>(this, GetClass()))
 	{
-		if (UUserWidget* DragVisual = CreateWidget<UUserWidget>(this, SlotDragVisualWidgetClass))
+		if (UEDInventorySlotWidget* DragVisualSlot = Cast<UEDInventorySlotWidget>(DragVisual))
 		{
-			DragOperation->DefaultDragVisual = DragVisual;
+			DragVisualSlot->SetItemState(CurrentItemName, CurrentQuantity, CurrentRarity, CurrentIconTexture);
+			DragVisualSlot->SetSelectedState(false);
+			DragVisualSlot->SetSupportsItemDrag(false);
+			DragVisualSlot->SetSourceInventoryComponent(nullptr);
 		}
+
+		DragOperation->DefaultDragVisual = DragVisual;
 	}
 
 	OutOperation = DragOperation;

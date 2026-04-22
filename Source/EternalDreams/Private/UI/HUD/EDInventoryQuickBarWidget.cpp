@@ -690,6 +690,33 @@ void UEDInventoryQuickBarWidget::HandleQuickSlotDoubleClicked(int32 InSlotIndex)
 		return;
 	}
 
+	// 스킬 아이템 - 빈 스킬 슬롯을 우선 사용하고,
+	// 둘 다 차 있으면 FirstSkill 슬롯부터 교체
+	if (ItemData->ItemType == EEDInventoryItemType::Skill)
+	{
+		EEDSkillSlotType TargetSkillSlotType = EEDSkillSlotType::FirstSkill;
+
+		if (!InventoryComponent->FirstSkillSlot.EquippedItem.IsValid())
+		{
+			TargetSkillSlotType = EEDSkillSlotType::FirstSkill;
+		}
+		else if (!InventoryComponent->SecondSkillSlot.EquippedItem.IsValid())
+		{
+			TargetSkillSlotType = EEDSkillSlotType::SecondSkill;
+		}
+
+		EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+		const bool bSuccess = InventoryComponent->PredicateEquipSkillFromSlot(InSlotIndex, TargetSkillSlotType, Failure);
+		if (!bSuccess)
+		{
+			ShowInventoryFailure(Failure);
+			return;
+		}
+
+		ShowInventorySuccess(ItemData->DisplayName, FText::FromString(TEXT("장착")));
+		return;
+	}
+
 	// 현재 즉시 사용/장착이 없는 아이템 타입
 	ShowInventoryFailure(EEDInventoryActionFailure::NotConsumable);
 }

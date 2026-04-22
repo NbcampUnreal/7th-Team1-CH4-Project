@@ -38,10 +38,6 @@ public:
 	// 퀵바 밖으로 드롭됐을 때 호출되는 델리게이트
 	FOnEDQuickBarSlotDroppedOutside OnQuickBarSlotDroppedOutside;
 	
-	// 아이템 슬롯 드래그 시 마우스를 따라다니는 위젯 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
-	TSubclassOf<UUserWidget> DragVisualWidgetClass;
-	
 	// 빈 슬롯 상태로 표시
 	void SetEmptyState();
 	
@@ -65,6 +61,16 @@ private:
 
 	// 현재 슬롯 수량
 	int32 CurrentQuantity = 0;
+
+	// 현재 아이템 이름
+	FText QuickBarCurrentItemName;
+
+	// 현재 아이템 희귀도
+	EEDItemRarity QuickBarCurrentRarity = EEDItemRarity::Normal;
+
+	// 현재 아이템 아이콘
+	UPROPERTY(Transient)
+	TObjectPtr<UTexture2D> QuickBarCurrentIconTexture = nullptr;
 	
 	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;

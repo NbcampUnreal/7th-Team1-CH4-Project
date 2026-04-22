@@ -5,10 +5,14 @@
 #include "Characters/Player/Component/SkillComponent.h"
 #include "Characters/Player/EDPlayerCharacter.h"
 #include "Engine/AssetManager.h"
+#include "Engine/LocalPlayer.h"
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
 #include "Inventory/Component/EDInventoryComponent.h"
+#include "Inventory/Core/EDInventoryTypes.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "UI/HUD/EDSkillSlotWidget.h"
+#include "UI/Message/EDUserFacingMessage.h"
+#include "UI/Subsystem/EDUIManageSubsystem.h"
 
 namespace
 {
@@ -36,6 +40,20 @@ const UEDInventoryItemDataAsset* ResolveSkillBarItemData(const FPrimaryAssetId& 
 void UEDSkillBarWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+
+	if (QSkillSlot)
+	{
+		QSkillSlot->SetTargetSkillSlotType(EEDSkillSlotType::FirstSkill);
+		QSkillSlot->OnSkillSlotDropped.AddUObject(this, &UEDSkillBarWidget::HandleFirstSkillSlotDropped);
+		QSkillSlot->OnSkillSlotDoubleClicked.AddUObject(this, &UEDSkillBarWidget::HandleFirstSkillSlotDoubleClicked);
+	}
+
+	if (ESkillSlot)
+	{
+		ESkillSlot->SetTargetSkillSlotType(EEDSkillSlotType::SecondSkill);
+		ESkillSlot->OnSkillSlotDropped.AddUObject(this, &UEDSkillBarWidget::HandleSecondSkillSlotDropped);
+		ESkillSlot->OnSkillSlotDoubleClicked.AddUObject(this, &UEDSkillBarWidget::HandleSecondSkillSlotDoubleClicked);
+	}
 
 	InitializeReferences();
 	BindInventoryDelegates();
@@ -292,6 +310,19 @@ const UEDInventoryItemDataAsset* UEDSkillBarWidget::ResolveItemData(const FPrima
 	return ResolveSkillBarItemData(ItemId);
 }
 
+FText UEDSkillBarWidget::ResolveItemDisplayName(const FPrimaryAssetId& ItemId) const
+{
+	if (const UEDInventoryItemDataAsset* ItemData = ResolveItemData(ItemId))
+	{
+		if (!ItemData->DisplayName.IsEmpty())
+		{
+			return ItemData->DisplayName;
+		}
+	}
+
+	return ItemId.IsValid() ? FText::FromName(ItemId.PrimaryAssetName) : FText::FromString(TEXT("\uC2A4\uD0AC"));
+}
+
 bool UEDSkillBarWidget::ResolveCooldownFromTag(const FGameplayTag& CooldownTag, float& OutRemainingTime, float& OutMaxCooldownTime) const
 {
 	OutRemainingTime = 0.0f;
@@ -319,6 +350,155 @@ bool UEDSkillBarWidget::ResolveCooldownFromTag(const FGameplayTag& CooldownTag, 
 void UEDSkillBarWidget::RequestDeferredRefresh()
 {
 	bDeferredRefreshRequested = true;
+}
+
+void UEDSkillBarWidget::HandleSkillSlotDropped(EEDSkillSlotType TargetSkillSlotType, int32 SourceSlotIndex)
+{
+	if (!CachedInventoryComponent || SourceSlotIndex == INDEX_NONE)
+	{
+		return;
+	}
+
+	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+	const bool bSucceeded = CachedInventoryComponent->PredicateEquipSkillFromSlot(SourceSlotIndex, TargetSkillSlotType, Failure);
+	if (!bSucceeded)
+	{
+		ShowInventoryFailure(Failure);
+		return;
+	}
+
+	FEDInventorySlotData SlotData;
+	if (CachedInventoryComponent->InventorySlots.IsValidIndex(SourceSlotIndex))
+	{
+		SlotData = CachedInventoryComponent->InventorySlots[SourceSlotIndex];
+	}
+
+	ShowInventorySuccess(ResolveItemDisplayName(SlotData.Item.ItemId), FText::FromString(TEXT("\uC7A5\uCC29")));
+}
+
+void UEDSkillBarWidget::HandleFirstSkillSlotDropped(int32 SourceSlotIndex)
+{
+	HandleSkillSlotDropped(EEDSkillSlotType::FirstSkill, SourceSlotIndex);
+}
+
+void UEDSkillBarWidget::HandleSecondSkillSlotDropped(int32 SourceSlotIndex)
+{
+	HandleSkillSlotDropped(EEDSkillSlotType::SecondSkill, SourceSlotIndex);
+}
+
+void UEDSkillBarWidget::HandleSkillSlotDoubleClicked(EEDSkillSlotType SkillSlotType)
+{
+	if (!CachedInventoryComponent)
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidInventory);
+		return;
+	}
+
+	if (!HasEmptyInventorySlot())
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::NoSpace);
+		return;
+	}
+
+	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+	const bool bSucceeded = (SkillSlotType == EEDSkillSlotType::FirstSkill)
+		? CachedInventoryComponent->PredicateUnequipFirstSkill(Failure)
+		: CachedInventoryComponent->PredicateUnequipSecondSkill(Failure);
+	if (!bSucceeded)
+	{
+		ShowInventoryFailure(Failure);
+		return;
+	}
+
+	ShowInventorySuccess(ResolveSkillItemDisplayName(SkillSlotType), FText::FromString(TEXT("\uD574\uC81C")));
+}
+
+void UEDSkillBarWidget::HandleFirstSkillSlotDoubleClicked()
+{
+	HandleSkillSlotDoubleClicked(EEDSkillSlotType::FirstSkill);
+}
+
+void UEDSkillBarWidget::HandleSecondSkillSlotDoubleClicked()
+{
+	HandleSkillSlotDoubleClicked(EEDSkillSlotType::SecondSkill);
+}
+
+void UEDSkillBarWidget::ShowInventoryFailure(EEDInventoryActionFailure Failure) const
+{
+	ULocalPlayer* LocalPlayer = GetOwningLocalPlayer();
+	if (!LocalPlayer)
+	{
+		return;
+	}
+
+	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIManageSubsystem)
+	{
+		return;
+	}
+
+	UIManageSubsystem->ShowToastMessage(
+		EDUserFacingMessage::Inventory::GetFailureText(Failure),
+		EEDUIMessageType::Error,
+		3.0f);
+}
+
+void UEDSkillBarWidget::ShowInventorySuccess(const FText& TargetName, const FText& ActionName) const
+{
+	ULocalPlayer* LocalPlayer = GetOwningLocalPlayer();
+	if (!LocalPlayer)
+	{
+		return;
+	}
+
+	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIManageSubsystem)
+	{
+		return;
+	}
+
+	UIManageSubsystem->ShowToastMessage(
+		EDUserFacingMessage::Inventory::GetSuccessText(TargetName, ActionName),
+		EEDUIMessageType::Success,
+		3.0f);
+}
+
+bool UEDSkillBarWidget::HasEmptyInventorySlot() const
+{
+	if (!CachedInventoryComponent)
+	{
+		return false;
+	}
+
+	for (const FEDInventorySlotData& SlotData : CachedInventoryComponent->InventorySlots)
+	{
+		if (SlotData.IsEmpty())
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+FText UEDSkillBarWidget::ResolveSkillItemDisplayName(EEDSkillSlotType SkillSlotType) const
+{
+	if (!CachedInventoryComponent)
+	{
+		return FText::FromString(TEXT("\uC2A4\uD0AC"));
+	}
+
+	FPrimaryAssetId ItemId;
+	if (SkillSlotType == EEDSkillSlotType::FirstSkill)
+	{
+		ItemId = CachedInventoryComponent->FirstSkillSlot.EquippedItem.ItemId;
+	}
+	else
+	{
+		ItemId = CachedInventoryComponent->SecondSkillSlot.EquippedItem.ItemId;
+	}
+
+	return ResolveItemDisplayName(ItemId);
 }
 
 void UEDSkillBarWidget::HandleWeaponSlotChanged(const FGameplayTagContainer& MainItemTags, const FGameplayTagContainer& SpecialItemTags, const FGameplayTagContainer& SkillItemTags, const FGameplayTagContainer& SkillCooldownTags)

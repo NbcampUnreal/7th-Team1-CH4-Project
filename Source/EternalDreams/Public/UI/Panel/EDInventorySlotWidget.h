@@ -11,7 +11,6 @@ class UEDInventoryComponent;
 class UImage;
 class UTextBlock;
 class UTexture2D;
-class UUserWidget;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDInventorySlotClicked, int32);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDInventorySlotRightClicked, int32);
@@ -54,10 +53,6 @@ public:
 	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
 
 protected:
-	// 슬롯 드래그 시 마우스를 따라다닐 비주얼 위젯 클래스
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
-	TSubclassOf<UUserWidget> SlotDragVisualWidgetClass;
-
 	// 빈 슬롯 안내 텍스트
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Inventory")
 	TObjectPtr<UTextBlock> EmptyText;
@@ -94,6 +89,11 @@ private:
 
 	// 현재 아이템 수량
 	int32 CurrentQuantity = 0;
+	FText CurrentItemName;
+	EEDItemRarity CurrentRarity = EEDItemRarity::Normal;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UTexture2D> CurrentIconTexture = nullptr;
 
 	// 현재 슬롯에서 드래그 시작을 허용할지 여부
 	bool bSupportsItemDrag = true;
