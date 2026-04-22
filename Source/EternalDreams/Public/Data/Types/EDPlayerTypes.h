@@ -22,7 +22,9 @@ enum class EPlayerNameType : uint8
 {
 	Basic			UMETA(DisplayName = "DA_Basic"),		
 	Barbarian		UMETA(DisplayName = "DA_Barbarian"),	
-	Druid			UMETA(DisplayName = "DA_Druid")
+	Druid			UMETA(DisplayName = "DA_Druid"),
+	Nekku			UMETA(DisplayName = "DA_Nekku"),	
+	Elf				UMETA(DisplayName = "DA_Elf")
 };
 
 

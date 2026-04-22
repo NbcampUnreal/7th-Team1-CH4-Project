@@ -216,6 +216,11 @@ void AEDPlayerController::SetupInputComponent()
 	);
 }
 
+void AEDPlayerController::ClientRPC_LoadComplete_Implementation()
+{
+	OnAllLoadCompleted.Broadcast();
+}
+
 void AEDPlayerController::HandleToggleLootInventory()
 {
 	if (ShouldBlockHUDInput())

@@ -110,9 +110,27 @@ void AEDPlayerCharacter::BeginPlay()
 	CachedDataSubsystem = DataSubsystem;
 	if (DataSubsystem->IsDataReady())
 	{
+		
 		ApplyPlayerDataAsset();
+		if (HasAuthority())
+		{
+			OnSeverLoadedComplete();
+		}
+		else if (IsLocallyControlled())
+		{
+			NotifyServerPlayerLoadComplete();
+		}
+		
 	} else
 	{
+		if (HasAuthority())
+		{
+			DataSubsystem->OnAllDataLoaded.AddDynamic(this, &AEDPlayerCharacter::OnSeverLoadedComplete);
+		}
+		else if (IsLocallyControlled())
+		{
+			DataSubsystem->OnAllDataLoaded.AddDynamic(this, &AEDPlayerCharacter::NotifyServerPlayerLoadComplete);
+		}
 		DataSubsystem->OnAllDataLoaded.AddDynamic(this, &AEDPlayerCharacter::ApplyPlayerDataAsset);
 	}
 	//Inventory Binding
@@ -198,42 +216,7 @@ void AEDPlayerCharacter::OnRep_PlayerState()
 	InitializeAbilitySystem();
 	BroadcastFloatingHealthBarSource();
 	UE_LOG(LogTemp,Warning,TEXT("OnRep_PlayerState"));
-	APlayerController* LocalPC = GetWorld()->GetFirstPlayerController();
-	if (LocalPC && LocalPC->PlayerState && GetPlayerState())
-	{
-		
-		UE_LOG(LogTemp,Warning,TEXT("OnRep_PlayerState : Character"));
-		if (!IsLocallyControlled())
-		{
-			UE_LOG(LogTemp,Warning,TEXT("OnRep_PlayerState : OtherCharacter"));
-			AEDPlayerState* ThisPS=Cast<AEDPlayerState> (GetPlayerState());
-			AEDPlayerState* LocalPS=Cast<AEDPlayerState> (LocalPC->PlayerState);	
-			
-			if (ThisPS&&LocalPS)
-			{
-				UE_LOG(LogTemp,Warning,TEXT("%d %d"),ThisPS->TeamId,LocalPS->TeamId);
-				if (GetMesh()&&GetMesh()->GetChildComponent(0))
-				{
-					USkeletalMeshComponent* RetargetMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
-					UEDSkillDataSubsystem* SkillDataSubsystem = UEDSkillDataSubsystem::Get(GetWorld());
-					if (RetargetMeshComp&&SkillDataSubsystem)
-					{
-						//적군 오버레이 머티리얼 설정
-						if (ThisPS->TeamId!=LocalPS->TeamId)
-						{
-							RetargetMeshComp->SetOverlayMaterial(SkillDataSubsystem->GetEnemyMat());
-						}
-						//팀 오버레이 머티리얼 설정
-						else
-						{
-							RetargetMeshComp->SetOverlayMaterial(SkillDataSubsystem->GetTeamMat());
-						}
-					}
-				}
-			}
-			
-		}
-	}
+	
 	
 }
 
@@ -570,19 +553,15 @@ void AEDPlayerCharacter::OnPlayerSkinChanged_Implementation(EPlayerNameType Skin
 	FName PlayerSkinCategory= *UEnum::GetDisplayValueAsText(EPlayerDataType::PlayerData).ToString();
 	
 	//타겟 메시 및 애님인스턴스 설정
-	if (GetMesh()==nullptr||GetMesh()->GetAnimInstance()==nullptr)
-	{
-
-		SetTargetMeshId(FPrimaryAssetId(
+	SetTargetMeshId(FPrimaryAssetId(
 			PlayerSkinCategory,
 			*UEnum::GetDisplayValueAsText(EPlayerNameType::Basic).ToString()
 			));
 		
-		SetTargetABPId(FPrimaryAssetId(PlayerSkinCategory,
+	SetTargetABPId(FPrimaryAssetId(PlayerSkinCategory,
 			*UEnum::GetDisplayValueAsText(EPlayerNameType::Basic).ToString()
 			));
 		
-	}
 	
 	//플레이어 스킨 변경
 	UEDPlayerDataAsset* PlayerSkin = EDGameDataSubsystem->GetData<UEDPlayerDataAsset>(
@@ -641,6 +620,7 @@ float AEDPlayerCharacter::GetMaxHealth() const
 
 void AEDPlayerCharacter::ApplyPlayerDataAsset()
 {
+	/*
     if (!HasAuthority()) return;
     UEDGameDataSubsystem* DataSubsystem = CachedDataSubsystem.Get();
     if (!DataSubsystem) return;
@@ -650,7 +630,7 @@ void AEDPlayerCharacter::ApplyPlayerDataAsset()
         FPrimaryAssetId(PlayerDataCategory, *UEnum::GetDisplayValueAsText(EPlayerNameType::Basic).ToString())
     );
     if (!PlayerData) return;
-
+	
     if (PlayerData->SkeletalMesh.IsValid())
     {
     	// 만약 메시가 아직 준비안되었으면 동기로 로드, 정상적인 시퀀스에서는 동기로 호출될일 없음
@@ -720,11 +700,133 @@ void AEDPlayerCharacter::ApplyPlayerDataAsset()
 			InventoryComponent->RequestEnsureDefaultEquipment();
     	}
     });
+    */
 }
 
 void AEDPlayerCharacter::BroadcastFloatingHealthBarSource()
 {
 	OnFloatingHealthBarSourceChanged.Broadcast(AbilitySystemComponent, BaseAttributeSet);
+}
+
+void AEDPlayerCharacter::SetPlayer()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	//Set Skin
+	if (GetPlayerState()&&Cast<AEDPlayerState>(GetPlayerState()))
+	{
+		OnPlayerSkinChanged(Cast<AEDPlayerState>(GetPlayerState())->PlayerSkinName);
+		UE_LOG(LogTemp,Warning,TEXT("SET SKIN"));
+	}
+	
+	//Set OverlayMaterial
+	SetOverlayMaterial();
+		
+	//Set Weapon
+	if (!IsValid(WeaponClass))
+	{
+		UE_LOG(LogTemp, Error, TEXT("[ApplyPlayerDataAsset] WeaponClass 없음"));
+		return;
+	}
+
+	if (!IsValid(RWeaponActor))
+	{
+		RWeaponActor = GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
+		if (IsValid(RWeaponActor)&&GetMesh()&&Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0)))
+		{
+			RWeaponActor->SetOwner(this);
+			GetCapsuleComponent()->IgnoreActorWhenMoving(RWeaponActor, true);
+			RWeaponActor->AttachToComponent(
+			Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0)),
+			FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+			RWeaponSocketName
+		);
+			
+		}
+	}
+
+	if (!IsValid(LWeaponActor))
+	{
+		LWeaponActor = GetWorld()->SpawnActor<AEDWeapon>(WeaponClass);
+		if (IsValid(LWeaponActor)&&GetMesh()&&Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0)))
+		{
+			LWeaponActor->SetOwner(this);
+			GetCapsuleComponent()->IgnoreActorWhenMoving(LWeaponActor, true);
+			LWeaponActor->AttachToComponent(
+			Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0)),
+			FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+			LWeaponSocketName
+		);
+		}
+	}
+	
+	
+	if (IsValid(InventoryComponent))
+	{
+		InventoryComponent->RequestEnsureDefaultEquipment();
+	}
+	
+}
+
+void AEDPlayerCharacter::OnSeverLoadedComplete()
+{
+	if (AEDGameMode* EDGameMode=Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld())))
+			{
+				EDGameMode->bIsServerLoadedCompleted=true;
+		UE_LOG(LogTemp,Warning,TEXT("서버 로드 완료"));
+				EDGameMode->OnServerPlayerDataLoaded();
+			}
+}
+
+void AEDPlayerCharacter::NotifyServerPlayerLoadComplete_Implementation()
+{
+	if (HasAuthority())
+	{
+		if (AEDGameMode* EDGameMode=Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld())))
+		{
+			EDGameMode->OnPlayerDataLoaded();
+			UE_LOG(LogTemp,Warning,TEXT("클라이언트 로드 완료"));
+		}
+	}
+}
+
+void AEDPlayerCharacter::SetOverlayMaterial_Implementation()
+{
+	APlayerController* LocalPC = GetWorld()->GetFirstPlayerController();
+	if (LocalPC && LocalPC->PlayerState && GetPlayerState())
+	{
+		if (!IsLocallyControlled())
+		{
+			AEDPlayerState* ThisPS=Cast<AEDPlayerState> (GetPlayerState());
+			AEDPlayerState* LocalPS=Cast<AEDPlayerState> (LocalPC->PlayerState);	
+			
+			if (ThisPS&&LocalPS)
+			{
+				UE_LOG(LogTemp,Warning,TEXT("%d %d"),ThisPS->TeamId,LocalPS->TeamId);
+				if (GetMesh()&&GetMesh()->GetChildComponent(0))
+				{
+					USkeletalMeshComponent* RetargetMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
+					UEDSkillDataSubsystem* SkillDataSubsystem = UEDSkillDataSubsystem::Get(GetWorld());
+					if (RetargetMeshComp&&SkillDataSubsystem)
+					{
+						//적군 오버레이 머티리얼 설정
+						if (ThisPS->TeamId!=LocalPS->TeamId)
+						{
+							RetargetMeshComp->SetOverlayMaterial(SkillDataSubsystem->GetEnemyMat());
+						}
+						//팀 오버레이 머티리얼 설정
+						else
+						{
+							RetargetMeshComp->SetOverlayMaterial(SkillDataSubsystem->GetTeamMat());
+						}
+					}
+				}
+			}
+			
+		}
+	}
 }
 
 // ============================================================

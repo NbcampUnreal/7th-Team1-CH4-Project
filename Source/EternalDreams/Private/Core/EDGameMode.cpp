@@ -8,6 +8,7 @@
 #include "Characters/Player/EDPlayerController.h"
 #include "Environment/EDRestrictedArea.h"
 #include "EngineUtils.h"
+#include "Characters/Player/EDPlayerCharacter.h"
 #include "Kismet/GameplayStatics.h"
 #include "Environment/EDLightingManager.h"
 #include "Characters/Monster/Spawn/EDMonsterSpawnSubsystem.h"
@@ -117,10 +118,7 @@ void AEDGameMode::BeginPlay()
 	// 구형 로비 호환: BeginPlay에서 바로 Phase 시작 (테스트용)
 	// [IOCP 전환 시] 아래 블록을 제거하고, PostLogin의 TryStartPhaseSequence()를 활성화
 	// IOCP에서는 기존 맵이 존재 하지 않기 때문에 Phase 시작전 비동기 로드 필요 
-	if (PhaseSequence.Num() > 0)
-	{
-		StartPhaseSequence();
-	}
+	
 }
 
 void AEDGameMode::Tick(float DeltaSeconds)
@@ -931,4 +929,39 @@ void AEDGameMode::TryStartPhaseSequence()
 	// ============================================================
 
 	StartPhaseSequence();
+}
+
+//현석 : 서버에서 로드완료된 클라이언트수를 체크
+void AEDGameMode::OnPlayerDataLoaded()
+{
+	LoadedCompletedPlayerNum++;
+	OnServerPlayerDataLoaded();
+}
+
+void AEDGameMode::OnServerPlayerDataLoaded()
+{
+	if (!bIsServerLoadedCompleted)
+	{
+		return;
+	}
+	if (LoadedCompletedPlayerNum>=NumPlayers)
+	{
+		UE_LOG(LogTemp,Warning,TEXT("서버, 클라이언트 로드 완료 %d/%d"),LoadedCompletedPlayerNum,NumPlayers);
+		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+		{
+			if (AEDPlayerController* PC = Cast<AEDPlayerController>(It->Get()))
+			{
+				// 서버의 플레이어
+				if (AEDPlayerCharacter* PlayerCharacter=Cast<AEDPlayerCharacter>( PC->GetCharacter()))
+				{
+					PlayerCharacter->SetPlayer();
+					PC->ClientRPC_LoadComplete();
+					if (PhaseSequence.Num() > 0)
+					{
+						StartPhaseSequence();
+					}
+				}
+			}
+		}
+	}
 }

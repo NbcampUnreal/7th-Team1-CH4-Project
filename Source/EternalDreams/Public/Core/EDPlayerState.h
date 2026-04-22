@@ -76,9 +76,11 @@ public:
 	int32 DesiredZoneId = 0;
 	
 	//현석 : 플레이어 스킨 선택 (디폴트는 드루이드) UI에서 선택 후 설정
-	UPROPERTY(Replicated, BlueprintReadWrite, Category = "ED|Player")
-	EPlayerNameType PlayerName=EPlayerNameType::Druid;
+	UPROPERTY(BlueprintReadWrite, Category = "ED|Player", Replicated)
+	EPlayerNameType PlayerSkinName=EPlayerNameType::Druid;
 	
+	UFUNCTION(BlueprintCallable,Server, Reliable)
+	void SetPlayerSkinName(EPlayerNameType InPlayerSkinName);
 	// -------------------------------------------------------
 	// 사망 / 부활 / 전적
 	// -------------------------------------------------------
