@@ -2,6 +2,7 @@
 #include "UI/Panel/EDEquipmentSlotWidget.h"
 
 #include "Components/Border.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "InputCoreTypes.h"
 #include "UI/Style/EDUIRarityColors.h"
@@ -30,9 +31,15 @@ void UEDEquipmentSlotWidget::SetEmptyState(const FText& InSlotTypeName)
 	{
 		RarityAccent->SetVisibility(ESlateVisibility::Collapsed);
 	}
+
+	if (ItemIconImage)
+	{
+		ItemIconImage->SetVisibility(ESlateVisibility::Collapsed);
+		ItemIconImage->SetBrushFromTexture(nullptr);
+	}
 }
 
-void UEDEquipmentSlotWidget::SetItemState(const FText& InSlotTypeName, const FText& InItemName, EEDItemRarity InRarity)
+void UEDEquipmentSlotWidget::SetItemState(const FText& InSlotTypeName, const FText& InItemName, EEDItemRarity InRarity, UTexture2D* InIconTexture)
 {
 	if (SlotTypeText)
 	{
@@ -55,6 +62,12 @@ void UEDEquipmentSlotWidget::SetItemState(const FText& InSlotTypeName, const FTe
 	{
 		RarityAccent->SetVisibility(ESlateVisibility::Visible);
 		RarityAccent->SetBrushColor(EDRarityColors::Resolve(InRarity));
+	}
+
+	if (ItemIconImage)
+	{
+		ItemIconImage->SetVisibility(InIconTexture ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		ItemIconImage->SetBrushFromTexture(InIconTexture);
 	}
 }
 

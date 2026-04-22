@@ -4,6 +4,7 @@
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Border.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "InputCoreTypes.h"
 #include "Inventory/Component/EDInventoryComponent.h"
@@ -14,6 +15,9 @@ void UEDInventorySlotWidget::SetEmptyState()
 {
 	bHasItem = false;
 	CurrentQuantity = 0;
+	CurrentItemName = FText::GetEmpty();
+	CurrentRarity = EEDItemRarity::Normal;
+	CurrentIconTexture = nullptr;
 
 	if (EmptyText)
 	{
@@ -36,12 +40,21 @@ void UEDInventorySlotWidget::SetEmptyState()
 	{
 		RarityAccent->SetVisibility(ESlateVisibility::Collapsed);
 	}
+
+	if (ItemIconImage)
+	{
+		ItemIconImage->SetVisibility(ESlateVisibility::Collapsed);
+		ItemIconImage->SetBrushFromTexture(nullptr);
+	}
 }
 
-void UEDInventorySlotWidget::SetItemState(const FText& InItemName, int32 InQuantity, EEDItemRarity InRarity)
+void UEDInventorySlotWidget::SetItemState(const FText& InItemName, int32 InQuantity, EEDItemRarity InRarity, UTexture2D* InIconTexture)
 {
 	bHasItem = true;
 	CurrentQuantity = InQuantity;
+	CurrentItemName = InItemName;
+	CurrentRarity = InRarity;
+	CurrentIconTexture = InIconTexture;
 
 	if (EmptyText)
 	{
@@ -65,6 +78,12 @@ void UEDInventorySlotWidget::SetItemState(const FText& InItemName, int32 InQuant
 		RarityAccent->SetVisibility(ESlateVisibility::Visible);
 		RarityAccent->SetBrushColor(EDRarityColors::Resolve(InRarity));
 	}
+
+	if (ItemIconImage)
+	{
+		ItemIconImage->SetVisibility(InIconTexture ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		ItemIconImage->SetBrushFromTexture(InIconTexture);
+	}
 }
 
 void UEDInventorySlotWidget::SetSlotIndex(int32 InSlotIndex)
@@ -87,6 +106,11 @@ void UEDInventorySlotWidget::SetSourceInventoryComponent(UEDInventoryComponent* 
 	SourceInventoryComponent = InSourceInventoryComponent;
 }
 
+void UEDInventorySlotWidget::SetSupportsItemDrag(bool bInSupportsItemDrag)
+{
+	bSupportsItemDrag = bInSupportsItemDrag;
+}
+
 FReply UEDInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	if (SlotIndex == INDEX_NONE)
@@ -98,7 +122,7 @@ FReply UEDInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeomet
 	{
 		OnSlotClicked.Broadcast(SlotIndex);
 
-		if (bHasItem && CurrentQuantity > 0 && SourceInventoryComponent)
+		if (bSupportsItemDrag && bHasItem && CurrentQuantity > 0 && SourceInventoryComponent)
 		{
 			return FReply::Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
 		}
@@ -140,7 +164,7 @@ void UEDInventorySlotWidget::NativeOnDragDetected(
 {
 	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
 
-	if (SlotIndex == INDEX_NONE || !bHasItem || CurrentQuantity <= 0 || !SourceInventoryComponent)
+	if (SlotIndex == INDEX_NONE || !bSupportsItemDrag || !bHasItem || CurrentQuantity <= 0 || !SourceInventoryComponent)
 	{
 		return;
 	}
@@ -153,14 +177,24 @@ void UEDInventorySlotWidget::NativeOnDragDetected(
 
 	DragOperation->SourceSlotIndex = SlotIndex;
 	DragOperation->SourceInventoryComponent = SourceInventoryComponent;
+	DragOperation->SourceItemName = CurrentItemName;
+	DragOperation->SourceItemQuantity = CurrentQuantity;
+	DragOperation->SourceItemRarity = CurrentRarity;
+	DragOperation->SourceIconTexture = CurrentIconTexture;
 	DragOperation->Pivot = EDragPivot::MouseDown;
 
-	if (SlotDragVisualWidgetClass)
+	// 드래그 비주얼은 현재 슬롯 위젯 클래스를 그대로 사용한다.
+	if (UUserWidget* DragVisual = CreateWidget<UUserWidget>(this, GetClass()))
 	{
-		if (UUserWidget* DragVisual = CreateWidget<UUserWidget>(this, SlotDragVisualWidgetClass))
+		if (UEDInventorySlotWidget* DragVisualSlot = Cast<UEDInventorySlotWidget>(DragVisual))
 		{
-			DragOperation->DefaultDragVisual = DragVisual;
+			DragVisualSlot->SetItemState(CurrentItemName, CurrentQuantity, CurrentRarity, CurrentIconTexture);
+			DragVisualSlot->SetSelectedState(false);
+			DragVisualSlot->SetSupportsItemDrag(false);
+			DragVisualSlot->SetSourceInventoryComponent(nullptr);
 		}
+
+		DragOperation->DefaultDragVisual = DragVisual;
 	}
 
 	OutOperation = DragOperation;

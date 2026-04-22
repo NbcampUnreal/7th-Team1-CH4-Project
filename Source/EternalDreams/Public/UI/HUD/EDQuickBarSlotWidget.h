@@ -5,6 +5,7 @@
 #include "EDQuickBarSlotWidget.generated.h"
 
 class UEDInventoryComponent;
+class UTexture2D;
 
 // 퀵바 슬롯 좌클릭 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDQuickBarSlotClicked, int32);
@@ -37,15 +38,11 @@ public:
 	// 퀵바 밖으로 드롭됐을 때 호출되는 델리게이트
 	FOnEDQuickBarSlotDroppedOutside OnQuickBarSlotDroppedOutside;
 	
-	// 아이템 슬롯 드래그 시 마우스를 따라다니는 위젯 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Inventory")
-	TSubclassOf<UUserWidget> DragVisualWidgetClass;
-	
 	// 빈 슬롯 상태로 표시
 	void SetEmptyState();
 	
 	// 아이템이 들어 있는 슬롯 상태로 표시
-	void SetItemState(const FText& InItemName, int32 InQuantity, EEDItemRarity InRarity);
+	void SetItemState(const FText& InItemName, int32 InQuantity, EEDItemRarity InRarity, UTexture2D* InIconTexture = nullptr);
 
 protected:
 	// 좌클릭 입력 처리
@@ -64,6 +61,16 @@ private:
 
 	// 현재 슬롯 수량
 	int32 CurrentQuantity = 0;
+
+	// 현재 아이템 이름
+	FText QuickBarCurrentItemName;
+
+	// 현재 아이템 희귀도
+	EEDItemRarity QuickBarCurrentRarity = EEDItemRarity::Normal;
+
+	// 현재 아이템 아이콘
+	UPROPERTY(Transient)
+	TObjectPtr<UTexture2D> QuickBarCurrentIconTexture = nullptr;
 	
 	virtual void NativeOnDragDetected(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent, UDragDropOperation*& OutOperation) override;
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;

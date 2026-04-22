@@ -10,6 +10,7 @@ struct FEDInventorySlotData;
 class UUniformGridPanel;
 class UTextBlock;
 class UEDInventoryComponent;
+class UEDInventoryItemDataAsset;
 class UEDInventorySlotWidget;
 class UEDLootInteractionComponent;
 
@@ -94,6 +95,9 @@ private:
 
 	// ItemId로 아이템 표시 이름 가져오기
 	FText ResolveItemDisplayName(const FPrimaryAssetId& ItemId) const;
+
+	// ItemId로부터 아이템 데이터 에셋 찾기
+	const UEDInventoryItemDataAsset* ResolveItemData(const FPrimaryAssetId& ItemId) const;
 
 	// ItemId로 아이템 희귀도 가져오기
 	EEDItemRarity ResolveItemRarity(const FPrimaryAssetId& ItemId) const;
