@@ -4,6 +4,7 @@
 #include "Blueprint/WidgetBlueprintLibrary.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Border.h"
+#include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "InputCoreTypes.h"
 #include "Inventory/Component/EDInventoryComponent.h"
@@ -36,9 +37,15 @@ void UEDInventorySlotWidget::SetEmptyState()
 	{
 		RarityAccent->SetVisibility(ESlateVisibility::Collapsed);
 	}
+
+	if (ItemIconImage)
+	{
+		ItemIconImage->SetVisibility(ESlateVisibility::Collapsed);
+		ItemIconImage->SetBrushFromTexture(nullptr);
+	}
 }
 
-void UEDInventorySlotWidget::SetItemState(const FText& InItemName, int32 InQuantity, EEDItemRarity InRarity)
+void UEDInventorySlotWidget::SetItemState(const FText& InItemName, int32 InQuantity, EEDItemRarity InRarity, UTexture2D* InIconTexture)
 {
 	bHasItem = true;
 	CurrentQuantity = InQuantity;
@@ -65,6 +72,12 @@ void UEDInventorySlotWidget::SetItemState(const FText& InItemName, int32 InQuant
 		RarityAccent->SetVisibility(ESlateVisibility::Visible);
 		RarityAccent->SetBrushColor(EDRarityColors::Resolve(InRarity));
 	}
+
+	if (ItemIconImage)
+	{
+		ItemIconImage->SetVisibility(InIconTexture ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+		ItemIconImage->SetBrushFromTexture(InIconTexture);
+	}
 }
 
 void UEDInventorySlotWidget::SetSlotIndex(int32 InSlotIndex)
@@ -87,6 +100,11 @@ void UEDInventorySlotWidget::SetSourceInventoryComponent(UEDInventoryComponent* 
 	SourceInventoryComponent = InSourceInventoryComponent;
 }
 
+void UEDInventorySlotWidget::SetSupportsItemDrag(bool bInSupportsItemDrag)
+{
+	bSupportsItemDrag = bInSupportsItemDrag;
+}
+
 FReply UEDInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
 	if (SlotIndex == INDEX_NONE)
@@ -98,7 +116,7 @@ FReply UEDInventorySlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeomet
 	{
 		OnSlotClicked.Broadcast(SlotIndex);
 
-		if (bHasItem && CurrentQuantity > 0 && SourceInventoryComponent)
+		if (bSupportsItemDrag && bHasItem && CurrentQuantity > 0 && SourceInventoryComponent)
 		{
 			return FReply::Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
 		}
@@ -140,7 +158,7 @@ void UEDInventorySlotWidget::NativeOnDragDetected(
 {
 	Super::NativeOnDragDetected(InGeometry, InMouseEvent, OutOperation);
 
-	if (SlotIndex == INDEX_NONE || !bHasItem || CurrentQuantity <= 0 || !SourceInventoryComponent)
+	if (SlotIndex == INDEX_NONE || !bSupportsItemDrag || !bHasItem || CurrentQuantity <= 0 || !SourceInventoryComponent)
 	{
 		return;
 	}

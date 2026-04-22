@@ -19,12 +19,12 @@ void UEDQuickBarSlotWidget::SetEmptyState()
 	Super::SetEmptyState();
 }
 
-void UEDQuickBarSlotWidget::SetItemState(const FText& InItemName, int32 InQuantity, EEDItemRarity InRarity)
+void UEDQuickBarSlotWidget::SetItemState(const FText& InItemName, int32 InQuantity, EEDItemRarity InRarity, UTexture2D* InIconTexture)
 {
 	bHasItem = true;
 	CurrentQuantity = InQuantity;
 
-	Super::SetItemState(InItemName, InQuantity, InRarity);
+	Super::SetItemState(InItemName, InQuantity, InRarity, InIconTexture);
 }
 
 FReply UEDQuickBarSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)

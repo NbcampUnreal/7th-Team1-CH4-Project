@@ -213,8 +213,9 @@ void UEDInventoryQuickBarWidget::RefreshQuickSlots()
 			? ItemData->DisplayName
 			: FText::FromName(SlotData.Item.ItemId.PrimaryAssetName);
 		const EEDItemRarity ItemRarity = ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
+		UTexture2D* ItemIconTexture = ItemData ? ItemData->IconTexture : nullptr;
 		
-		SlotWidget->SetItemState(ItemName, SlotData.Item.Quantity, ItemRarity);
+		SlotWidget->SetItemState(ItemName, SlotData.Item.Quantity, ItemRarity, ItemIconTexture);
 	}
 }
 
@@ -235,7 +236,8 @@ void UEDInventoryQuickBarWidget::RefreshEquipmentSlots()
 				? Data->DisplayName
 				: FText::FromName(InventoryComponent->WeaponSlot.EquippedItem.ItemId.PrimaryAssetName);
 			const EEDItemRarity Rarity = Data ? Data->Rarity : EEDItemRarity::Normal;
-			WeaponSlotWidget->SetItemState(FText::FromString(TEXT("Weapon")), ItemName, Rarity);
+			UTexture2D* IconTexture = Data ? Data->IconTexture : nullptr;
+			WeaponSlotWidget->SetItemState(FText::FromString(TEXT("Weapon")), ItemName, Rarity, IconTexture);
 		}
 		else
 		{
@@ -253,7 +255,8 @@ void UEDInventoryQuickBarWidget::RefreshEquipmentSlots()
 				? Data->DisplayName
 				: FText::FromName(InventoryComponent->TopArmorSlot.EquippedItem.ItemId.PrimaryAssetName);
 			const EEDItemRarity Rarity = Data ? Data->Rarity : EEDItemRarity::Normal;
-			TopArmorSlotWidget->SetItemState(FText::FromString(TEXT("Top Armor")), ItemName, Rarity);
+			UTexture2D* IconTexture = Data ? Data->IconTexture : nullptr;
+			TopArmorSlotWidget->SetItemState(FText::FromString(TEXT("Top Armor")), ItemName, Rarity, IconTexture);
 		}
 		else
 		{
@@ -271,7 +274,8 @@ void UEDInventoryQuickBarWidget::RefreshEquipmentSlots()
 				? Data->DisplayName
 				: FText::FromName(InventoryComponent->BottomArmorSlot.EquippedItem.ItemId.PrimaryAssetName);
 			const EEDItemRarity Rarity = Data ? Data->Rarity : EEDItemRarity::Normal;
-			BottomArmorSlotWidget->SetItemState(FText::FromString(TEXT("Bottom Armor")), ItemName, Rarity);
+			UTexture2D* IconTexture = Data ? Data->IconTexture : nullptr;
+			BottomArmorSlotWidget->SetItemState(FText::FromString(TEXT("Bottom Armor")), ItemName, Rarity, IconTexture);
 		}
 		else
 		{

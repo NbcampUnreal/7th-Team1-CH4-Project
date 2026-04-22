@@ -5,6 +5,7 @@
 #include "EDQuickBarSlotWidget.generated.h"
 
 class UEDInventoryComponent;
+class UTexture2D;
 
 // 퀵바 슬롯 좌클릭 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDQuickBarSlotClicked, int32);
@@ -45,7 +46,7 @@ public:
 	void SetEmptyState();
 	
 	// 아이템이 들어 있는 슬롯 상태로 표시
-	void SetItemState(const FText& InItemName, int32 InQuantity, EEDItemRarity InRarity);
+	void SetItemState(const FText& InItemName, int32 InQuantity, EEDItemRarity InRarity, UTexture2D* InIconTexture = nullptr);
 
 protected:
 	// 좌클릭 입력 처리
