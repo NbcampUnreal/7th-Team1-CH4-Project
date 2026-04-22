@@ -284,7 +284,7 @@ void AEDMonsterBase::HandleDeath()
 		{
 			Destroy();
 		}),
-		20.f, false);
+		40.f, false);
 }
 
 void AEDMonsterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
