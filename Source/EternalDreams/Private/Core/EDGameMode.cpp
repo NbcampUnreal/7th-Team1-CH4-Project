@@ -13,15 +13,16 @@
 
 AEDGameMode::AEDGameMode()
 {
-	GameStateClass        = AEDGameState::StaticClass();
-	PlayerStateClass      = AEDPlayerState::StaticClass();
+	GameStateClass = AEDGameState::StaticClass();
+	PlayerStateClass = AEDPlayerState::StaticClass();
 	PlayerControllerClass = AEDPlayerController::StaticClass();
 
 	PrimaryActorTick.bCanEverTick = true;
 	bUseSeamlessTravel = true;
 }
 
-void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
+void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId,
+                           FString& ErrorMessage)
 {
 	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
 	// ============================================================
@@ -109,10 +110,10 @@ void AEDGameMode::BeginPlay()
 		CachedLightingManager = Cast<AEDLightingManager>(FoundManagers[0]);
 	}
 	// ============================================================
-	
+
 	CacheZonePlayerStarts();
 	InitRestrictedZones();
-	
+
 	// 구형 로비 호환: BeginPlay에서 바로 Phase 시작 (테스트용)
 	// [IOCP 전환 시] 아래 블록을 제거하고, PostLogin의 TryStartPhaseSequence()를 활성화
 	// IOCP에서는 기존 맵이 존재 하지 않기 때문에 Phase 시작전 비동기 로드 필요 
@@ -241,17 +242,25 @@ void AEDGameMode::OnPhaseStarted(int32 PhaseIndex, const FGameplayTag& PhaseTag)
 		FName RowName = (PhaseIndex % 2 == 0) ? FName("Day") : FName("Night");
 		CachedLightingManager->Multicast_StartTransition(RowName, 3.0f);
 	}
-	
-	switch (PhaseIndex) 
+
+	switch (PhaseIndex)
 	{
-	case 0: OnDay1_DayStarted();   break;
-	case 1: OnDay1_NightStarted(); break;
-	case 2: OnDay2_DayStarted();   break;
-	case 3: OnDay2_NightStarted(); break;
-	case 4: OnDay3_DayStarted();   break;
-	case 5: OnDay3_NightStarted(); break;
-	case 6: OnDay4_DayStarted();   break;
-	case 7: OnDay4_NightStarted(); break;
+	case 0: OnDay1_DayStarted();
+		break;
+	case 1: OnDay1_NightStarted();
+		break;
+	case 2: OnDay2_DayStarted();
+		break;
+	case 3: OnDay2_NightStarted();
+		break;
+	case 4: OnDay3_DayStarted();
+		break;
+	case 5: OnDay3_NightStarted();
+		break;
+	case 6: OnDay4_DayStarted();
+		break;
+	case 7: OnDay4_NightStarted();
+		break;
 	default: break;
 	}
 }
@@ -383,7 +392,7 @@ void AEDGameMode::OnMatchFinished()
 	if (!GS) return;
 
 	UE_LOG(LogEDCore, Warning, TEXT("[Match] 종료 — 승리팀: %s, %.1f초 후 로비 복귀"),
-		EDTeam::GetTeamName(GS->GetWinnerTeamId()), MatchEndDelay);
+	       EDTeam::GetTeamName(GS->GetWinnerTeamId()), MatchEndDelay);
 
 	// 팀 등수 계산: 1등 = WinnerTeamId, 2등부터 = EliminatedTeams 역순(마지막 탈락 = 2등)
 	TArray<int32> TeamRankings;
@@ -442,9 +451,29 @@ void AEDGameMode::Logout(AController* Exiting)
 	{
 		UE_LOG(LogEDCore, Warning, TEXT("[Match] 잔여 인원 0명 — 로비 복귀 ServerTravel → %s"), *LobbyMapPath);
 		bMatchFinished = true;
-		GetWorld()->ServerTravel(LobbyMapPath);
+		
+		// 서버 프레임 1 프레임 유예시킴으로써 컨넥션이 완전히 끊기지 않아
+		// 로그아웃중인 클라이언트가 서버 트래블시 레벨 이동하는것을 방지함.
+		
+		// 현재는 데디서버를 띄워서 테스트가 안됨
+		// TODO: SetTimerForNextTick 부족하면 SetTimer로 넉넉하게 시간 주기 (1~5초)
+		UWorld* World = GetWorld();
+		FString Lmap = LobbyMapPath;
+		
+		World->GetTimerManager().SetTimerForNextTick(
+			[WeakW = TWeakObjectPtr<UWorld>(World), Lmap]()
+			{
+				UWorld* World = WeakW.Get();
+				if (!World || World->bIsTearingDown || IsEngineExitRequested())
+				{
+					return;
+				}
+				UE_LOG(LogEDCore, Warning, TEXT("ServerTravel"));
+				World->ServerTravel(Lmap, /*bAbsolute=*/true);
+			});
 	}
 }
+
 
 // ============================================================
 //  사망 / 부활 / 승패
@@ -472,7 +501,7 @@ void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 	}
 
 	UE_LOG(LogEDCore, Warning, TEXT("[Death] %s 사망 (Day %d, Revives %d)"),
-		*VictimPS->GetPlayerName(), GetCurrentDay(), VictimPS->RemainingRevives);
+	       *VictimPS->GetPlayerName(), GetCurrentDay(), VictimPS->RemainingRevives);
 
 	EnterSpectator(Victim);
 
@@ -544,7 +573,7 @@ void AEDGameMode::SchedulePlayerRespawn(AController* Victim)
 		{
 			PC->ClientOpenZoneSelectWidget();
 			UE_LOG(LogEDCore, Warning, TEXT("[Death] ZoneSelectWidget 오픈 RPC → %s"),
-				*PC->GetName());
+			       *PC->GetName());
 		}
 	}, RespawnZoneSelectDelay, false);
 }
@@ -585,7 +614,7 @@ void AEDGameMode::HandleRespawnRequest(AController* Victim, int32 SelectedZoneId
 	}
 
 	UE_LOG(LogEDCore, Warning, TEXT("[Respawn] %s → Zone %d (남은 부활 %d)"),
-		*PS->GetPlayerName(), SelectedZoneId, PS->RemainingRevives);
+	       *PS->GetPlayerName(), SelectedZoneId, PS->RemainingRevives);
 }
 
 // 탈락 처리
@@ -609,7 +638,7 @@ void AEDGameMode::CheckTeamElimination()
 	if (!GS) return;
 
 	// 팀별 생존/탈락 집계
-	TMap<int32, int32> TeamAliveCount;   // 살아있음(Eliminated == false)
+	TMap<int32, int32> TeamAliveCount; // 살아있음(Eliminated == false)
 	TMap<int32, int32> TeamTotalCount;
 
 	for (APlayerState* APS : GS->PlayerArray)
@@ -752,14 +781,14 @@ AActor* AEDGameMode::ChoosePlayerStart_Implementation(AController* Player)
 			}, PlayerStartOccupyDuration, false);
 
 			UE_LOG(LogEDCore, Warning, TEXT("[Spawn] %s → Zone %d, 사용가능 %d/%d, 선택: %s"),
-				PS ? *PS->GetPlayerName() : TEXT("?"), ZoneId,
-				Available.Num(), ZoneStarts->Num(), *Chosen->GetName());
+			       PS ? *PS->GetPlayerName() : TEXT("?"), ZoneId,
+			       Available.Num(), ZoneStarts->Num(), *Chosen->GetName());
 			return Chosen;
 		}
 	}
 
 	UE_LOG(LogEDCore, Warning, TEXT("[Spawn] %s → Zone %d 실패, 기본 폴백"),
-		PS ? *PS->GetPlayerName() : TEXT("?"), ZoneId);
+	       PS ? *PS->GetPlayerName() : TEXT("?"), ZoneId);
 	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
