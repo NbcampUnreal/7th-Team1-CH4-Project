@@ -694,23 +694,10 @@ void AEDGameMode::HandleRespawnRequest(AController* Victim, int32 SelectedZoneId
 		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] PostRestart: NewPawn=%s @ %s"),
 			*NewPawn->GetName(), *NewPawn->GetActorLocation().ToString());
 
-		// 카메라/입력 복구: 새 Pawn 복제를 기다린 뒤 뷰타겟을 전환
+		// 카메라는 EDCameraActor가 Tick에서 자체 재탈환 + Pawn 캐시 갱신하도록 처리
 		if (PC)
 		{
-			TWeakObjectPtr<APlayerController> WeakPC(PC);
-			TWeakObjectPtr<APawn> WeakPawn(NewPawn);
-			FTimerHandle ViewTargetHandle;
-			GetWorldTimerManager().SetTimer(ViewTargetHandle, [WeakPC, WeakPawn]()
-			{
-				APlayerController* LocalPC = WeakPC.Get();
-				APawn* LocalPawn = WeakPawn.Get();
-				if (!LocalPC || !LocalPawn) return;
-				LocalPC->SetViewTargetWithBlend(LocalPawn, 0.f);
-				LocalPC->ClientSetViewTarget(LocalPawn);
-				UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] ViewTarget 지연 재설정 → %s"), *LocalPawn->GetName());
-			}, 0.2f, false);
-
-			UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] PostRestart ControlledPawn=%s (ViewTarget 0.2s 후 재설정)"),
+			UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] PostRestart ControlledPawn=%s (카메라는 CameraActor가 처리)"),
 				*GetNameSafe(PC->GetPawn()));
 		}
 	}
