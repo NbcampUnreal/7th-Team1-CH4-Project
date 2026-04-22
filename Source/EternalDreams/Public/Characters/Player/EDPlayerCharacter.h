@@ -7,6 +7,7 @@
 #include "AttributeSet.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayEffectTypes.h"
+#include "UI/HUD/EDFloatingHealthBarSource.h"
 #include "Weapon/EDWeapon.h"
 #include "EDPlayerCharacter.generated.h"
 
@@ -16,7 +17,6 @@ class UGameplayEffect;
 class UGameplayAbility;
 class AEDWeapon;
 class AEDPlayerController;
-class UWidgetComponent;
 class UEDBaseAttributeSet;
 class UEDPlayerAttributeSet;
 class UIMCComponent;
@@ -24,6 +24,7 @@ class UZoneDetectorComponent;
 class UEDInventoryComponent;
 class USkillComponent;
 class UEDGameDataSubsystem;
+class UEDFloatingHealthBarWidgetComponent;
 struct FOnAttributeChangeData;
 
 
@@ -66,6 +67,8 @@ public:
 	
 	UFUNCTION()
 	FORCEINLINE USkillComponent* GetSkillComponent() const {return PlayerSkillComponent;}
+
+	FORCEINLINE FEDOnFloatingHealthBarSourceChanged& GetOnFloatingHealthBarSourceChanged() { return OnFloatingHealthBarSourceChanged; }
 	
 	
 	
@@ -80,6 +83,9 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UZoneDetectorComponent> ZoneDetector;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	TObjectPtr<UEDFloatingHealthBarWidgetComponent> FloatingHealthBarWidgetComponent;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
 	TObjectPtr<USkillComponent> PlayerSkillComponent;
@@ -261,7 +267,9 @@ private:
 	// 플레이어 데이터 로드 및 초기화
 	UFUNCTION()
 	void ApplyPlayerDataAsset();
+	void BroadcastFloatingHealthBarSource();
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastSetWeaponTags(FGameplayTag BasicAttackTag, FGameplayTag EvadeTag, FGameplayTag EvadeCoolTimeTag);
 	TWeakObjectPtr<UEDGameDataSubsystem> CachedDataSubsystem;
+	FEDOnFloatingHealthBarSourceChanged OnFloatingHealthBarSourceChanged;
 };

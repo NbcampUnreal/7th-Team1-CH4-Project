@@ -34,6 +34,7 @@
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "Net/UnrealNetwork.h"
+#include "UI/HUD/EDFloatingHealthBarWidgetComponent.h"
 
 
 // Sets default values
@@ -58,6 +59,13 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 	
 	//--ksh 금지구역 감지 컴포넌트 부착
 	ZoneDetector = CreateDefaultSubobject<UZoneDetectorComponent>(TEXT("ZoneDetector"));
+
+	FloatingHealthBarWidgetComponent = CreateDefaultSubobject<UEDFloatingHealthBarWidgetComponent>(TEXT("FloatingHealthBarWidgetComponent"));
+	FloatingHealthBarWidgetComponent->SetupAttachment(GetRootComponent());
+	FloatingHealthBarWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	FloatingHealthBarWidgetComponent->SetDrawAtDesiredSize(true);
+	FloatingHealthBarWidgetComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 160.0f));
+	FloatingHealthBarWidgetComponent->SetVisibility(true);
 
 	InventoryComponent = CreateDefaultSubobject<UEDInventoryComponent>(TEXT("InventoryComponent"));
 }
@@ -124,10 +132,8 @@ void AEDPlayerCharacter::BeginPlay()
 	}
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(BaseAttributeSet->GetWalkSpeedAttribute())
 	.AddUObject(this, &AEDPlayerCharacter::OnWalkSpeedChanged);
-	
-	
-	
-	
+
+	BroadcastFloatingHealthBarSource();
 }
 
 void AEDPlayerCharacter::Tick(float DeltaSeconds)
@@ -160,6 +166,7 @@ void AEDPlayerCharacter::OnRep_PlayerState()
 	Super::OnRep_PlayerState();
 	//AbilitySystem 초기화
 	InitializeAbilitySystem();
+	BroadcastFloatingHealthBarSource();
 	UE_LOG(LogTemp,Warning,TEXT("OnRep_PlayerState"));
 	APlayerController* LocalPC = GetWorld()->GetFirstPlayerController();
 	if (LocalPC && LocalPC->PlayerState && GetPlayerState())
@@ -662,6 +669,11 @@ void AEDPlayerCharacter::ApplyPlayerDataAsset()
 			InventoryComponent->RequestEnsureDefaultEquipment();
     	}
     });
+}
+
+void AEDPlayerCharacter::BroadcastFloatingHealthBarSource()
+{
+	OnFloatingHealthBarSourceChanged.Broadcast(AbilitySystemComponent, BaseAttributeSet);
 }
 
 // ============================================================
