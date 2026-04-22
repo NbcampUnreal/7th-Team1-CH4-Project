@@ -24,6 +24,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "HUD")
 	void HideLayout();
 
+	UFUNCTION(BlueprintCallable, Category = "HUD")
+	void SetGameLayerInputEnabled(bool bEnabled);
+
 	UFUNCTION(BlueprintCallable, Category = "HUD|Layer")
 	UPanelWidget* GetLayerSlot(EEDUILayer Layer) const;
 
