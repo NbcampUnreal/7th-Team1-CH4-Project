@@ -4,6 +4,8 @@
 #include "AbilitySystemGlobals.h"
 #include "Engine/AssetManager.h"
 #include "EngineUtils.h"
+#include "Core/EDAssetManager.h"
+#include "Core/EDGameDataSubsystem.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Inventory/GAS/EDInventoryGASBridge.h"
@@ -25,17 +27,14 @@ const UEDInventoryItemDataAsset* ResolveItemData_Component(const FPrimaryAssetId
         return nullptr;
     }
 
-    UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(ItemId);
-    if (!ItemObject)
+    UEDAssetManager& AM = UEDAssetManager::Get();
+    UEDInventoryItemDataAsset* ItemData = AM.GetPrimaryAsset<UEDInventoryItemDataAsset>(ItemId);
+    if (!ItemData)
     {
-        const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(ItemId);
-        if (AssetPath.IsValid())
-        {
-            ItemObject = AssetPath.TryLoad();
-        }
+        ItemData = AM.LoadPrimaryAssetSync<UEDInventoryItemDataAsset>(ItemId);
     }
 
-    return Cast<UEDInventoryItemDataAsset>(ItemObject);
+    return ItemData;
 }
 
 int32 GetItemMaxStack_Component(const FPrimaryAssetId& ItemId)

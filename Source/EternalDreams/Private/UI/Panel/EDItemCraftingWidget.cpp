@@ -5,6 +5,8 @@
 #include "Components/Image.h"
 #include "Components/PanelWidget.h"
 #include "Components/TextBlock.h"
+#include "Core/EDAssetManager.h"
+#include "Core/EDGameDataSubsystem.h"
 #include "Engine/AssetManager.h"
 #include "Engine/DataTable.h"
 #include "GameFramework/Pawn.h"
@@ -26,17 +28,14 @@ const UEDInventoryItemDataAsset* ResolveCraftItemData(const FPrimaryAssetId& Ite
 		return nullptr;
 	}
 
-	UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(ItemId);
-	if (!ItemObject)
+	UEDAssetManager& AM = UEDAssetManager::Get();
+	UEDInventoryItemDataAsset* ItemData = AM.GetPrimaryAsset<UEDInventoryItemDataAsset>(ItemId);
+	if (!ItemData)
 	{
-		const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(ItemId);
-		if (AssetPath.IsValid())
-		{
-			ItemObject = AssetPath.TryLoad();
-		}
+		ItemData = AM.LoadPrimaryAssetSync<UEDInventoryItemDataAsset>(ItemId);
 	}
 
-	return Cast<UEDInventoryItemDataAsset>(ItemObject);
+	return ItemData;
 }
 
 FText GetCraftFailureText(EEDInventoryActionFailure Failure)

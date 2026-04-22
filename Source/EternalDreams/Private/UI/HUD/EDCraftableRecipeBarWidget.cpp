@@ -3,6 +3,7 @@
 
 #include "Characters/Player/EDPlayerController.h"
 #include "Components/PanelWidget.h"
+#include "Core/EDAssetManager.h"
 #include "Engine/AssetManager.h"
 #include "GameFramework/Pawn.h"
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
@@ -19,17 +20,12 @@ const UEDInventoryItemDataAsset* ResolveCraftableItemData(const FPrimaryAssetId&
 		return nullptr;
 	}
 
-	UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(ItemId);
-	if (!ItemObject)
+	UEDAssetManager& AM = UEDAssetManager::Get(); 
+	if (UEDInventoryItemDataAsset* CachedAsset = AM.GetPrimaryAsset<UEDInventoryItemDataAsset>(ItemId))
 	{
-		const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(ItemId);
-		if (AssetPath.IsValid())
-		{
-			ItemObject = AssetPath.TryLoad();
-		}
+		return CachedAsset;
 	}
-
-	return Cast<UEDInventoryItemDataAsset>(ItemObject);
+	return AM.LoadPrimaryAssetSync<UEDInventoryItemDataAsset>(ItemId);
 }
 }
 

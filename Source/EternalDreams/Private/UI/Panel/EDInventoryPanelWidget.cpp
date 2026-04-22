@@ -5,6 +5,8 @@
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
+#include "Core/EDAssetManager.h"
+#include "Core/EDGameDataSubsystem.h"
 #include "Engine/AssetManager.h"
 #include "GameFramework/Pawn.h"
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
@@ -288,22 +290,13 @@ FText UEDInventoryPanelWidget::ResolveItemDisplayName(const FPrimaryAssetId& Ite
 		return FText::GetEmpty();
 	}
 
-	UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(ItemId);
-	if (!ItemObject)
+	if (UEDGameDataSubsystem* DS = UEDGameDataSubsystem::Get(this))
 	{
-		const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(ItemId);
-		if (AssetPath.IsValid())
+		if (auto* Data = DS->GetData<UEDInventoryItemDataAsset>(ItemId))
 		{
-			ItemObject = AssetPath.TryLoad();
+			return Data->DisplayName;
 		}
 	}
-
-	const UEDInventoryItemDataAsset* ItemData = Cast<UEDInventoryItemDataAsset>(ItemObject);
-	if (ItemData && !ItemData->DisplayName.IsEmpty())
-	{
-		return ItemData->DisplayName;
-	}
-
 	return FText::FromName(ItemId.PrimaryAssetName);
 }
 
@@ -314,17 +307,12 @@ EEDItemRarity UEDInventoryPanelWidget::ResolveItemRarity(const FPrimaryAssetId& 
 		return EEDItemRarity::Normal;
 	}
 
-	UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(ItemId);
-	if (!ItemObject)
+	UEDAssetManager& AM = UEDAssetManager::Get();
+	const UEDInventoryItemDataAsset* ItemData = AM.GetPrimaryAsset<UEDInventoryItemDataAsset>(ItemId);
+	if (!ItemData)
 	{
-		const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(ItemId);
-		if (AssetPath.IsValid())
-		{
-			ItemObject = AssetPath.TryLoad();
-		}
+		ItemData = AM.LoadPrimaryAssetSync<UEDInventoryItemDataAsset>(ItemId);
 	}
-
-	const UEDInventoryItemDataAsset* ItemData = Cast<UEDInventoryItemDataAsset>(ItemObject);
 	return ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
 }
 

@@ -9,6 +9,7 @@
 #include "Components/HorizontalBoxSlot.h"
 #include "Components/PanelWidget.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Core/EDAssetManager.h"
 #include "Engine/AssetManager.h"
 #include "Engine/Engine.h"
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
@@ -25,17 +26,12 @@ const UEDInventoryItemDataAsset* ResolveCraftTreeItemData(const FPrimaryAssetId&
 		return nullptr;
 	}
 
-	UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(ItemId);
-	if (!ItemObject)
+	UEDAssetManager& AM = UEDAssetManager::Get();
+	if (auto* Cached = AM.GetPrimaryAsset<UEDInventoryItemDataAsset>(ItemId))
 	{
-		const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(ItemId);
-		if (AssetPath.IsValid())
-		{
-			ItemObject = AssetPath.TryLoad();
-		}
+		return Cached;
 	}
-
-	return Cast<UEDInventoryItemDataAsset>(ItemObject);
+	return AM.LoadPrimaryAssetSync<UEDInventoryItemDataAsset>(ItemId);
 }
 }
 
