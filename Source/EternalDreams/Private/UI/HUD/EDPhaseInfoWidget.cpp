@@ -7,20 +7,32 @@
 
 #define LOCTEXT_NAMESPACE "EDPhaseInfoWidget"
 
+namespace
+{
+	FText FormatRemainingTimeText(float InRemainingTime)
+	{
+		const float RemainingTime = FMath::Max(0.0f, InRemainingTime);
+		const int32 Minutes = FMath::FloorToInt(RemainingTime / 60.0f);
+		const int32 Seconds = FMath::FloorToInt(FMath::Fmod(RemainingTime, 60.0f));
+
+		return FText::FromString(FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds));
+	}
+}
+
 void UEDPhaseInfoWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
+	ApplyDefaultTexts();
 	TryCacheGameState();
 	BindPhaseChanged();
-	RefreshPhaseLabels();
-	RefreshRemainingTime();
+	RefreshDisplay();
 
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().SetTimer(
 			RefreshTimerHandle,
-			FTimerDelegate::CreateUObject(this, &UEDPhaseInfoWidget::RefreshRemainingTime),
+			FTimerDelegate::CreateUObject(this, &UEDPhaseInfoWidget::RefreshDisplay),
 			RefreshInterval,
 			true);
 	}
@@ -40,7 +52,10 @@ void UEDPhaseInfoWidget::NativeDestruct()
 
 void UEDPhaseInfoWidget::TryCacheGameState()
 {
-	if (CachedGameState.IsValid()) return;
+	if (CachedGameState.IsValid())
+	{
+		return;
+	}
 
 	if (UWorld* World = GetWorld())
 	{
@@ -67,38 +82,76 @@ void UEDPhaseInfoWidget::UnbindPhaseChanged()
 
 void UEDPhaseInfoWidget::HandlePhaseChanged(const FGameplayTag& /*OldPhase*/, const FGameplayTag& /*NewPhase*/)
 {
+	RefreshDisplay();
+}
+
+void UEDPhaseInfoWidget::RefreshDisplay()
+{
+	TryCacheGameState();
+	if (!CachedGameState.IsValid())
+	{
+		ApplyDefaultTexts();
+		return;
+	}
+
 	RefreshPhaseLabels();
 	RefreshRemainingTime();
 }
 
 void UEDPhaseInfoWidget::RefreshPhaseLabels()
 {
-	TryCacheGameState();
-	if (!CachedGameState.IsValid()) return;
+	if (!CachedGameState.IsValid())
+	{
+		return;
+	}
 
-	const int32 Day = CachedGameState->GetCurrentDay();
-	const bool bNight = CachedGameState->GetIsNight();
+	const int32 CurrentDay = CachedGameState->GetCurrentDay();
+	const bool bIsNight = CachedGameState->GetIsNight();
 
 	if (DayText)
 	{
-		DayText->SetText(FText::Format(LOCTEXT("DayFmt", "Day {0}"), FText::AsNumber(Day)));
+		if (CurrentDay > 0)
+		{
+			DayText->SetText(FText::Format(LOCTEXT("DayFormat", "{0}일차"), FText::AsNumber(CurrentDay)));
+		}
+		else
+		{
+			DayText->SetText(LOCTEXT("DayDefault", "-일차"));
+		}
 	}
+
 	if (PhaseText)
 	{
-		PhaseText->SetText(bNight ? LOCTEXT("Night", "Night") : LOCTEXT("Day", "Day"));
+		PhaseText->SetText(bIsNight ? LOCTEXT("NightLabel", "밤") : LOCTEXT("DayLabel", "낮"));
 	}
 }
 
 void UEDPhaseInfoWidget::RefreshRemainingTime()
 {
-	TryCacheGameState();
-	if (!CachedGameState.IsValid() || !TimeText) return;
+	if (!CachedGameState.IsValid() || !TimeText)
+	{
+		return;
+	}
 
-	const float Remaining = FMath::Max(0.f, CachedGameState->GetPhaseRemainingTime());
-	const int32 Minutes = FMath::FloorToInt(Remaining / 60.f);
-	const int32 Seconds = FMath::FloorToInt(FMath::Fmod(Remaining, 60.f));
+	TimeText->SetText(FormatRemainingTimeText(CachedGameState->GetPhaseRemainingTime()));
+}
 
-	TimeText->SetText(FText::FromString(FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds)));
+void UEDPhaseInfoWidget::ApplyDefaultTexts() const
+{
+	if (DayText)
+	{
+		DayText->SetText(LOCTEXT("DayFallback", "-일차"));
+	}
+
+	if (PhaseText)
+	{
+		PhaseText->SetText(LOCTEXT("PhaseFallback", "-"));
+	}
+
+	if (TimeText)
+	{
+		TimeText->SetText(LOCTEXT("TimeFallback", "--:--"));
+	}
 }
 
 #undef LOCTEXT_NAMESPACE
