@@ -12,6 +12,11 @@ void AEDPlayerState::SetDisplayNickname(const FString& InDisplayNickname)
 	DisplayNickname = InDisplayNickname.TrimStartAndEnd();
 }
 
+void AEDPlayerState::SetPlayerSkinName_Implementation(EPlayerNameType InPlayerSkinName)
+{
+	PlayerSkinName=InPlayerSkinName;
+}
+
 void AEDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -25,7 +30,7 @@ void AEDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(AEDPlayerState, RemainingRevives);
 	DOREPLIFETIME(AEDPlayerState, Kills);
 	DOREPLIFETIME(AEDPlayerState, Deaths);
-	DOREPLIFETIME(AEDPlayerState, PlayerName);
+	DOREPLIFETIME(AEDPlayerState, PlayerSkinName);
 }
 
 void AEDPlayerState::CopyProperties(APlayerState* PlayerState)
@@ -43,5 +48,6 @@ void AEDPlayerState::CopyProperties(APlayerState* PlayerState)
 		PS->RemainingRevives = RemainingRevives;
 		PS->Kills = Kills;
 		PS->Deaths = Deaths;
+		PS->PlayerSkinName = PlayerSkinName;
 	}
 }

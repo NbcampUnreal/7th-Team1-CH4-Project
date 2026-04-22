@@ -183,7 +183,8 @@ private:
 	int32 CurrentPhaseIndex = INDEX_NONE;
 	float PhaseTimer = 0.f;
 	bool bPhaseSequenceActive = false;
-
+	
+	
 	void AdvanceToPhase(int32 PhaseIndex);
 	float GetPhaseDuration(int32 PhaseIndex) const;
 	void SetPhase(FGameplayTag NewPhase);
@@ -251,4 +252,19 @@ private:
 	 * PostLogin에서 이 함수로 전원 접속 감지 후 시작하도록 전환.
 	 */
 	void TryStartPhaseSequence();
+	
+	
+	//현석: 전체 플레이어 수 및 로드완료된 플레이어 수
+#pragma region HyunSeok
+private:
+	int32 LoadedCompletedPlayerNum=0;
+	
+public:
+	bool bIsServerLoadedCompleted=false;
+	
+	UFUNCTION()
+	void OnPlayerDataLoaded();
+	UFUNCTION()
+	void OnServerPlayerDataLoaded();
+#pragma endregion
 };
