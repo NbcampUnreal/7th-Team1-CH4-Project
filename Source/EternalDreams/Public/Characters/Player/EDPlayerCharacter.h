@@ -198,6 +198,8 @@ public:
 	UPROPERTY(BlueprintAssignable)
 	FOnAttributeChanged OnHealthDecreased;
 	
+
+	
 	
 public:
 	
@@ -288,4 +290,18 @@ private:
 	void MulticastSetWeaponTags(FGameplayTag BasicAttackTag, FGameplayTag EvadeTag, FGameplayTag EvadeCoolTimeTag);
 	TWeakObjectPtr<UEDGameDataSubsystem> CachedDataSubsystem;
 	FEDOnFloatingHealthBarSourceChanged OnFloatingHealthBarSourceChanged;
+	
+	
+	//Server Sync
+public:
+	UFUNCTION()
+	void SetPlayer();
+	UFUNCTION(NetMulticast,Reliable)
+	void SetOverlayMaterial();
+	UFUNCTION(Server,Reliable)
+	void NotifyServerPlayerLoadComplete();
+	UFUNCTION()
+	void OnSeverLoadedComplete();
+
+	
 };
