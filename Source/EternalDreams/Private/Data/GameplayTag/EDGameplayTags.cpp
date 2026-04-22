@@ -266,6 +266,11 @@ FString("SetByCaller용 Intelligence + 증가 Tag")
 	FString("Anim Notify Hit Event용 Tag")
 	);
 	
+	Tags.Event_Monster_RageExplosion = Manager.AddNativeGameplayTag(
+	FName("Event.Monster.RageExplosion"),
+	FString("몬스터 분노 폭발 AnimNotify 이벤트용 Tag")
+	);
+	
 	//Inventory-Item
 	Tags.Item_Weapon_Sword = Manager.AddNativeGameplayTag(
 		FName("Item.Weapon.Sword"),

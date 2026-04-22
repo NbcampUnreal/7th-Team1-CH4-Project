@@ -4,8 +4,12 @@
 #include "Characters/Monster/GAS/GA_MonsterSkillAbility.h"
 #include "Characters/Monster/EDMonsterBase.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystemInterface.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "NiagaraFunctionLibrary.h"
+#include "Kismet/KismetSystemLibrary.h"
 
 UGA_MonsterSkillAbility::UGA_MonsterSkillAbility()
 {
@@ -37,6 +41,11 @@ void UGA_MonsterSkillAbility::ActivateAbility(const FGameplayAbilitySpecHandle H
 	}
 	// 쿨타임 적용
 	ApplyCooldown(Handle, ActorInfo, ActivationInfo);
+	// AnimNotify 이벤트 대기 = 몽타주 중간에 폭발트리거
+	UAbilityTask_WaitGameplayEvent* EventTask = UAbilityTask_WaitGameplayEvent::WaitGameplayEvent(
+		this, FEDGameplayTags::Get().Event_Monster_RageExplosion);
+	EventTask->EventReceived.AddDynamic(this, &UGA_MonsterSkillAbility::OnExplosionEvent);
+	EventTask->ReadyForActivation();
 	
 	UAbilityTask_PlayMontageAndWait* MontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 		this, TEXT("Skill"), SkillMontage);
@@ -82,4 +91,58 @@ void UGA_MonsterSkillAbility::OnMontageComplete()
 {
 	UE_LOG(LogTemp, Warning, TEXT("[MonsterSkillAbility] OnMontageCompleted 호출"));
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
+}
+
+void UGA_MonsterSkillAbility::OnExplosionEvent(FGameplayEventData Payload)
+{
+	AEDMonsterBase* Monster = Cast<AEDMonsterBase>(CurrentActorInfo->AvatarActor.Get());
+	if (IsValid(Monster) == false)
+		return;
+	
+	ApplyExplosionDamage(Monster);
+	if (IsValid(ExplosionEffect))
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(Monster, ExplosionEffect, Monster->GetActorLocation());
+}
+
+void UGA_MonsterSkillAbility::ApplyExplosionDamage(AEDMonsterBase* Monster)
+{
+	if (IsValid(DamageEffectClass) == false)
+		return;
+	
+	UAbilitySystemComponent* MonsterASC = Monster->GetAbilitySystemComponent();
+	if (IsValid(MonsterASC) == false)
+		return;
+	
+	TArray<AActor*> OverlapActors;
+	TArray<AActor*> ActorsToIgnore { Monster };
+	UKismetSystemLibrary::SphereOverlapActors(
+		Monster, Monster->GetActorLocation(), ExplosionRadius,
+		TArray<TEnumAsByte<EObjectTypeQuery>>{ UEngineTypes::ConvertToObjectType(ECC_Pawn) },
+		nullptr, ActorsToIgnore, OverlapActors);
+	
+	const float Atk = IsValid(Monster->GetDataAsset()) ? Monster->GetDataAsset()->GetStat().Atk : 0.f;
+	const float DamageAmount = Atk * 1.5f;
+	
+	for (AActor* HitActor : OverlapActors)
+	{
+		IAbilitySystemInterface* TargetASI = Cast<IAbilitySystemInterface>(HitActor);
+		if (TargetASI == nullptr)
+			continue;
+
+		UAbilitySystemComponent* TargetASC = TargetASI->GetAbilitySystemComponent();
+		if (IsValid(TargetASC) == false)
+			continue;
+		
+		if (Cast<AEDMonsterBase>(HitActor))
+			continue;
+		
+		FGameplayEffectContextHandle Context = MonsterASC->MakeEffectContext();
+		Context.AddSourceObject(Monster);
+		FGameplayEffectSpecHandle  SpecHandle = MonsterASC->MakeOutgoingSpec(DamageEffectClass, 1.f, Context);
+		if (SpecHandle.IsValid() == false)
+			continue;
+		SpecHandle.Data->SetSetByCallerMagnitude(FEDGameplayTags::Get().Data_Damage, DamageAmount);
+		MonsterASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+		
+	}
 }

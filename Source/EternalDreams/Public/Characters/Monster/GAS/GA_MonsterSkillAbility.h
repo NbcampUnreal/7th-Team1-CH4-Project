@@ -6,6 +6,9 @@
 #include "Abilities/GameplayAbility.h"
 #include "GA_MonsterSkillAbility.generated.h"
 
+class AEDMonsterBase;
+class UNiagaraSystem;
+
 /**
  * 
  */
@@ -37,7 +40,21 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
 	TSubclassOf<UGameplayEffect> CooldownEffectClass;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
+	TObjectPtr<UNiagaraSystem> ExplosionEffect;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill", meta = (ClampMin = "50.0"))
+	float ExplosionRadius = 400.f;
+	
 private:
 	UFUNCTION()
 	void OnMontageComplete();
+	
+	UFUNCTION()
+	void OnExplosionEvent(FGameplayEventData Payload);
+
+	void ApplyExplosionDamage(AEDMonsterBase* Monster);
 };

@@ -192,6 +192,9 @@ void UGA_BossBlinkAbility::ApplyAreaDamage(AEDMonsterBase* Monster)
 		if (IsValid(TargetASC) == false)
 			continue;
 		
+		if (Cast<AEDMonsterBase>(HitActor))
+			continue;
+		
 		FGameplayEffectContextHandle Context = MonsterASC->MakeEffectContext();
 		Context.AddSourceObject(Monster);
 		FGameplayEffectSpecHandle SpecHandle = MonsterASC->MakeOutgoingSpec(DamageEffectClass, 1.f, Context);
