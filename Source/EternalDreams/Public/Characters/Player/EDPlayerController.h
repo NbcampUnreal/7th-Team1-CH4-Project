@@ -181,6 +181,9 @@ private:
 
 	// 애플리케이션 복귀 시 현재 열린 UI 상태에 맞게 입력 모드와 포커스 복구를 요청
 	void HandleApplicationReactivated();
+
+	// 사망 / 부활 / 매치 결과 UI가 열려 있을 때 HUD 입력을 막음
+	bool ShouldBlockHUDInput() const;
 	
 #pragma endregion 김동주
 

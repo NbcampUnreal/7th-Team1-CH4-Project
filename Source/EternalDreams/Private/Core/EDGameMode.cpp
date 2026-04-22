@@ -93,6 +93,13 @@ void AEDGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
+	bMatchFinished = false;
+
+	if (AEDGameState* GS = GetGameState<AEDGameState>())
+	{
+		GS->ResetMatchResult();
+	}
+
 
 	// ---ksh 월드에 배치된 EnvManager를 찾아서 캐싱해둡니다. ---
 	TArray<AActor*> FoundManagers;
