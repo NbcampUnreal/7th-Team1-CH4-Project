@@ -455,7 +455,8 @@ void AEDGameMode::Logout(AController* Exiting)
 		// 서버 프레임 1 프레임 유예시킴으로써 컨넥션이 완전히 끊기지 않아
 		// 로그아웃중인 클라이언트가 서버 트래블시 레벨 이동하는것을 방지함.
 		
-		// 현재는 데디서버를 띄워서 테스트가 안됨
+		// 현재는 데디서버가 같이 종료되어서 (넥스트 틱이 내부가 제대로 작동하는지 )테스트가 안됨
+		// 패키징후 데디서버가 살아있는 멀티환경에서 넥스트 프레임으로 크래쉬가 나는지 테스트 필요 
 		// TODO: SetTimerForNextTick 부족하면 SetTimer로 넉넉하게 시간 주기 (1~5초)
 		UWorld* World = GetWorld();
 		FString Lmap = LobbyMapPath;
