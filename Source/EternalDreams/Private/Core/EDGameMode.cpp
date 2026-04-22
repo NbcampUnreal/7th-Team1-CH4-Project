@@ -10,6 +10,7 @@
 #include "EngineUtils.h"
 #include "Kismet/GameplayStatics.h"
 #include "Environment/EDLightingManager.h"
+#include "Characters/Monster/Spawn/EDMonsterSpawnSubsystem.h"
 
 AEDGameMode::AEDGameMode()
 {
@@ -318,6 +319,12 @@ void AEDGameMode::OnDay2_DayStarted()
 {
 	// [아이템] 에픽 등급 재료 등장 — S4 담당
 	// [부활] 부활키트 사용 가능 시작 — S6 담당
+
+	// [몬스터] 엘리트 몬스터 스폰
+	if (UEDMonsterSpawnSubsystem* SpawnSub = GetWorld()->GetSubsystem<UEDMonsterSpawnSubsystem>())
+	{
+		SpawnSub->TriggerSpawnByGrade(EMonsterGrade::Elite);
+	}
 }
 
 void AEDGameMode::OnDay2_NightStarted()
@@ -335,7 +342,12 @@ void AEDGameMode::OnDay2_NightStarted()
 
 void AEDGameMode::OnDay3_DayStarted()
 {
-	// [몬스터] 위클라이너(보스) 스폰 — S2 담당
+	// [몬스터] 위클라이너(보스) 스폰
+	if (UEDMonsterSpawnSubsystem* SpawnSub = GetWorld()->GetSubsystem<UEDMonsterSpawnSubsystem>())
+	{
+		SpawnSub->TriggerSpawnByGrade(EMonsterGrade::Boss);
+	}
+
 	// [아이템] 전설 등급 재료 등장 — S4 담당
 }
 
@@ -442,7 +454,27 @@ void AEDGameMode::Logout(AController* Exiting)
 	{
 		UE_LOG(LogEDCore, Warning, TEXT("[Match] 잔여 인원 0명 — 로비 복귀 ServerTravel → %s"), *LobbyMapPath);
 		bMatchFinished = true;
-		GetWorld()->ServerTravel(LobbyMapPath);
+		
+		// 서버 프레임 1 프레임 유예시킴으로써 컨넥션이 완전히 끊기지 않아
+		// 로그아웃중인 클라이언트가 서버 트래블시 레벨 이동하는것을 방지함.
+		
+		// 현재는 데디서버가 같이 종료되어서 (넥스트 틱이 내부가 제대로 작동하는지 )테스트가 안됨
+		// 패키징후 데디서버가 살아있는 멀티환경에서 넥스트 프레임으로 크래쉬가 나는지 테스트 필요 
+		// TODO: SetTimerForNextTick 부족하면 SetTimer로 넉넉하게 시간 주기 (1~5초)
+		UWorld* World = GetWorld();
+		FString Lmap = LobbyMapPath;
+		
+		World->GetTimerManager().SetTimerForNextTick(
+			[WeakW = TWeakObjectPtr<UWorld>(World), Lmap]()
+			{
+				UWorld* World = WeakW.Get();
+				if (!World || World->bIsTearingDown || IsEngineExitRequested())
+				{
+					return;
+				}
+				UE_LOG(LogEDCore, Warning, TEXT("ServerTravel"));
+				World->ServerTravel(Lmap, /*bAbsolute=*/true);
+			});
 	}
 }
 
@@ -452,13 +484,25 @@ void AEDGameMode::Logout(AController* Exiting)
 
 void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 {
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] HandlePlayerDeath 진입 Victim=%s Killer=%s HasAuth=%d"),
+		*GetNameSafe(Victim), *GetNameSafe(Killer), HasAuthority() ? 1 : 0);
+
 	if (!HasAuthority() || !Victim) return;
 
 	AEDPlayerState* VictimPS = Victim->GetPlayerState<AEDPlayerState>();
-	if (!VictimPS) return;
+	if (!VictimPS)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] VictimPS NULL → abort"));
+		return;
+	}
 
 	// 이미 사망 처리된 경우 중복 방지
-	if (VictimPS->bIsDead) return;
+	if (VictimPS->bIsDead)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] 이미 bIsDead=true → 중복 호출 차단 %s"),
+			*VictimPS->GetPlayerName());
+		return;
+	}
 
 	VictimPS->bIsDead = true;
 	VictimPS->Deaths++;
@@ -474,15 +518,35 @@ void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 	UE_LOG(LogEDCore, Warning, TEXT("[Death] %s 사망 (Day %d, Revives %d)"),
 		*VictimPS->GetPlayerName(), GetCurrentDay(), VictimPS->RemainingRevives);
 
-	EnterSpectator(Victim);
+	// 사망 몽타주 재생 시간을 위해 UnPossess/Spectator 전환을 지연
+	{
+		FTimerHandle& SpectatorHandle = SpectatorEnterTimers.FindOrAdd(Victim);
+		GetWorldTimerManager().ClearTimer(SpectatorHandle);
+
+		TWeakObjectPtr<AController> WeakVictim(Victim);
+		GetWorldTimerManager().SetTimer(SpectatorHandle, [this, WeakVictim]()
+		{
+			if (AController* C = WeakVictim.Get())
+			{
+				EnterSpectator(C);
+			}
+		}, DeathMontageDelay, false);
+	}
 
 	const int32 Day = GetCurrentDay();
 	const bool bCanRevive = (Day >= 1 && Day <= 2) && VictimPS->RemainingRevives > 0;
+
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] Day=%d Revives=%d → bCanRevive=%d"),
+		Day, VictimPS->RemainingRevives, bCanRevive ? 1 : 0);
 
 	// 클라에 사망 UI 트리거 (오버레이 + 카운트다운)
 	if (AEDPlayerController* PC = Cast<AEDPlayerController>(Victim))
 	{
 		PC->ClientOnPlayerDied(bCanRevive ? RespawnZoneSelectDelay : 0.f, bCanRevive);
+	}
+	else
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] Victim이 PlayerController 아님 → Client RPC 스킵"));
 	}
 
 	if (bCanRevive)
@@ -491,6 +555,7 @@ void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 	}
 	else
 	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] Revive 불가 → EliminatePlayer"));
 		EliminatePlayer(Victim);
 	}
 }
@@ -499,11 +564,14 @@ void AEDGameMode::EnterSpectator(AController* Victim)
 {
 	if (!Victim) return;
 
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] EnterSpectator Victim=%s OldPawn=%s"),
+		*GetNameSafe(Victim), *GetNameSafe(Victim->GetPawn()));
+
 	// 기존 Pawn 제거
 	if (APawn* OldPawn = Victim->GetPawn())
 	{
 		Victim->UnPossess();
-		OldPawn->SetLifeSpan(10.f);
+		OldPawn->SetLifeSpan(DeathPawnLifeSpan);
 	}
 
 	APlayerController* PC = Cast<APlayerController>(Victim);
@@ -511,6 +579,8 @@ void AEDGameMode::EnterSpectator(AController* Victim)
 
 	PC->ChangeState(NAME_Spectating);
 	PC->ClientGotoState(NAME_Spectating);
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] EnterSpectator 완료 StateName=%s"),
+		*PC->GetStateName().ToString());
 
 	// 살아있는 팀원 시점으로 전환
 	if (AController* Teammate = FindLivingTeammate(Victim))
@@ -532,6 +602,9 @@ void AEDGameMode::SchedulePlayerRespawn(AController* Victim)
 {
 	if (!Victim) return;
 
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] SchedulePlayerRespawn Victim=%s Delay=%.2f"),
+		*GetNameSafe(Victim), RespawnZoneSelectDelay);
+
 	FTimerHandle& Handle = RespawnTimers.FindOrAdd(Victim);
 	GetWorldTimerManager().ClearTimer(Handle);
 
@@ -539,12 +612,20 @@ void AEDGameMode::SchedulePlayerRespawn(AController* Victim)
 	GetWorldTimerManager().SetTimer(Handle, [this, WeakVictim]()
 	{
 		AController* C = WeakVictim.Get();
-		if (!C) return;
+		if (!C)
+		{
+			UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] Respawn 타이머 발화 했으나 Victim 소멸"));
+			return;
+		}
 		if (AEDPlayerController* PC = Cast<AEDPlayerController>(C))
 		{
-			PC->ClientOpenZoneSelectWidget();
-			UE_LOG(LogEDCore, Warning, TEXT("[Death] ZoneSelectWidget 오픈 RPC → %s"),
+			UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] Respawn 타이머 발화 → ClientOpenZoneSelectWidget 호출 PC=%s"),
 				*PC->GetName());
+			PC->ClientOpenZoneSelectWidget();
+		}
+		else
+		{
+			UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] Respawn 타이머 발화했으나 PC 캐스트 실패"));
 		}
 	}, RespawnZoneSelectDelay, false);
 }
@@ -552,16 +633,35 @@ void AEDGameMode::SchedulePlayerRespawn(AController* Victim)
 // 스폰 처리
 void AEDGameMode::HandleRespawnRequest(AController* Victim, int32 SelectedZoneId)
 {
-	if (!HasAuthority() || !Victim) return;
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] HandleRespawnRequest 진입 Victim=%s Zone=%d"),
+		*GetNameSafe(Victim), SelectedZoneId);
+
+	if (!HasAuthority() || !Victim)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] 권한 없음 또는 Victim NULL → abort"));
+		return;
+	}
 
 	AEDPlayerState* PS = Victim->GetPlayerState<AEDPlayerState>();
-	if (!PS || !PS->bIsDead || PS->bEliminated) return;
-	if (PS->RemainingRevives <= 0) return;
+	if (!PS || !PS->bIsDead || PS->bEliminated)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] PS 체크 실패 PS=%s bIsDead=%d bEliminated=%d"),
+			PS ? *PS->GetPlayerName() : TEXT("NULL"),
+			PS ? (PS->bIsDead ? 1 : 0) : -1,
+			PS ? (PS->bEliminated ? 1 : 0) : -1);
+		return;
+	}
+	if (PS->RemainingRevives <= 0)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] RemainingRevives=%d → abort"), PS->RemainingRevives);
+		return;
+	}
 
 	// Zone 유효성 검증
 	if (!ZonePlayerStartMap.Contains(SelectedZoneId))
 	{
-		UE_LOG(LogEDCore, Warning, TEXT("[Respawn] 잘못된 ZoneId: %d"), SelectedZoneId);
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] 잘못된 ZoneId: %d (MapKeys=%d)"),
+			SelectedZoneId, ZonePlayerStartMap.Num());
 		return;
 	}
 
@@ -569,13 +669,42 @@ void AEDGameMode::HandleRespawnRequest(AController* Victim, int32 SelectedZoneId
 	PS->RemainingRevives--;
 	PS->bIsDead = false;
 
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] Request: Zone=%d, MapHasZone=%d, ZoneStartsNum=%d, PrePawn=%s"),
+		SelectedZoneId,
+		ZonePlayerStartMap.Contains(SelectedZoneId) ? 1 : 0,
+		ZonePlayerStartMap.Contains(SelectedZoneId) ? ZonePlayerStartMap[SelectedZoneId].Num() : -1,
+		*GetNameSafe(Victim->GetPawn()));
+
 	// 관전 해제 및 새 Pawn 스폰
-	if (APlayerController* PC = Cast<APlayerController>(Victim))
+	APlayerController* PC = Cast<APlayerController>(Victim);
+	if (PC)
 	{
 		PC->ChangeState(NAME_Playing);
 		PC->ClientGotoState(NAME_Playing);
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] ChangeState(Playing) → PC State: %s StartSpot=%s"),
+			*PC->PlayerState->GetName(), *GetNameSafe(Victim->StartSpot.Get()));
+
+		// StartSpot 재사용 방지 (부활 시 ChoosePlayerStart가 확실히 돌도록)
+		Victim->StartSpot = nullptr;
 	}
 	RestartPlayer(Victim);
+
+	if (APawn* NewPawn = Victim->GetPawn())
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] PostRestart: NewPawn=%s @ %s"),
+			*NewPawn->GetName(), *NewPawn->GetActorLocation().ToString());
+
+		// 카메라는 EDCameraActor가 Tick에서 자체 재탈환 + Pawn 캐시 갱신하도록 처리
+		if (PC)
+		{
+			UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] PostRestart ControlledPawn=%s (카메라는 CameraActor가 처리)"),
+				*GetNameSafe(PC->GetPawn()));
+		}
+	}
+	else
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG] PostRestart: NewPawn=NULL (Possess 실패?)"));
+	}
 
 	// 타이머 정리
 	if (FTimerHandle* Handle = RespawnTimers.Find(Victim))
@@ -714,6 +843,8 @@ void AEDGameMode::CacheZonePlayerStarts()
 
 AActor* AEDGameMode::ChoosePlayerStart_Implementation(AController* Player)
 {
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] ChoosePlayerStart 진입 Player=%s"), *GetNameSafe(Player));
+
 	if (!Player)
 	{
 		return Super::ChoosePlayerStart_Implementation(Player);
@@ -721,6 +852,8 @@ AActor* AEDGameMode::ChoosePlayerStart_Implementation(AController* Player)
 
 	const AEDPlayerState* PS = Player->GetPlayerState<AEDPlayerState>();
 	const int32 ZoneId = PS ? PS->DesiredZoneId : 0;
+	UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Server] ChoosePlayerStart DesiredZoneId=%d StartSpot=%s"),
+		ZoneId, *GetNameSafe(Player->StartSpot.Get()));
 
 	if (const TArray<AEDPlayerStart*>* ZoneStarts = ZonePlayerStartMap.Find(ZoneId))
 	{

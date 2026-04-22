@@ -53,7 +53,7 @@ AProjectileActor::AProjectileActor()
 void AProjectileActor::BeginPlay()
 {
 	Super::BeginPlay();
-	UE_LOG(LogTemp,Warning,TEXT("Projectile"));
+
 	//로드된 StaticMesh 적용
 	const UEDGameDataSubsystem* EDGameplayDataSubsystem=UEDGameDataSubsystem::Get(GetWorld());
 	if (EDGameplayDataSubsystem)
@@ -116,6 +116,7 @@ void AProjectileActor::OnProjectileHit(UPrimitiveComponent* HitComponent, AActor
 {
 	if (GetWorld()==nullptr)
 	{
+		UE_LOG(LogTemp,Warning,TEXT("Projectile Has No World"));
 		return;
 	}
 	if (HasAuthority()==false)
@@ -124,6 +125,10 @@ void AProjectileActor::OnProjectileHit(UPrimitiveComponent* HitComponent, AActor
 	}
 	if (OtherActor==nullptr||OtherActor==this||GetOwner()==nullptr)
 	{
+		if (!OtherActor)		UE_LOG(LogTemp,Warning,TEXT("Projectile Has No OtherActor"));
+		if (OtherActor==this)		UE_LOG(LogTemp,Warning,TEXT("Projectile Has Collision to otheractor"));
+		if (!GetOwner())		UE_LOG(LogTemp,Warning,TEXT("Projectile Has No Owner"));
+		
 		return;
 	}
 	
@@ -152,11 +157,13 @@ void AProjectileActor::OnProjectileHit(UPrimitiveComponent* HitComponent, AActor
 	IAbilitySystemInterface* TargetASI = Cast<IAbilitySystemInterface>(OtherActor);
 	if (TargetASI == nullptr)
 	{
+		Destroy();
 		return;
 	}
 	UAbilitySystemComponent* TargetASC = TargetASI->GetAbilitySystemComponent();
 	if (TargetASC == nullptr)
 	{
+		Destroy();
 		return;
 	}
 

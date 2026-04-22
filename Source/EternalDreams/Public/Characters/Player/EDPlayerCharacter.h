@@ -7,6 +7,7 @@
 #include "AttributeSet.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayEffectTypes.h"
+#include "UI/HUD/EDFloatingHealthBarSource.h"
 #include "Weapon/EDWeapon.h"
 #include "EDPlayerCharacter.generated.h"
 
@@ -16,7 +17,6 @@ class UGameplayEffect;
 class UGameplayAbility;
 class AEDWeapon;
 class AEDPlayerController;
-class UWidgetComponent;
 class UEDBaseAttributeSet;
 class UEDPlayerAttributeSet;
 class UIMCComponent;
@@ -24,9 +24,10 @@ class UZoneDetectorComponent;
 class UEDInventoryComponent;
 class USkillComponent;
 class UEDGameDataSubsystem;
+class UEDFloatingHealthBarWidgetComponent;
 struct FOnAttributeChangeData;
 
-
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnAttributeChanged);
 /*
  * 플레이어 캐릭터 클래스
  */
@@ -66,7 +67,8 @@ public:
 	
 	UFUNCTION()
 	FORCEINLINE USkillComponent* GetSkillComponent() const {return PlayerSkillComponent;}
-	
+
+	FORCEINLINE FEDOnFloatingHealthBarSourceChanged& GetOnFloatingHealthBarSourceChanged() { return OnFloatingHealthBarSourceChanged; }
 	
 	
 	
@@ -80,6 +82,9 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UZoneDetectorComponent> ZoneDetector;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	TObjectPtr<UEDFloatingHealthBarWidgetComponent> FloatingHealthBarWidgetComponent;
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
 	TObjectPtr<USkillComponent> PlayerSkillComponent;
@@ -138,6 +143,8 @@ public:
 	bool IsDead() const { return bIsDead; }
 
 protected:
+	bool bIsStop=false;
+	
 	/** 중복 HandleDeath 호출 방지용 서버 전용 플래그 */
 	bool bIsDead = false;
 	
@@ -155,7 +162,10 @@ protected:
 	
 	
 	//Callback
+	
+	void OnStopTagChanged(const FGameplayTag Tag,int32 newCount);
 	void OnWalkSpeedChanged(const struct FOnAttributeChangeData& Data);
+	void OnHealthChanged(const struct FOnAttributeChangeData& Data);
 	UFUNCTION()
 	void OnEquipChanged(FGameplayTag& AttributeDataTag, float Value);
 	UFUNCTION(BlueprintCallable,Server, Reliable)
@@ -166,6 +176,10 @@ protected:
 	void OnFirstSkillChanged(const FGameplayTagContainer& SkillItemTags, const FGameplayTagContainer& SkillCooldownTags);
 	UFUNCTION(BlueprintCallable,Server, Reliable)
 	void OnSecondSkillChanged(const FGameplayTagContainer& SkillItemTags, const FGameplayTagContainer& SkillCooldownTags);
+	
+
+	
+	
 	
 	//Skin
 #pragma region Skin
@@ -180,6 +194,14 @@ protected:
 	FPrimaryAssetId RetargetABPId;
 	
 public:	
+	//Delegates
+	UPROPERTY(BlueprintAssignable)
+	FOnAttributeChanged OnHealthDecreased;
+	
+	
+public:
+	
+	
 	UFUNCTION()
 	FORCEINLINE void SetTargetMeshId(const FPrimaryAssetId& InTargetMeshId){if (!HasAuthority()){return;} TargetMeshId=InTargetMeshId; ApplyTargetMesh();}
 	UFUNCTION()
@@ -261,7 +283,9 @@ private:
 	// 플레이어 데이터 로드 및 초기화
 	UFUNCTION()
 	void ApplyPlayerDataAsset();
+	void BroadcastFloatingHealthBarSource();
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastSetWeaponTags(FGameplayTag BasicAttackTag, FGameplayTag EvadeTag, FGameplayTag EvadeCoolTimeTag);
 	TWeakObjectPtr<UEDGameDataSubsystem> CachedDataSubsystem;
+	FEDOnFloatingHealthBarSourceChanged OnFloatingHealthBarSourceChanged;
 };

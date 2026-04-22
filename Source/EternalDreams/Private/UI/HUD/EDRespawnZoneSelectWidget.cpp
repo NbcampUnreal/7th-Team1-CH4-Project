@@ -96,15 +96,27 @@ void UEDRespawnZoneSelectWidget::SetAvailableZones(const TArray<int32>& Availabl
 
 void UEDRespawnZoneSelectWidget::SubmitSelectedZone()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Widget] SubmitSelectedZone PendingZone=%d Valid=%d Avail=%d"),
+		PendingZoneId,
+		IsValidZoneId(PendingZoneId) ? 1 : 0,
+		IsZoneAvailable(PendingZoneId) ? 1 : 0);
+
 	if (!IsValidZoneId(PendingZoneId) || !IsZoneAvailable(PendingZoneId))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Widget] Submit 중단 — 유효하지 않은 Zone"));
 		return;
 	}
 
 	if (AEDPlayerController* PlayerController = Cast<AEDPlayerController>(GetOwningPlayer()))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Widget] Server_RequestRespawn 호출 PC=%s Zone=%d"),
+			*PlayerController->GetName(), PendingZoneId);
 		PlayerController->Server_RequestRespawn(PendingZoneId);
 		CloseSelfPanel();
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[RespawnDBG][Widget] OwningPlayer 캐스트 실패 → 요청 미전송"));
 	}
 }
 

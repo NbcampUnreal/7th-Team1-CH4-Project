@@ -17,6 +17,7 @@
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Interaction/Component/EDLootTargetComponent.h"
 #include "Perception/AIPerceptionComponent.h"
+#include "UI/HUD/EDFloatingHealthBarWidgetComponent.h"
 
 // Sets default values
 AEDMonsterBase::AEDMonsterBase()
@@ -45,6 +46,13 @@ AEDMonsterBase::AEDMonsterBase()
 	InventoryComponent->bGiveDefaultWeaponOnBeginPlay = false;
 	InventoryComponent->bUseEquipmentSlots = false;
 
+	FloatingHealthBarWidgetComponent = CreateDefaultSubobject<UEDFloatingHealthBarWidgetComponent>(TEXT("FloatingHealthBarWidgetComponent"));
+	FloatingHealthBarWidgetComponent->SetupAttachment(GetRootComponent());
+	FloatingHealthBarWidgetComponent->SetWidgetSpace(EWidgetSpace::Screen);
+	FloatingHealthBarWidgetComponent->SetDrawAtDesiredSize(true);
+	FloatingHealthBarWidgetComponent->SetRelativeLocation(FVector(0.0f, 0.0f, 160.0f));
+	FloatingHealthBarWidgetComponent->SetVisibility(true);
+
 	
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 }
@@ -64,6 +72,8 @@ void AEDMonsterBase::BeginPlay()
 	
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetHealthAttribute())
 	.AddUObject(this, &AEDMonsterBase::OnHealthChanged);
+
+	BroadcastFloatingHealthBarSource();
 	
 	// UEDMonsterDataAsset* DataAsset = GetDataAsset();
 	// if (IsValid(DataAsset) == false)
@@ -289,10 +299,16 @@ void AEDMonsterBase::HandleDeath()
 
 void AEDMonsterBase::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
+	BroadcastFloatingHealthBarSource();
 	// 서버에서만 처리하고 이미 죽었으면 호출 X
 	if (HasAuthority() == false || MonsterState == EMonsterState::Dead)
 		return;
 	
 	if (Data.NewValue <= 0.f)
 		HandleDeath();
+}
+
+void AEDMonsterBase::BroadcastFloatingHealthBarSource()
+{
+	OnFloatingHealthBarSourceChanged.Broadcast(AbilitySystemComponent, BaseAttributeSet);
 }

@@ -1,5 +1,6 @@
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
 
+#include "Core/EDAssetManager.h"
 #include "Engine/AssetManager.h"
 #include "Engine/DataTable.h"
 #include "Internationalization/Text.h"
@@ -26,17 +27,12 @@ const UEDInventoryItemDataAsset* ResolveItemData_BP(const FPrimaryAssetId& ItemI
         return nullptr;
     }
 
-    UObject* ItemObject = UAssetManager::Get().GetPrimaryAssetObject(ItemId);
-    if (!ItemObject)
+    UEDAssetManager& AM = UEDAssetManager::Get();
+    if (auto* Cached = AM.GetPrimaryAsset<UEDInventoryItemDataAsset>(ItemId))
     {
-        const FSoftObjectPath AssetPath = UAssetManager::Get().GetPrimaryAssetPath(ItemId);
-        if (AssetPath.IsValid())
-        {
-            ItemObject = AssetPath.TryLoad();
-        }
+        return Cached;
     }
-
-    return Cast<UEDInventoryItemDataAsset>(ItemObject);
+    return AM.LoadPrimaryAssetSync<UEDInventoryItemDataAsset>(ItemId);
 }
 
 FText ResolveDisplayName_BP(const FPrimaryAssetId& ItemId)
@@ -447,7 +443,7 @@ void UEDInventoryBlueprintLibrary::GetItemDictionaryByTags(const FGameplayTagCon
     OutItems.Reset();
 
     TArray<FPrimaryAssetId> ItemIds;
-    UAssetManager::Get().GetPrimaryAssetIdList(FPrimaryAssetType(TEXT("InventoryItem")), ItemIds);
+    UEDAssetManager::Get().GetPrimaryAssetIdList(FPrimaryAssetType(TEXT("InventoryItem")), ItemIds);
 
     for (const FPrimaryAssetId& ItemId : ItemIds)
     {

@@ -55,14 +55,29 @@ void AEDCameraActor::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 	if (!IsValid(PlayerController))
 	{
-		return;
+		PlayerController = Cast<AEDPlayerController>(UGameplayStatics::GetPlayerController(GetWorld(), 0));
+		if (!IsValid(PlayerController))
+		{
+			return;
+		}
 	}
-	
+
+	// 부활 시 새 Pawn으로 교체되면 캐시 갱신 + LookTarget 재센터
+	APawn* CurrentPawn = PlayerController->GetPawn();
+	if (IsValid(CurrentPawn) && CurrentPawn != PlayerCharacter)
+	{
+		PlayerCharacter = Cast<AEDPlayerCharacter>(CurrentPawn);
+		if (IsValid(PlayerCharacter))
+		{
+			LookTargetLocation = PlayerCharacter->GetActorLocation();
+		}
+	}
+
 	if (PlayerController->GetViewTarget()!=this)
 	{
 		PlayerController->SetViewTargetWithBlend(this);
 	}
-	
+
 	if(bIsFocusedPlayer)
 	{
 		if (!IsValid(PlayerCharacter))
@@ -70,7 +85,7 @@ void AEDCameraActor::Tick(float DeltaTime)
 			return;
 		}
 		LookTargetLocation=PlayerCharacter->GetActorLocation();
-		
+
 	}
 	else
 	{
