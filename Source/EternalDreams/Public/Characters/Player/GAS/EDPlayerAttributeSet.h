@@ -46,6 +46,10 @@ public:
 	FGameplayAttributeData Intelligence;
 	ATTRIBUTE_ACCESSORS(UEDPlayerAttributeSet, Intelligence)
 	
+	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_AttackSpeed)
+	FGameplayAttributeData AttackSpeed;
+	ATTRIBUTE_ACCESSORS(UEDPlayerAttributeSet, AttackSpeed)
+	
 	//kSH --- 금지구역 시간 ---
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_SurvivalTime)
 	FGameplayAttributeData SurvivalTime;
@@ -63,6 +67,9 @@ public:
 	virtual void OnRep_Dexterity(const FGameplayAttributeData& OldDexterity);
 	UFUNCTION()
 	virtual void OnRep_Intelligence(const FGameplayAttributeData& OldIntelligence);
+	UFUNCTION()
+	virtual void OnRep_AttackSpeed(const FGameplayAttributeData& OldAttackSpeed);
+
 
 	
 	//kSH --- 금지구역 콜백 ---

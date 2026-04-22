@@ -2405,14 +2405,38 @@ void UEDInventoryComponent::GatherDistributionTargets(TArray<UEDInventoryCompone
     OutReadyTargets.Reset();
     bOutHasPendingTargets = false;
 
-    if (!GetOwner())
+    if (!GetOwner() || DistributionTargetActorTags.Num() == 0)
+    {
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (!World)
     {
         return;
     }
 
     TSet<UEDInventoryComponent*> UniqueTargets;
+    TSet<AActor*> CandidateActors;
 
-    for (AActor* TargetActor : DistributionTargetActors)
+    for (const FName& TargetTag : DistributionTargetActorTags)
+    {
+        if (TargetTag.IsNone())
+        {
+            continue;
+        }
+
+        for (TActorIterator<AActor> It(World); It; ++It)
+        {
+            AActor* CandidateActor = *It;
+            if (CandidateActor && CandidateActor->ActorHasTag(TargetTag))
+            {
+                CandidateActors.Add(CandidateActor);
+            }
+        }
+    }
+
+    for (AActor* TargetActor : CandidateActors)
     {
         UEDInventoryComponent* TargetInventory = ResolveInventoryComponentFromActor_Component(TargetActor);
         if (!TargetInventory || TargetInventory == this)

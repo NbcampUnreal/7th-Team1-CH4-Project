@@ -6,8 +6,11 @@
 #include "AbilitySystemComponent.h"
 #include "Projects.h"
 #include "Characters/Player/EDPlayerCharacter.h"
+#include "Characters/Player/GAS/EDPlayerAttributeSet.h"
 #include "Components/SphereComponent.h"
 #include "Core/EDGameDataSubsystem.h"
+#include "Core/EDPlayerState.h"
+#include "Core/EDSkillDataSubsystem.h"
 #include "Data/EDWeaponDataAsset.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
 #include "Data/Types/EDPlayerTypes.h"
@@ -44,8 +47,7 @@ AProjectileActor::AProjectileActor()
 	ProjectileMovement->InitialSpeed = 1000.f;
 	ProjectileMovement->bRotationFollowsVelocity = true;
 	ProjectileMovement->bShouldBounce = false;
-	
-	
+
 }
 
 void AProjectileActor::BeginPlay()
@@ -84,8 +86,22 @@ void AProjectileActor::BeginPlay()
 			SphereComponent->MoveIgnoreActors.Add(Actor);
 		}
 	}
-
 	
+		
+	//플레이어의 화살 생성 시점 변수를 캡처
+	AEDPlayerCharacter* Player=Cast<AEDPlayerCharacter>(GetOwner());
+	UAbilitySystemComponent* PlayerASC = Player->GetAbilitySystemComponent();
+	if (!PlayerASC)
+	{
+		return;
+	}
+	const UEDPlayerAttributeSet* PlayerAttributeSet = Cast<UEDPlayerAttributeSet>(PlayerASC->GetAttributeSet(UEDPlayerAttributeSet::StaticClass()));
+	if (PlayerAttributeSet)
+	{
+		CapturePlayerStrength= PlayerAttributeSet->GetStrength();
+		CapturePlayerDexterity= PlayerAttributeSet->GetDexterity();
+		CapturePlayerIntelligence= PlayerAttributeSet->GetIntelligence();
+	}
 }
 
 void AProjectileActor::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -106,29 +122,85 @@ void AProjectileActor::OnProjectileHit(UPrimitiveComponent* HitComponent, AActor
 	{
 		return;
 	}
-	if (OtherActor==nullptr||OtherActor==this)
+	if (OtherActor==nullptr||OtherActor==this||GetOwner()==nullptr)
 	{
 		return;
 	}
 	
-	
-	IAbilitySystemInterface* AttackerASI=Cast<IAbilitySystemInterface>(GetOwner());
-	if (AttackerASI==nullptr)
+	AEDPlayerCharacter* HittedPlayer=Cast<AEDPlayerCharacter>(OtherActor);
+	AEDPlayerCharacter* AttackedPlayer=Cast<AEDPlayerCharacter>(GetOwner());
+	if (HittedPlayer&&AttackedPlayer&&HittedPlayer->GetController()&&AttackedPlayer->GetController())
 	{
-		return;
-	}
-	TObjectPtr<UAbilitySystemComponent> AttackerASC=AttackerASI->GetAbilitySystemComponent();
-	if (AttackerASC==nullptr)
-	{
-		return;
-	}
-	
-	
-	FGameplayEventData HitGameplayEventData;
+		AEDPlayerState* HittedPlayerState=HittedPlayer->GetController()->GetPlayerState<AEDPlayerState>();
+		AEDPlayerState* AttackedPlayerState=AttackedPlayer->GetController()->GetPlayerState<AEDPlayerState>();
+		if (HittedPlayerState&&AttackedPlayerState)
+		{
+			//같은 팀인 경우 GE 적용하지 않음
+			if (HittedPlayerState->TeamId==AttackedPlayerState->TeamId)
+			{
+				Destroy();
+				return;
+			}
+		}
 		
-	HitGameplayEventData.Target=OtherActor;
-	AttackerASC->HandleGameplayEvent(FEDGameplayTags::Get().Event_SkillHit,&HitGameplayEventData);
+	}
 	
+	
+	
+	
+	//맞은 적의 ASI, ASC를 가져온다.
+	IAbilitySystemInterface* TargetASI = Cast<IAbilitySystemInterface>(OtherActor);
+	if (TargetASI == nullptr)
+	{
+		return;
+	}
+	UAbilitySystemComponent* TargetASC = TargetASI->GetAbilitySystemComponent();
+	if (TargetASC == nullptr)
+	{
+		return;
+	}
+
+	AEDPlayerCharacter* Player=Cast<AEDPlayerCharacter>(GetOwner());
+	
+	
+	UAbilitySystemComponent* PlayerASC = Player->GetAbilitySystemComponent();
+	if (!PlayerASC)
+	{
+		return;
+	}
+
+	FGameplayEffectContextHandle Context = PlayerASC->MakeEffectContext();
+	Context.AddSourceObject(Player); // 소스 오브젝트는 현재 캐릭터(Avatar)
+
+	FGameplayEffectSpecHandle SpecHandle = PlayerASC->MakeOutgoingSpec(DamageEffectClass, 1.0f, Context);
+	if (SpecHandle.IsValid() )
+	{
+		//AssetTag 로 검색
+		
+		const UEDSkillDataSubsystem* EDSkillDataSubsystem=UEDSkillDataSubsystem::Get(GetWorld());
+		
+		if (ProjectileSkillTag==FGameplayTag::EmptyTag||!IsValid(EDSkillDataSubsystem))
+		{
+			return;
+		}
+		
+		const FSkillMulStatus* SkillMulStaus =EDSkillDataSubsystem->GetSkillData(ProjectileSkillTag);
+		
+		if (SkillMulStaus==nullptr)
+		{
+			return;
+		}
+		
+		
+		float SkillFinalDamage =
+			CapturePlayerStrength * SkillMulStaus->DamageStrengthMultiplier +
+			CapturePlayerDexterity * SkillMulStaus->DamageDexterityMultiplier +
+			CapturePlayerIntelligence * SkillMulStaus->DamageIntelligenceMultiplier
+		;
+
+		SpecHandle.Data->SetSetByCallerMagnitude(FEDGameplayTags::Get().Data_Damage, SkillFinalDamage);
+		PlayerASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+	}
 	
 	UE_LOG(LogTemp,Warning,TEXT("%s"),*OtherActor->GetName());
 	Destroy();

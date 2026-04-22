@@ -13,6 +13,7 @@
 #include "UI/Subsystem/EDUIManageSubsystem.h"
 #include "UI/HUD/EDDeathOverlayWidget.h"
 #include "UI/HUD/EDRespawnZoneSelectWidget.h"
+#include "UI/HUD/EDMatchResultWidget.h"
 #include "UI/Types/EDUIWidgetIds.h"
 #include "Misc/CoreDelegates.h"
 #include "Core/EDGameMode.h"
@@ -79,13 +80,9 @@ void AEDPlayerController::BeginPlay()
 		// Game + UI 입력 모드 설정 (로비 UIOnly → 인게임 전환)
 
 
-		FInputModeGameOnly InputMode;
-		/*
-				InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
-				InputMode.SetHideCursorDuringCapture(false);
-				InputMode.SetWidgetToFocus(nullptr);
-		 *
-		 */
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		InputMode.SetHideCursorDuringCapture(false);
 		SetInputMode(InputMode);
 		bShowMouseCursor = true;
 
@@ -221,6 +218,11 @@ void AEDPlayerController::SetupInputComponent()
 
 void AEDPlayerController::HandleToggleLootInventory()
 {
+	if (ShouldBlockHUDInput())
+	{
+		return;
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 루팅 인벤토리 토글 입력을 처리합니다."));
 
 	if (!LootInteractionComponent)
@@ -234,6 +236,11 @@ void AEDPlayerController::HandleToggleLootInventory()
 
 void AEDPlayerController::HandleToggleCraftPanel()
 {
+	if (ShouldBlockHUDInput())
+	{
+		return;
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 아이템 제작 패널 토글 입력을 처리합니다."));
 
 	ULocalPlayer* LocalPlayer = GetLocalPlayer();
@@ -275,6 +282,11 @@ void AEDPlayerController::HandleUIBack()
 
 void AEDPlayerController::HandleCraftItem()
 {
+	if (ShouldBlockHUDInput())
+	{
+		return;
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 제작 입력을 처리합니다."));
 
 	if (!CraftingInteractionComponent)
@@ -335,6 +347,25 @@ void AEDPlayerController::HandleApplicationReactivated()
 	}
 }
 
+bool AEDPlayerController::ShouldBlockHUDInput() const
+{
+	ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	if (!LocalPlayer)
+	{
+		return false;
+	}
+
+	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIManageSubsystem)
+	{
+		return false;
+	}
+
+	return UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_DeathOverlay)
+		|| UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_RespawnZoneSelect)
+		|| UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_MatchResult);
+}
+
 
 void AEDPlayerController::CameraZoom(const FInputActionValue& value)
 {
@@ -344,22 +375,6 @@ void AEDPlayerController::CameraZoom(const FInputActionValue& value)
 void AEDPlayerController::CameraFocus(const FInputActionValue& value)
 {
 	OnCameraFocus.ExecuteIfBound(value);
-}
-
-void AEDPlayerController::Server_RequestStartPhaseSequence_Implementation()
-{
-	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	if (!GM) return;
-
-	GM->StartPhaseSequence();
-}
-
-void AEDPlayerController::Server_RequestSkipPhase_Implementation()
-{
-	AEDGameMode* GM = Cast<AEDGameMode>(UGameplayStatics::GetGameMode(GetWorld()));
-	if (!GM) return;
-
-	GM->SkipToNextPhase();
 }
 
 void AEDPlayerController::ClientOnPlayerDied_Implementation(float CountdownSeconds, bool bCanRespawn)
@@ -408,4 +423,28 @@ void AEDPlayerController::Server_RequestRespawn_Implementation(int32 SelectedZon
 	if (!GM) return;
 
 	GM->HandleRespawnRequest(this, SelectedZoneId);
+}
+
+void AEDPlayerController::ClientShowMatchResult_Implementation(const TArray<int32>& TeamRankings)
+{
+	ULocalPlayer* LP = GetLocalPlayer();
+	if (!LP) return;
+
+	UEDUIManageSubsystem* UIMgr = LP->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIMgr)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPlayerController: UIManageSubsystem을 찾을 수 없습니다."));
+		return;
+	}
+
+	UCommonActivatableWidget* Panel = UIMgr->OpenPanel(EDUIWidgetIds::Panel_MatchResult);
+	if (UEDMatchResultWidget* ResultWidget = Cast<UEDMatchResultWidget>(Panel))
+	{
+		int32 MyTeamId = EDTeam::None;
+		if (AEDPlayerState* PS = GetPlayerState<AEDPlayerState>())
+		{
+			MyTeamId = PS->TeamId;
+		}
+		ResultWidget->SetResult(TeamRankings, MyTeamId);
+	}
 }

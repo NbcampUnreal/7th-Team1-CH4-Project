@@ -54,6 +54,7 @@ public:
 
 	/** 최종 승리팀 ID (EDTeam::None = 미결정). 서버에서만 세팅 */
 	void SetWinnerTeamId(int32 NewTeamId);
+	void ResetMatchResult();
 
 	UFUNCTION(BlueprintCallable, Category = "ED|Match")
 	int32 GetWinnerTeamId() const { return WinnerTeamId; }

@@ -1,4 +1,4 @@
-#include "Public/UI/Subsystem/EDUIManageSubsystem.h"
+﻿#include "Public/UI/Subsystem/EDUIManageSubsystem.h"
 
 #include "Blueprint/UserWidget.h"
 #include "Blueprint/WidgetBlueprintLibrary.h"
@@ -50,6 +50,7 @@ void UEDUIManageSubsystem::ShowHUD()
 	// HUD가 아직 없으면 표시 요청 시점에 함께 생성
 	if (!IsHUDCreated())
 	{
+		CleanupHUD();
 		CreateHUDInternal();
 	}
 
@@ -57,6 +58,8 @@ void UEDUIManageSubsystem::ShowHUD()
 	{
 		HUDLayoutInstance->ShowLayout();
 	}
+
+	RefreshInputMode();
 }
 
 void UEDUIManageSubsystem::HideHUD()
@@ -229,7 +232,7 @@ void UEDUIManageSubsystem::ShowToastMessage(const FText& InMessage, EEDUIMessage
 
 bool UEDUIManageSubsystem::IsHUDCreated() const
 {
-	return HUDLayoutInstance != nullptr;
+	return IsValid(HUDLayoutInstance) && HUDLayoutInstance->IsInViewport();
 }
 
 UEDHUDLayout* UEDUIManageSubsystem::CreateHUDInternal()
@@ -268,14 +271,27 @@ UEDHUDLayout* UEDUIManageSubsystem::CreateHUDInternal()
 
 void UEDUIManageSubsystem::CleanupHUD()
 {
+	for (TPair<FName, TObjectPtr<UCommonActivatableWidget>>& PanelPair : PanelInstances)
+	{
+		if (PanelPair.Value)
+		{
+			PanelPair.Value->RemoveFromParent();
+		}
+	}
+
+	PanelInstances.Empty();
+
 	if (!HUDLayoutInstance)
 	{
+		RefreshInputMode();
 		return;
 	}
 
 	// 부모에서 제거한 뒤 참조를 비워 두어 중복 접근을 방지
 	HUDLayoutInstance->RemoveFromParent();
 	HUDLayoutInstance = nullptr;
+
+	RefreshInputMode();
 }
 
 UCommonActivatableWidget* UEDUIManageSubsystem::CreatePanelInstance(FName PanelId)
@@ -283,10 +299,12 @@ UCommonActivatableWidget* UEDUIManageSubsystem::CreatePanelInstance(FName PanelI
 	// 이미 생성된 패널 있으면 재사용
 	if (TObjectPtr<UCommonActivatableWidget>* FoundPanel = PanelInstances.Find(PanelId))
 	{
-		if (*FoundPanel)
+		if (IsValid(*FoundPanel))
 		{
 			return *FoundPanel;
 		}
+
+		PanelInstances.Remove(PanelId);
 	}
 
 	TSubclassOf<UCommonActivatableWidget>* FoundClass = RegisteredPanelClasses.Find(PanelId);
@@ -477,34 +495,69 @@ void UEDUIManageSubsystem::RefreshInputMode()
 	const FName OpenModalPanel = FindOpenPanelInLayer(EEDUILayer::Modal);
 	const FName OpenMenuPanel = FindOpenPanelInLayer(EEDUILayer::Menu);
 	const FName OpenGamePanel = FindOpenPanelInLayer(EEDUILayer::Game);
+	const bool bIsLootInventoryPanelOpen = IsPanelOpen(EDUIWidgetIds::Panel_LootInventory);
+	const bool bShouldBlockGameLayerInput = !OpenModalPanel.IsNone() || !OpenMenuPanel.IsNone();
 
 	UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: OpenModalPanel = %s"), *OpenModalPanel.ToString());
 	UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: OpenMenuPanel = %s"), *OpenMenuPanel.ToString());
 	UE_LOG(LogTemp, Warning, TEXT("EDUIManageSubsystem: OpenGamePanel = %s"), *OpenGamePanel.ToString());
 
-	// Menu 또는 Modal 패널이 열려 있으면 UI 입력을 우선으로 받도록 전환
-	if (!OpenModalPanel.IsNone() || !OpenMenuPanel.IsNone())
+	if (HUDLayoutInstance)
 	{
-		UWidgetBlueprintLibrary::SetInputMode_GameAndUIEx(PlayerController, nullptr, EMouseLockMode::DoNotLock, false);
+		HUDLayoutInstance->SetGameLayerInputEnabled(!bShouldBlockGameLayerInput);
+	}
+
+	// Menu / Modal 패널은 게임 입력보다 UI 입력이 우선이어야 하므로
+	// 실제 열린 패널을 포커스 대상으로 넘겨 UI 전용 입력 모드로 전환
+	if (bShouldBlockGameLayerInput)
+	{
+		const FName FocusPanelId = !OpenModalPanel.IsNone() ? OpenModalPanel : OpenMenuPanel;
+		UWidgetBlueprintLibrary::SetInputMode_UIOnlyEx(PlayerController, nullptr, EMouseLockMode::DoNotLock);
 		PlayerController->bShowMouseCursor = true;
 
-		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 메뉴 입력 모드로 전환했습니다."));
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: Modal/Menu UI 입력 모드로 전환했습니다. 패널 ID = %s"), *FocusPanelId.ToString());
+		return;
+	}
+
+	if (bIsLootInventoryPanelOpen)
+	{
+		UCommonActivatableWidget* LootInventoryPanel = nullptr;
+		if (const TObjectPtr<UCommonActivatableWidget>* FoundPanel = PanelInstances.Find(EDUIWidgetIds::Panel_LootInventory))
+		{
+			LootInventoryPanel = FoundPanel->Get();
+		}
+
+		UWidgetBlueprintLibrary::SetInputMode_GameAndUIEx(
+			PlayerController,
+			LootInventoryPanel,
+			EMouseLockMode::DoNotLock,
+			false);
+		PlayerController->bShowMouseCursor = true;
+
+		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 루팅 인벤토리 패널 상호작용을 위해 GameAndUI 입력 모드로 전환했습니다."));
 		return;
 	}
 
 	// Game 레이어 패널은 HUD 오버레이처럼 동작하므로 게임 입력을 유지
 	if (!OpenGamePanel.IsNone())
 	{
-		UWidgetBlueprintLibrary::SetInputMode_GameOnly(PlayerController);
+		UWidgetBlueprintLibrary::SetInputMode_GameAndUIEx(
+			PlayerController,
+			nullptr,
+			EMouseLockMode::DoNotLock,
+			false);
 		PlayerController->bShowMouseCursor = true;
 
 		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 게임 레이어 패널이 열려 있어 게임 입력 모드를 유지합니다."));
 		return;
 	}
 
-	UWidgetBlueprintLibrary::SetInputMode_GameOnly(PlayerController);
+	UWidgetBlueprintLibrary::SetInputMode_GameAndUIEx(
+		PlayerController,
+		nullptr,
+		EMouseLockMode::DoNotLock,
+		false);
 	PlayerController->bShowMouseCursor = true;
-	UWidgetBlueprintLibrary::SetFocusToGameViewport();
 
 	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 열린 패널이 없어 게임 입력 모드와 포커스를 게임 뷰포트로 복구했습니다."));
 }

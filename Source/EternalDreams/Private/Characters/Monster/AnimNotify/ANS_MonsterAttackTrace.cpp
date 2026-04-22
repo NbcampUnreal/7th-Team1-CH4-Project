@@ -90,6 +90,9 @@ void UANS_MonsterAttackTrace::NotifyTick(USkeletalMeshComponent* MeshComp, UAnim
 		if (IsValid(TargetASC) == false)
 			continue;
 		
+		if (Cast<AEDMonsterBase>(HitActor))
+			continue;
+		
 		// 예외 처리 통과시 충돌 캐릭터 배열에 추가
 		HitArray->Add(HitActor);
 		// DataAsset의 Atk 참조 Monster의 Atk은 GA에 없기 때문

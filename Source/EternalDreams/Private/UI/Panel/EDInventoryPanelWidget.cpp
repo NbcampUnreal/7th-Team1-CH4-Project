@@ -144,6 +144,8 @@ void UEDInventoryPanelWidget::RefreshInventorySlots()
 			continue;
 		}
 
+		SlotWidget->SetSourceInventoryComponent(DisplayedInventoryComponent);
+
 		FEDInventorySlotData SlotData;
 		if (!TryGetSlotData(Index, SlotData) || SlotData.IsEmpty())
 		{

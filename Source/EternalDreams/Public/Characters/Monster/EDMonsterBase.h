@@ -18,6 +18,7 @@ DECLARE_MULTICAST_DELEGATE(FOnDataAssetInitialized);
 
 class UAbilitySystemComponent;
 class UEDInventoryComponent;
+class UEDLootTargetComponent;
 struct FStreamableHandle;
 
 UCLASS()
@@ -79,9 +80,10 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_MonsterDataId, Category = "Monster|Data")
 	FPrimaryAssetId MonsterDataId;
 	
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Inventory")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Loot")
 	TObjectPtr<UEDInventoryComponent> InventoryComponent;
-	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|Loot")
+	TObjectPtr<UEDLootTargetComponent> LootTargetComponent;	
 private:
 	// 비동기 로드(임시)
 	void LoadVisuals(UEDMonsterDataAsset* InDataAsset);
@@ -102,4 +104,5 @@ private:
 	
 	TWeakObjectPtr<UEDGameDataSubsystem> CachedDataSubsystem;
 	FTimerHandle DestroyMeshTimerHandle;
+	
 };

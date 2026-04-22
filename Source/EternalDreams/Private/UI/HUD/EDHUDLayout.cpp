@@ -26,6 +26,26 @@ void UEDHUDLayout::HideLayout()
 	SetVisibility(ESlateVisibility::Collapsed);
 }
 
+void UEDHUDLayout::SetGameLayerInputEnabled(bool bEnabled)
+{
+	if (!GameLayerSlot)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDHUDLayout: GameLayerSlot이 없어 HUD 가시성을 전환할 수 없습니다."));
+		return;
+	}
+
+	// Modal / Menu UI가 열려 있을 때는 Game 레이어 HUD를 숨겨
+	// 마우스 입력이 아래 HUD 슬롯으로 전달되지 않게 함
+	GameLayerSlot->SetVisibility(bEnabled ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+
+	UE_LOG(
+		LogTemp,
+		Log,
+		TEXT("EDHUDLayout: GameLayerSlot 가시성을 전환했습니다. bEnabled=%s, ChildCount=%d"),
+		bEnabled ? TEXT("true") : TEXT("false"),
+		GameLayerSlot->GetChildrenCount());
+}
+
 UPanelWidget* UEDHUDLayout::GetLayerSlot(EEDUILayer Layer) const
 {
 	switch (Layer)

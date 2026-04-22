@@ -30,10 +30,7 @@ public:
 	//값 초기 설정용 속성
 	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Attributes")
 	float MaxHealthFloat=100.f;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Attributes")
-	float MaxDefensiveFloat=0.f;
-	UPROPERTY(EditAnywhere,BlueprintReadWrite,Category="Attributes")
-	float MaxWalkSpeedFloat=680.f;
+
 	
 protected:
 	float MaxAttributeValue=9999.f;
@@ -55,20 +52,11 @@ public:
 	FGameplayAttributeData Defensive;
 	ATTRIBUTE_ACCESSORS(UEDBaseAttributeSet, Defensive)
 	
-	//최대 방어력(감소되기 전 방어력)
-	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_MaxDefensive)
-	FGameplayAttributeData MaxDefensive;
-	ATTRIBUTE_ACCESSORS(UEDBaseAttributeSet, MaxDefensive)
-	
 	//현재 이동속도
 	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_WalkSpeed)
 	FGameplayAttributeData WalkSpeed;
 	ATTRIBUTE_ACCESSORS(UEDBaseAttributeSet, WalkSpeed)
 	
-	//최대 이동속도(감소되기 전 이동속도)
-	UPROPERTY(BlueprintReadOnly, Category = "Attributes", ReplicatedUsing = OnRep_MaxWalkSpeed)
-	FGameplayAttributeData MaxWalkSpeed;
-	ATTRIBUTE_ACCESSORS(UEDBaseAttributeSet, MaxWalkSpeed)
 	
 	
 	
@@ -81,13 +69,10 @@ public:
 	
 	UFUNCTION()
 	virtual void OnRep_Defensive(const FGameplayAttributeData& OldDefensive);
-	UFUNCTION()
-	virtual void OnRep_MaxDefensive(const FGameplayAttributeData& OldMaxDefensive);
 	
 	UFUNCTION()
 	virtual void OnRep_WalkSpeed(const FGameplayAttributeData& OldWalkSpeed);
-	UFUNCTION()
-	virtual void OnRep_MaxWalkSpeed(const FGameplayAttributeData& OldMaxWalkSpeed);
+	
 
 	
 public:

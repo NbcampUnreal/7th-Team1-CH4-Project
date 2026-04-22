@@ -99,13 +99,16 @@ private:
 	void ShowInventorySuccess(const FText& TargetName, const FText& ActionName) const;
 	
 	// 슬롯 간 드롭 처리
-	void HandleQuickSlotDroppedOnSlot(int32 FromSlotIndex, int32 ToSlotIndex);
+	void HandleQuickSlotDroppedOnSlot(UEDInventoryComponent* SourceInventoryComponent, int32 FromSlotIndex, int32 ToSlotIndex);
 
 	// 퀵바 밖으로 드롭 처리
 	void HandleQuickSlotDroppedOutside(int32 FromSlotIndex);
 
 	// 슬롯 간 이동 시도
 	void TryMoveQuickSlotItem(int32 FromSlotIndex, int32 ToSlotIndex);
+
+	// 외부 인벤토리의 아이템을 특정 퀵바 슬롯으로 이동
+	void TryTransferExternalItemToQuickSlot(UEDInventoryComponent* SourceInventoryComponent, int32 FromSlotIndex, int32 ToSlotIndex);
 
 	// 슬롯 일부 버리기 시도
 	void TryDropQuickSlotItemCount(int32 FromSlotIndex, int32 DropCount);

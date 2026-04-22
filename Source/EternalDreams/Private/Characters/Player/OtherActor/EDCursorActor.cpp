@@ -5,6 +5,7 @@
 
 #include "Components/WidgetComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "Blueprint/UserWidget.h"
 
 
 // Sets default values
@@ -27,7 +28,10 @@ void AEDCursorActor::BeginPlay()
 	Super::BeginPlay();
 	if (CursorWidget!=nullptr)
 	{
-		CursorWidget->AddToViewport();
+		// 커서 위젯은 항상 최상단에 그리되, 마우스 히트 테스트는 막지 않아야
+		// 인벤토리 슬롯의 클릭 / 더블클릭 / 드래그 입력을 가로채지 않음
+		CursorWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
+		CursorWidget->AddToViewport(999);
 	}
 
 }
@@ -71,4 +75,3 @@ void AEDCursorActor::Tick(float DeltaTime)
 	CursorWidget->SetPositionInViewport(MousePos,true);
 	
 }
-

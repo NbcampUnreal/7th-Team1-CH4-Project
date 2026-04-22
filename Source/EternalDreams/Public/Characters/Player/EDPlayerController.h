@@ -66,18 +66,6 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
 	TObjectPtr<UInputAction> UIBackAction = nullptr;
 #pragma endregion 김동주
-	
-	// -------------------------------------------------------
-	// 테스트용 RPC (페이즈)
-	// -------------------------------------------------------
-
-	/** 클라이언트에서 호출 → 서버에서 실행. 페이즈 시퀀스 시작 요청. (테스트용) */
-	UFUNCTION(Server, Reliable)
-	void Server_RequestStartPhaseSequence();
-
-	/** 클라이언트에서 호출 → 서버에서 실행. 다음 페이즈 스킵 요청. (테스트용) */
-	UFUNCTION(Server, Reliable)
-	void Server_RequestSkipPhase();
 
 	// -------------------------------------------------------
 	// 사망 / 부활 RPC
@@ -104,6 +92,18 @@ public:
 	 */
 	UFUNCTION(Server, Reliable, Category = "ED|Death")
 	void Server_RequestRespawn(int32 SelectedZoneId);
+
+	// -------------------------------------------------------
+	// 매치 종료 RPC
+	// -------------------------------------------------------
+
+	/**
+	 * [서버→클라이언트] 매치 종료 시 호출.
+	 * TeamRankings: index 0=1등, 1=2등, ... 순서로 정렬된 팀 ID 배열.
+	 * UIManager의 Panel_MatchResult를 열고 SetResult로 전달.
+	 */
+	UFUNCTION(Client, Reliable, Category = "ED|Match")
+	void ClientShowMatchResult(const TArray<int32>& TeamRankings);
 
 public:
 #pragma region Input Player
@@ -181,6 +181,9 @@ private:
 
 	// 애플리케이션 복귀 시 현재 열린 UI 상태에 맞게 입력 모드와 포커스 복구를 요청
 	void HandleApplicationReactivated();
+
+	// 사망 / 부활 / 매치 결과 UI가 열려 있을 때 HUD 입력을 막음
+	bool ShouldBlockHUDInput() const;
 	
 #pragma endregion 김동주
 
