@@ -3,6 +3,7 @@
 #include "Core/EDGameState.h"
 
 #include "Core/EDGameDataSubsystem.h"
+#include "Core/EDPlayerState.h"
 #include "Engine/Engine.h"
 #include "Net/UnrealNetwork.h"
 
@@ -26,6 +27,14 @@ void AEDGameState::SetWinnerTeamId(int32 NewTeamId)
 {
 	if (!HasAuthority()) return;
 	WinnerTeamId = NewTeamId;
+}
+
+void AEDGameState::ResetMatchResult()
+{
+	if (!HasAuthority()) return;
+
+	WinnerTeamId = EDTeam::None;
+	EliminatedTeams.Reset();
 }
 
 void AEDGameState::AddEliminatedTeam(int32 TeamId)

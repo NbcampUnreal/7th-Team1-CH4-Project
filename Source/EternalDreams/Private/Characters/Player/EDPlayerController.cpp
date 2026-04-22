@@ -80,13 +80,9 @@ void AEDPlayerController::BeginPlay()
 		// Game + UI 입력 모드 설정 (로비 UIOnly → 인게임 전환)
 
 
-		FInputModeGameOnly InputMode;
-		/*
-				InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
-				InputMode.SetHideCursorDuringCapture(false);
-				InputMode.SetWidgetToFocus(nullptr);
-		 *
-		 */
+		FInputModeGameAndUI InputMode;
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		InputMode.SetHideCursorDuringCapture(false);
 		SetInputMode(InputMode);
 		bShowMouseCursor = true;
 
@@ -222,6 +218,11 @@ void AEDPlayerController::SetupInputComponent()
 
 void AEDPlayerController::HandleToggleLootInventory()
 {
+	if (ShouldBlockHUDInput())
+	{
+		return;
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 루팅 인벤토리 토글 입력을 처리합니다."));
 
 	if (!LootInteractionComponent)
@@ -235,6 +236,11 @@ void AEDPlayerController::HandleToggleLootInventory()
 
 void AEDPlayerController::HandleToggleCraftPanel()
 {
+	if (ShouldBlockHUDInput())
+	{
+		return;
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 아이템 제작 패널 토글 입력을 처리합니다."));
 
 	ULocalPlayer* LocalPlayer = GetLocalPlayer();
@@ -276,6 +282,11 @@ void AEDPlayerController::HandleUIBack()
 
 void AEDPlayerController::HandleCraftItem()
 {
+	if (ShouldBlockHUDInput())
+	{
+		return;
+	}
+
 	UE_LOG(LogTemp, Log, TEXT("EDPlayerController: 제작 입력을 처리합니다."));
 
 	if (!CraftingInteractionComponent)
@@ -334,6 +345,25 @@ void AEDPlayerController::HandleApplicationReactivated()
 			false
 		);
 	}
+}
+
+bool AEDPlayerController::ShouldBlockHUDInput() const
+{
+	ULocalPlayer* LocalPlayer = GetLocalPlayer();
+	if (!LocalPlayer)
+	{
+		return false;
+	}
+
+	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIManageSubsystem)
+	{
+		return false;
+	}
+
+	return UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_DeathOverlay)
+		|| UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_RespawnZoneSelect)
+		|| UIManageSubsystem->IsPanelOpen(EDUIWidgetIds::Panel_MatchResult);
 }
 
 
