@@ -91,6 +91,8 @@ ETeamAttitude::Type AEDMonsterAIController::GetTeamAttitudeTowards(const AActor&
 		const AEDPlayerState* PS = OtherPawn->GetPlayerState<AEDPlayerState>();
 		if (IsValid(PS) && EDTeam::IsPlayerTeam(PS->TeamId))
 			return ETeamAttitude::Hostile;
+		
+		return ETeamAttitude::Neutral;
 	}
 	
 	return MonsterTeamId == OtherTeam->GetGenericTeamId() 
@@ -170,6 +172,7 @@ void AEDMonsterAIController::OnPerceptionUpdated(const TArray<AActor*>& UpdatedA
 			{
 				UE_LOG(LogTemp, Warning, TEXT("[%s] 반격 감지(%s): %s"), *GetName(), *SenseClass->GetName(), *Actor->GetName());
 				BB->SetValueAsObject(TEXT("TargetActor"), Actor);
+				BB->SetValueAsBool(TEXT("bIsTracking"), true);
 				StartTeamReport(Actor);
 			}
 			// Hearing 감지
@@ -196,12 +199,15 @@ void AEDMonsterAIController::OnPerceptionForgotten(AActor* Actor)
 	if (IsValid(Actor) == false)
 		return;
 	UE_LOG(LogTemp, Warning, TEXT("[%s] 잊혀진 액터: %s"), *GetName(),*Actor->GetName());
-	
-	GetWorldTimerManager().ClearTimer(TeamReportTimerHandle);
-	
 	UBlackboardComponent* BB = GetBlackboardComponent();
 	if (IsValid(BB) == false)
 		return;
+	// 현재 타겟이 잊혀진 액터와 다르면 초기화하지 않음
+	AActor* CurrentTarget = Cast<AActor>(BB->GetValueAsObject(TEXT("TargetActor")));;
+	if (CurrentTarget != Actor)
+		return;
+	
+	GetWorldTimerManager().ClearTimer(TeamReportTimerHandle);
 	BB->SetValueAsObject(TEXT("TargetActor"), nullptr);
 	BB->SetValueAsVector(TEXT("LastHearingLocation"), FVector::ZeroVector);
 	BB->SetValueAsBool(TEXT("bIsTracking"), false);

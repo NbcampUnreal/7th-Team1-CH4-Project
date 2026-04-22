@@ -95,7 +95,7 @@ public:
 	FGameplayTag Data_StatMul;
 	//Event
 	FGameplayTag Event_SkillHit;
-	
+	FGameplayTag Event_Monster_RageExplosion;
 	//Inventory-Item
 	FGameplayTag Item_Weapon_Sword;
 	FGameplayTag Item_Weapon_Hammer;

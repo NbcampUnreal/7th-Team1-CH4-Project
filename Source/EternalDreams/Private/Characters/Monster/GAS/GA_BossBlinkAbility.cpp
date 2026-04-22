@@ -12,6 +12,9 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "AIController.h"
 #include "NavigationSystem.h"
+#include "DrawDebugHelpers.h"
+#include "Kismet/GameplayStatics.h"
+#include "Components/CapsuleComponent.h"
 
 UGA_BossBlinkAbility::UGA_BossBlinkAbility()
 {
@@ -61,18 +64,26 @@ void UGA_BossBlinkAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	BlinkDestination = Target->GetActorLocation() + ToTarget * BlinkOffset;
 	// 벽 체크 - 도착 지점이 막혀있으면 히트 지점 직전으로 조정
 	FHitResult HitResult;
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(Monster);
+	Params.AddIgnoredActor(Target);
 	bool bBlocked = Monster->GetWorld()->LineTraceSingleByChannel(
 		HitResult,
-		Monster->GetActorLocation(),
+		Target->GetActorLocation(),
 		BlinkDestination,
-		ECC_WorldStatic);
+		ECC_WorldStatic,
+		Params);
+	
 	if (bBlocked)
 		BlinkDestination =  HitResult.Location - ToTarget * 50.f;
 	// NavMesh 위로 높이 보정
 	UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(Monster->GetWorld());
 	FNavLocation NavLocation;
-	if (IsValid(NavSys)  && NavSys->ProjectPointToNavigation(BlinkDestination, NavLocation))
+	if (IsValid(NavSys) && NavSys->ProjectPointToNavigation(BlinkDestination, NavLocation))
 		BlinkDestination = NavLocation.Location;
+	// 캡슐 절반 높이만큼 위로 올려서 바닥 끼임 방지
+	BlinkDestination.Z += Monster->GetCapsuleComponent()->GetScaledCapsuleHalfHeight();
+
 	// 도착 인디케이터
 	if (IsValid(IndicatorEffect))
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(Monster, IndicatorEffect, BlinkDestination);
@@ -156,6 +167,9 @@ void UGA_BossBlinkAbility::ExecuteBlink(AEDMonsterBase* Monster, AActor* Target)
 	// 착지 이펙트
 	if (IsValid(BlinkArrivalEffect))
 		UNiagaraFunctionLibrary::SpawnSystemAtLocation(Monster, BlinkArrivalEffect, BlinkDestination);
+	// 착지 사운드
+	if (IsValid(BlinkArrivalSound))
+		UGameplayStatics::PlaySoundAtLocation(Monster, BlinkArrivalSound, BlinkDestination);
 }
 
 void UGA_BossBlinkAbility::ApplyAreaDamage(AEDMonsterBase* Monster)
@@ -184,6 +198,9 @@ void UGA_BossBlinkAbility::ApplyAreaDamage(AEDMonsterBase* Monster)
 		
 		UAbilitySystemComponent* TargetASC = TargetASI->GetAbilitySystemComponent();
 		if (IsValid(TargetASC) == false)
+			continue;
+		
+		if (Cast<AEDMonsterBase>(HitActor))
 			continue;
 		
 		FGameplayEffectContextHandle Context = MonsterASC->MakeEffectContext();
