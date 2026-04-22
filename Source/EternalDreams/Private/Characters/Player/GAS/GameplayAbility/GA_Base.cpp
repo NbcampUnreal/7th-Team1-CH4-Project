@@ -5,8 +5,10 @@
 #include "AbilitySystemInterface.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Abilities/Tasks/AbilityTask_WaitGameplayEvent.h"
+#include "Characters/Player/EDPlayerCharacter.h"
 #include "Characters/Player/GAS/EDPlayerAttributeSet.h"
 #include "Core/EDGameDataSubsystem.h"
+#include "Core/EDPlayerState.h"
 #include "Core/EDSkillDataSubsystem.h"
 #include "Data/EDPlayerAnimDataAsset.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
@@ -34,7 +36,19 @@ void UGA_Base::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
+	//Get ASC
+	UAbilitySystemComponent* PlayerASC = GetAbilitySystemComponentFromActorInfo();
+	if (!PlayerASC)
+	{
+		return;
+	}
+	//Get AttributeSet
+	const UEDPlayerAttributeSet* PlayerAttributeSet = Cast<UEDPlayerAttributeSet>(PlayerASC->GetAttributeSet(UEDPlayerAttributeSet::StaticClass()));
+	if (!IsValid(PlayerAttributeSet))
+	{
+		return;
+	}
+	
 	//Get AnimMontage
 
 	UEDGameDataSubsystem* EDGameDataSubsystem = UEDGameDataSubsystem::Get(GetWorld());
@@ -60,7 +74,6 @@ void UGA_Base::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 			UE_LOG(LogTemp, Log, TEXT("Is Loaded: %s"), bIsLoaded ? TEXT("True") : TEXT("False"));
 
 			PlayerAnimMontage = PlayerAnimData->AnimMontage.LoadSynchronous();
-			PlayerAnimMontage = PlayerAnimData->AnimMontage.LoadSynchronous();
 			if (IsValid(PlayerAnimMontage))
 			{
 				UE_LOG(LogTemp,Warning,TEXT("PlayerAnimMontage Valid"));
@@ -75,13 +88,16 @@ void UGA_Base::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 		
 	}
 
+
+
+	
 	//Play Montage Task(비동기)
 	UAbilityTask_PlayMontageAndWait* PlayMontageTask =
 		UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
 			this,
 			NAME_None,
 			PlayerAnimMontage,
-			1.0f
+			PlayerAttributeSet->GetAttackSpeed()
 		);
 	if (!PlayMontageTask)
 	{
@@ -139,14 +155,35 @@ void UGA_Base::OnMontageCancelled()
 void UGA_Base::OnNotifyHitEvent(FGameplayEventData HitGameplayEventData)
 {
 	//맞은 적의 ASI, ASC를 가져온다.
-	AActor* HittedPlayer = const_cast<AActor*>(HitGameplayEventData.Target.Get());
-	if (!IsValid(HittedPlayer))
+	AActor* HittedActor = const_cast<AActor*>(HitGameplayEventData.Target.Get());
+	if (!IsValid(HittedActor))
 	{
 		return;
 	}
+	
+	AEDPlayerCharacter* HittedPlayer=Cast<AEDPlayerCharacter>(HittedActor);
+	AEDPlayerCharacter* AttackedPlayer=Cast<AEDPlayerCharacter>(GetAvatarActorFromActorInfo());
+	if (HittedPlayer&&AttackedPlayer&&HittedPlayer->GetController()&&AttackedPlayer->GetController())
+	{
+		AEDPlayerState* HittedPlayerState=HittedPlayer->GetController()->GetPlayerState<AEDPlayerState>();
+		AEDPlayerState* AttackedPlayerState=AttackedPlayer->GetController()->GetPlayerState<AEDPlayerState>();
+		if (HittedPlayerState&&AttackedPlayerState)
+		{
+			//같은 팀인 경우 GE 적용하지 않음
+			if (HittedPlayerState->TeamId==AttackedPlayerState->TeamId)
+			{
+				return;
+			}
+		}
+		
+	}
+	
+
+	
+	
 
 
-	IAbilitySystemInterface* TargetASI = Cast<IAbilitySystemInterface>(HittedPlayer);
+	IAbilitySystemInterface* TargetASI = Cast<IAbilitySystemInterface>(HittedActor);
 	if (TargetASI == nullptr)
 	{
 		return;

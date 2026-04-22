@@ -76,8 +76,6 @@ void UGA_MonsterSkillAbility::ApplyCooldown(const FGameplayAbilitySpecHandle Han
 	FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(CooldownEffectClass, 1.f, Context);
 	if (SpecHandle.IsValid())
 		ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-	
-	Super::ApplyCooldown(Handle, ActorInfo, ActivationInfo);
 }
 
 void UGA_MonsterSkillAbility::OnMontageComplete()

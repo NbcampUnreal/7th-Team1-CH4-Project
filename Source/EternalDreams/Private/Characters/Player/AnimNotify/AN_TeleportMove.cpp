@@ -20,9 +20,9 @@ void UAN_TeleportMove::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBas
 		return;
 	}
 	Player->GetCharacterMovement()->Velocity=FVector::ZeroVector;
-	FVector TeleportLocation=Player->GetActorForwardVector()*TeleportDistance+Player->GetActorLocation()+FVector(0,0,5.f);
+	FVector TeleportLocation=Player->GetActorForwardVector()*TeleportDistance+Player->GetActorLocation()+FVector(0,0,20.f);
 	
-	bool bCanTeleport =MeshComp->GetWorld()->OverlapAnyTestByProfile(
+	bool bCanTeleport =MeshComp->GetWorld()->OverlapBlockingTestByProfile(
 	TeleportLocation,
 	Player->GetActorRotation().Quaternion(),
 	FName("Visibility"),

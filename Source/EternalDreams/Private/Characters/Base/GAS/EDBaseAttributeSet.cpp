@@ -13,12 +13,10 @@
 UEDBaseAttributeSet::UEDBaseAttributeSet()
 {
 	InitMaxHealth(MaxHealthFloat);
-	InitMaxDefensive(MaxDefensiveFloat);
-	InitMaxWalkSpeed(MaxWalkSpeedFloat);
 	
 	InitHealth(GetMaxHealth());
-	InitDefensive(GetMaxDefensive());
-	InitWalkSpeed(GetMaxWalkSpeed());
+	InitDefensive(0.f);
+	InitWalkSpeed(680.f);
 }
 
 void UEDBaseAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -29,10 +27,8 @@ void UEDBaseAttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& 
 	DOREPLIFETIME(UEDBaseAttributeSet,MaxHealth);
 	
 	DOREPLIFETIME(UEDBaseAttributeSet,Defensive);
-	DOREPLIFETIME(UEDBaseAttributeSet,MaxDefensive);	
 	
 	DOREPLIFETIME(UEDBaseAttributeSet,WalkSpeed);
-	DOREPLIFETIME(UEDBaseAttributeSet,MaxWalkSpeed);	
 }
 
 void UEDBaseAttributeSet::OnRep_Health(const FGameplayAttributeData& OldHealth)
@@ -50,20 +46,18 @@ void UEDBaseAttributeSet::OnRep_Defensive(const FGameplayAttributeData& OldDefen
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDBaseAttributeSet,Defensive, OldDefensive);
 }
 
-void UEDBaseAttributeSet::OnRep_MaxDefensive(const FGameplayAttributeData& OldMaxDefensive)
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDBaseAttributeSet,MaxDefensive, OldMaxDefensive);
-}
 
 void UEDBaseAttributeSet::OnRep_WalkSpeed(const FGameplayAttributeData& OldWalkSpeed)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDBaseAttributeSet,WalkSpeed, OldWalkSpeed);
+	//게임에서도 반영(클라이언트)
+	ACharacter* OwningCharacter=Cast<ACharacter>(GetOwningActor());
+	if (IsValid(OwningCharacter))
+	{
+		OwningCharacter->GetCharacterMovement()->MaxWalkSpeed=GetWalkSpeed();
+	}
 }
 
-void UEDBaseAttributeSet::OnRep_MaxWalkSpeed(const FGameplayAttributeData& OldMaxWalkSpeed)
-{
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UEDBaseAttributeSet,WalkSpeed, OldMaxWalkSpeed);
-}
 
 void UEDBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
@@ -73,10 +67,6 @@ void UEDBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute
 	if (Attribute==GetHealthAttribute())
 	{
 		NewValue=FMath::Clamp(NewValue, 0.0f, GetMaxHealth());
-	}
-	if (Attribute==GetDefensiveAttribute())
-	{
-		NewValue=FMath::Clamp(NewValue, 0.0f, GetMaxDefensive());
 	}
 	if (Attribute==GetWalkSpeedAttribute())
 	{
@@ -125,12 +115,18 @@ void UEDBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 	if (Data.EvaluatedData.Attribute == GetDefensiveAttribute())
 	{
 		// Defensive가 변경되었을 때
-		SetDefensive(FMath::Clamp(GetDefensive(), 0.0f, GetMaxDefensive()));
+		SetDefensive(FMath::Clamp(GetDefensive(), 0.0f, MaxAttributeValue));
 	}
 	if (Data.EvaluatedData.Attribute == GetWalkSpeedAttribute())
 	{
 		// WalkSpeed가 변경되었을 때
 		SetWalkSpeed(FMath::Clamp(GetWalkSpeed(), 0.0f, MaxAttributeValue));
+		//게임에서도 반영(서버)
+		ACharacter* OwningCharacter=Cast<ACharacter>(GetOwningActor());
+		if (IsValid(OwningCharacter))
+		{
+			OwningCharacter->GetCharacterMovement()->MaxWalkSpeed=GetWalkSpeed();
+		}
 	}
 }
 

@@ -17,4 +17,10 @@ public:
 	// 프로젝트 세팅에서 노출
 	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Data")
 	TSoftObjectPtr<UDataTable> SkillMulDataTable;
+	
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Data")
+	TSoftObjectPtr<UMaterial> EnemyOverlayMat;
+	
+	UPROPERTY(Config, EditAnywhere, BlueprintReadOnly, Category = "Data")
+	TSoftObjectPtr<UMaterial> TeamOverlayMat;
 };

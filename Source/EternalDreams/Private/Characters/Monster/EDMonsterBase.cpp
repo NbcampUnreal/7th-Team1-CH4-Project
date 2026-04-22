@@ -15,6 +15,8 @@
 #include "Core/EDAssetManager.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
 #include "Inventory/Component/EDInventoryComponent.h"
+#include "Interaction/Component/EDLootTargetComponent.h"
+#include "Perception/AIPerceptionComponent.h"
 
 // Sets default values
 AEDMonsterBase::AEDMonsterBase()
@@ -22,6 +24,11 @@ AEDMonsterBase::AEDMonsterBase()
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
+	
+	bUseControllerRotationYaw = false;
+	bUseControllerRotationPitch = false;
+	bUseControllerRotationRoll = false;
+	
 	// 기본적으로 내부에서 true지만 명시적으로 표시
 	SetReplicateMovement(true);
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
@@ -37,7 +44,9 @@ AEDMonsterBase::AEDMonsterBase()
 	InventoryComponent = CreateDefaultSubobject<UEDInventoryComponent>(TEXT("InventoryComponent"));
 	InventoryComponent->bGiveDefaultWeaponOnBeginPlay = false;
 	InventoryComponent->bUseEquipmentSlots = false;
-	InventoryComponent->bAutoInitializeLootOnBeginPlay = false;
+
+	
+	GetCharacterMovement()->bOrientRotationToMovement = true;
 }
 
 // Called when the game starts or when spawned
@@ -53,25 +62,15 @@ void AEDMonsterBase::BeginPlay()
 	
 	CachedDataSubsystem = UEDGameDataSubsystem::Get(this);
 	
-	UEDMonsterDataAsset* DataAsset = GetDataAsset();
-	if (IsValid(DataAsset) == false)
-		return;
-	LoadVisuals(DataAsset);
-	
-	//InitializeFromDataAsset(DataAsset);
-	
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetHealthAttribute())
 	.AddUObject(this, &AEDMonsterBase::OnHealthChanged);
 	
-	if (HasAuthority() == false)
-		return;
-	
-	for (const TSubclassOf<UGameplayAbility>& AbilityClass : DataAsset->GetDefaultAbilities())
-	{
-		if (IsValid(AbilityClass) == false)
-			continue;
-		AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityClass));
-	}
+	// UEDMonsterDataAsset* DataAsset = GetDataAsset();
+	// if (IsValid(DataAsset) == false)
+	// 	return;
+	// LoadVisuals(DataAsset);
+	//
+	// InitializeFromDataAsset(DataAsset);
 }
 
 void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
@@ -104,6 +103,14 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	
 	if (HasAuthority() == false)
 		return;
+	// 어빌리티 부여
+	for (const TSubclassOf<UGameplayAbility>& AbilityClass : InDataAsset->GetDefaultAbilities())
+	{
+		if (IsValid(AbilityClass) == false)
+			continue;
+		AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(AbilityClass));
+	}
+	
 	// AttributeSet에 DA의 Stat 적용
 	const FMonsterStatRow& Stat = InDataAsset->GetStat();
 	UE_LOG(LogTemp, Warning, TEXT("[%s] InitializeFromDataAsset - MaxHP: %.1f, Atk: %.1f"),
@@ -112,8 +119,7 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 		return;
 	BaseAttributeSet->InitMaxHealth(Stat.MaxHP);
 	BaseAttributeSet->InitHealth(Stat.MaxHP);
-	BaseAttributeSet->InitMaxDefensive(Stat.Def);
-	BaseAttributeSet->InitMaxWalkSpeed(Stat.MoveSpeed);
+	BaseAttributeSet->InitDefensive(Stat.Def);
 	BaseAttributeSet->InitWalkSpeed(Stat.MoveSpeed);
 	// 몬스터 이동속도 MovementComponent에 적용
 	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
@@ -125,6 +131,7 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	// InventoryComponent LootTable 세팅
 	InventoryComponent->RandomLootTable = InDataAsset->GetLootTable();
 	InventoryComponent->RandomLootRollCount = InDataAsset->GetLootRollCount();
+	
 	// DA 초기화 완료 알림
 	OnDataAssetInitialized.Broadcast();
 }
@@ -142,8 +149,9 @@ void AEDMonsterBase::OnRep_MonsterState()
 	
 	if (MonsterState == EMonsterState::Dead)
 	{
-		// 캡슐 콜리전 비활성화
-		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		// Pawn채널 콜리전 비활성화
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+		GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Ignore);
 	}
 
 	UEDMonsterAnimInstance* Anim = Cast<UEDMonsterAnimInstance>(GetMesh()->GetAnimInstance());
@@ -218,9 +226,23 @@ void AEDMonsterBase::OnVisualsLoaded()
 
 void AEDMonsterBase::HandleDeath()
 {
+	if (MonsterState == EMonsterState::Dead)
+		return;
+	
 	// Dead 상태로 전환 (OnRep_MonsterState로 클라이언트에 복제)
 	MonsterState = EMonsterState::Dead;
 	OnRep_MonsterState();
+	
+	// 몬스터 시체에서 랜덤 루팅 아이템 스폰
+	EEDInventoryActionFailure ActionFailure;
+	if (IsValid(InventoryComponent) && InventoryComponent->PredicateInitializeRandomLoot(ActionFailure))
+	{
+		// 루팅 상호작용 활성화
+		LootTargetComponent = NewObject<UEDLootTargetComponent>(this, TEXT("LootTargetComponent"));
+		LootTargetComponent->SetIsReplicated(true);
+		LootTargetComponent->RegisterComponent();
+	}
+	
 	// AIController BT 중단 및 Focus 해제
 	AAIController* AIController = Cast<AAIController>(GetController());
 	if (IsValid(AIController) == false)
@@ -238,6 +260,9 @@ void AEDMonsterBase::HandleDeath()
 	AIController->StopMovement();
 	// BehaviorTree 중단
 	AIController->BrainComponent->StopLogic(TEXT("Dead"));
+	// Perception 비활성화
+	if (UAIPerceptionComponent* PerceptionComp = AIController->GetPerceptionComponent())
+		PerceptionComp->SetActive(false);
 	UE_LOG(LogTemp, Warning, TEXT("[%s] HandleDeath - 몬스터 사망"), *GetName());
 	// GA_Death 어빌리티 발동
 	FGameplayTagContainer DeathTag;
@@ -245,13 +270,6 @@ void AEDMonsterBase::HandleDeath()
 	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
 	// MonsterDeath 브로드 캐스트
 	OnMonsterDeath.Broadcast();
-	// 몬스터 시체에서 랜덤 루팅 아이템 스폰
-	if (IsValid(InventoryComponent))
-	{
-		bool bResult = InventoryComponent->RequestInitializeRandomLoot();
-		UE_LOG(LogTemp, Warning, TEXT("[%s] RandomLoot 요청: %s"), *GetName(), bResult ? TEXT("성공") : TEXT("실패(LootTable 없음)"));
-	}
-		
 	
 	// 20초 뒤에 몬스터 시체 처리 
 	GetWorldTimerManager().SetTimer(

@@ -199,6 +199,8 @@ void UEDInventoryQuickBarWidget::RefreshQuickSlots()
 			continue;
 		}
 
+		SlotWidget->SetSourceInventoryComponent(InventoryComponent);
+
 		FEDInventorySlotData SlotData;
 		if (!TryGetQuickSlotData(Index, SlotData) || SlotData.IsEmpty())
 		{
@@ -347,8 +349,14 @@ void UEDInventoryQuickBarWidget::ShowInventorySuccess(const FText& TargetName, c
 		3.0f);
 }
 
-void UEDInventoryQuickBarWidget::HandleQuickSlotDroppedOnSlot(int32 FromSlotIndex, int32 ToSlotIndex)
+void UEDInventoryQuickBarWidget::HandleQuickSlotDroppedOnSlot(UEDInventoryComponent* SourceInventoryComponent, int32 FromSlotIndex, int32 ToSlotIndex)
 {
+	if (SourceInventoryComponent && SourceInventoryComponent != InventoryComponent)
+	{
+		TryTransferExternalItemToQuickSlot(SourceInventoryComponent, FromSlotIndex, ToSlotIndex);
+		return;
+	}
+
 	TryMoveQuickSlotItem(FromSlotIndex, ToSlotIndex);
 }
 
@@ -406,6 +414,48 @@ void UEDInventoryQuickBarWidget::TryMoveQuickSlotItem(int32 FromSlotIndex, int32
 		return;
 	}
 
+}
+
+void UEDInventoryQuickBarWidget::TryTransferExternalItemToQuickSlot(UEDInventoryComponent* SourceInventoryComponent, int32 FromSlotIndex, int32 ToSlotIndex)
+{
+	if (!InventoryComponent || !SourceInventoryComponent)
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidInventory);
+		return;
+	}
+
+	if (FromSlotIndex == INDEX_NONE || ToSlotIndex == INDEX_NONE)
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
+		return;
+	}
+
+	if (!SourceInventoryComponent->InventorySlots.IsValidIndex(FromSlotIndex))
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::InvalidSlot);
+		return;
+	}
+
+	const FEDInventorySlotData& SourceSlotData = SourceInventoryComponent->InventorySlots[FromSlotIndex];
+	if (SourceSlotData.IsEmpty())
+	{
+		ShowInventoryFailure(EEDInventoryActionFailure::EmptySlot);
+		return;
+	}
+
+	EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+	const bool bSuccess = InventoryComponent->PredicateTransferItemToSlot(
+		SourceInventoryComponent,
+		InventoryComponent,
+		FromSlotIndex,
+		ToSlotIndex,
+		SourceSlotData.Item.Quantity,
+		Failure);
+	if (!bSuccess)
+	{
+		ShowInventoryFailure(Failure);
+		return;
+	}
 }
 
 void UEDInventoryQuickBarWidget::TryDropQuickSlotItemCount(int32 FromSlotIndex, int32 DropCount)

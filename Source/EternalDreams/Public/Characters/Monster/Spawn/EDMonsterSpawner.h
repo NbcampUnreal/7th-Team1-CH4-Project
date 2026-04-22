@@ -41,6 +41,11 @@ private:
 	void SpawnMonster();
 	// 몬스터 사망 시 콜백
 	void OnMonsterDeath();
+	// 데이터 서브시스템의 로드 완료 알림 받을 함수
+	UFUNCTION()
+	void OnDataLoadedResponse();
+	
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	
 	// 현재 스폰된 몬스터
 	TWeakObjectPtr<AEDMonsterBase> SpawnedMonster;
@@ -49,9 +54,9 @@ private:
 	
 	FTimerHandle RespawnTimerHandle;
 	
-	// 데이터 서브시스템의 로드 완료 알림 받을 함수
-	UFUNCTION()
-	void OnDataLoadedResponse();
+
 	
 	bool bIsDataReady = false;
+	
+
 };

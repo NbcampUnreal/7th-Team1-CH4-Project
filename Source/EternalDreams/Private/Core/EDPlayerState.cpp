@@ -25,6 +25,7 @@ void AEDPlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(AEDPlayerState, RemainingRevives);
 	DOREPLIFETIME(AEDPlayerState, Kills);
 	DOREPLIFETIME(AEDPlayerState, Deaths);
+	DOREPLIFETIME(AEDPlayerState, PlayerName);
 }
 
 void AEDPlayerState::CopyProperties(APlayerState* PlayerState)

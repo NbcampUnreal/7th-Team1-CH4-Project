@@ -4,6 +4,8 @@
 #include "UI/Panel/EDInventorySlotWidget.h"
 #include "EDQuickBarSlotWidget.generated.h"
 
+class UEDInventoryComponent;
+
 // 퀵바 슬롯 좌클릭 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDQuickBarSlotClicked, int32);
 
@@ -11,7 +13,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDQuickBarSlotClicked, int32);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDQuickBarSlotDoubleClicked, int32);
 
 // 퀵바 슬롯 드래그/드롭 이벤트
-DECLARE_MULTICAST_DELEGATE_TwoParams(FOnEDQuickBarSlotDroppedOnSlot, int32, int32);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FOnEDQuickBarSlotDroppedOnSlot, UEDInventoryComponent*, int32, int32);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDQuickBarSlotDroppedOutside, int32);
 
 UCLASS()

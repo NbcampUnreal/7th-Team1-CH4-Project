@@ -3,8 +3,11 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/Types/EDPlayerTypes.h"
 #include "GameFramework/PlayerState.h"
 #include "EDPlayerState.generated.h"
+
+enum class EPlayerNameType : uint8;
 
 /** 팀 관련 상수. 몬스터 AI가 FGenericTeamId(1)을 사용하므로 플레이어 팀은 10번대로 배정 */
 namespace EDTeam
@@ -71,7 +74,11 @@ public:
 	/** 희망 스폰 구역 ID (1~4). UI에서 선택 후 설정 */
 	UPROPERTY(Replicated, BlueprintReadWrite, Category = "ED|Player")
 	int32 DesiredZoneId = 0;
-
+	
+	//현석 : 플레이어 스킨 선택 (디폴트는 드루이드) UI에서 선택 후 설정
+	UPROPERTY(Replicated, BlueprintReadWrite, Category = "ED|Player")
+	EPlayerNameType PlayerName=EPlayerNameType::Druid;
+	
 	// -------------------------------------------------------
 	// 사망 / 부활 / 전적
 	// -------------------------------------------------------

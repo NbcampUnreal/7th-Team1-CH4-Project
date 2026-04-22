@@ -19,10 +19,13 @@
 #include "Components/WidgetComponent.h"
 #include "Core/EDAssetManager.h"
 #include "Core/EDGameDataSubsystem.h"
+#include "Core/EDPlayerState.h"
+#include "Core/EDSkillDataSubsystem.h"
 #include "Data/EDPlayerAnimDataAsset.h"
 #include "Data/EDPlayerDataAsset.h"
 #include "Data/EDWeaponDataAsset.h"
 #include "Data/EDPlayerDataAsset.h"
+#include "Data/EDSkillDeveloperSettings.h"
 #include "Data/GameplayTag/EDGameplayTags.h"
 #include "Data/Types/EDPlayerTypes.h"
 #include "Engine/AssetManager.h"
@@ -63,9 +66,12 @@ AEDPlayerCharacter::AEDPlayerCharacter()
 void AEDPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-	//AbilitySystem 초기화
-	InitializeAbilitySystem();
+	
+	//서버에서 AbilitySystem 초기화
+	if (HasAuthority())
+	{
+		InitializeAbilitySystem();
+	}
 	
 	//서버에서만, ASC가 있는 경우 실행
 	if (HasAuthority()&&IsValid(AbilitySystemComponent))
@@ -101,6 +107,15 @@ void AEDPlayerCharacter::BeginPlay()
 	{
 		DataSubsystem->OnAllDataLoaded.AddDynamic(this, &AEDPlayerCharacter::ApplyPlayerDataAsset);
 	}
+	//Inventory Binding
+	if (IsValid(InventoryComponent))
+	{
+		InventoryComponent->OnInventoryChanged.AddDynamic(this,&AEDPlayerCharacter::OnWeaponChanged);
+		InventoryComponent->OnFirstSkillSlotChanged.AddDynamic(this,&AEDPlayerCharacter::OnFirstSkillChanged);
+		InventoryComponent->OnSecondSkillSlotChanged.AddDynamic(this,&AEDPlayerCharacter::OnSecondSkillChanged);
+	}
+	
+	
 	
 	//ASC Duration Callback
 	if (!IsValid(AbilitySystemComponent))
@@ -110,12 +125,7 @@ void AEDPlayerCharacter::BeginPlay()
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(BaseAttributeSet->GetWalkSpeedAttribute())
 	.AddUObject(this, &AEDPlayerCharacter::OnWalkSpeedChanged);
 	
-	if (IsValid(InventoryComponent))
-	{
-		InventoryComponent->OnInventoryChanged.AddDynamic(this,&AEDPlayerCharacter::OnWeaponChanged);
-		InventoryComponent->OnFirstSkillSlotChanged.AddDynamic(this,&AEDPlayerCharacter::OnFirstSkillChanged);
-		InventoryComponent->OnSecondSkillSlotChanged.AddDynamic(this,&AEDPlayerCharacter::OnSecondSkillChanged);
-	}
+	
 	
 	
 }
@@ -143,6 +153,51 @@ void AEDPlayerCharacter::Tick(float DeltaSeconds)
 	}
 	MoveVector*=DashSpeed*DeltaSeconds;
 	AddActorWorldOffset(MoveVector, true, &Hit,ETeleportType::None);
+}
+
+void AEDPlayerCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	//AbilitySystem 초기화
+	InitializeAbilitySystem();
+	UE_LOG(LogTemp,Warning,TEXT("OnRep_PlayerState"));
+	APlayerController* LocalPC = GetWorld()->GetFirstPlayerController();
+	if (LocalPC && LocalPC->PlayerState && GetPlayerState())
+	{
+		
+		UE_LOG(LogTemp,Warning,TEXT("OnRep_PlayerState : Character"));
+		if (!IsLocallyControlled())
+		{
+			UE_LOG(LogTemp,Warning,TEXT("OnRep_PlayerState : OtherCharacter"));
+			AEDPlayerState* ThisPS=Cast<AEDPlayerState> (GetPlayerState());
+			AEDPlayerState* LocalPS=Cast<AEDPlayerState> (LocalPC->PlayerState);	
+			
+			if (ThisPS&&LocalPS)
+			{
+				UE_LOG(LogTemp,Warning,TEXT("%d %d"),ThisPS->TeamId,LocalPS->TeamId);
+				if (GetMesh()&&GetMesh()->GetChildComponent(0))
+				{
+					USkeletalMeshComponent* RetargetMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
+					UEDSkillDataSubsystem* SkillDataSubsystem = UEDSkillDataSubsystem::Get(GetWorld());
+					if (RetargetMeshComp&&SkillDataSubsystem)
+					{
+						//적군 오버레이 머티리얼 설정
+						if (ThisPS->TeamId!=LocalPS->TeamId)
+						{
+							RetargetMeshComp->SetOverlayMaterial(SkillDataSubsystem->GetEnemyMat());
+						}
+						//팀 오버레이 머티리얼 설정
+						else
+						{
+							RetargetMeshComp->SetOverlayMaterial(SkillDataSubsystem->GetTeamMat());
+						}
+					}
+				}
+			}
+			
+		}
+	}
+	
 }
 
 
@@ -373,6 +428,19 @@ void AEDPlayerCharacter::OnWeaponChanged_Implementation()
 		!IsValid(PlayerSkillComponent))
 	{
 		return;
+	}
+	
+	if (!IsValid(LWeaponActor) || !IsValid(RWeaponActor))
+	{
+		// 인벤토리 변경이 무기 액터 생성보다 먼저 들어올 수 있으므로
+		// 현재 플레이어 데이터 적용 경로를 한 번 더 태워 무기 액터 생성을 재시도
+		ApplyPlayerDataAsset();
+
+		// 재시도 이후에도 무기 액터가 없으면 더 진행하지 않음
+		if (!IsValid(LWeaponActor) || !IsValid(RWeaponActor))
+		{
+			return;
+		}
 	}
 	
 	const UEDGameDataSubsystem* DataSubsystem = UEDGameDataSubsystem::Get(GetWorld());
