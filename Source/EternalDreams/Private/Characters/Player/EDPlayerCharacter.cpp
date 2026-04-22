@@ -140,7 +140,8 @@ void AEDPlayerCharacter::BeginPlay()
     .AddUObject(this, &AEDPlayerCharacter::OnHealthChanged);
 	}
 
-	
+	AbilitySystemComponent->RegisterGameplayTagEvent(FEDGameplayTags::Get().State_Player_Stop,EGameplayTagEventType::NewOrRemoved).
+	AddUObject(this,&AEDPlayerCharacter::OnStopTagChanged);
 	
 	
 }
@@ -148,6 +149,24 @@ void AEDPlayerCharacter::BeginPlay()
 void AEDPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	
+	FHitResult HitResult;
+	if (UGameplayStatics::GetPlayerController(GetWorld(),0)->GetHitResultUnderCursor(ECC_Visibility,false, HitResult))
+	{
+		if (!bIsStop&&IsLocallyControlled())
+		{
+			FVector TargetLocation = HitResult.ImpactPoint;
+			FVector StartLocation = GetActorLocation();
+		
+			// 방향 Rotator 계산(Yaw만 사용)
+			FRotator LookAtRotation = FRotationMatrix::MakeFromX(TargetLocation - StartLocation).Rotator();
+			LookAtRotation.Pitch = 0.0f;
+			LookAtRotation.Roll = 0.0f;
+		
+			UGameplayStatics::GetPlayerController(GetWorld(),0)->SetControlRotation(LookAtRotation);
+		}
+	}
+	
 	
 	if (!bIsAnimMoving)
 	{
@@ -169,6 +188,8 @@ void AEDPlayerCharacter::Tick(float DeltaSeconds)
 	MoveVector*=DashSpeed*DeltaSeconds;
 	AddActorWorldOffset(MoveVector, true, &Hit,ETeleportType::None);
 }
+
+
 
 void AEDPlayerCharacter::OnRep_PlayerState()
 {
@@ -385,6 +406,18 @@ void AEDPlayerCharacter::StartAnimMove(float InDashSpeed, bool InbIsForward, boo
 void AEDPlayerCharacter::StopAnimMove()
 {
 	bIsAnimMoving=false;
+}
+
+void AEDPlayerCharacter::OnStopTagChanged(const FGameplayTag Tag, int32 NewCount)
+{
+	if (NewCount>0)
+	{
+		bIsStop=true;
+	}
+	else
+	{
+		bIsStop=false;
+	}
 }
 
 void AEDPlayerCharacter::OnWalkSpeedChanged(const FOnAttributeChangeData& Data)

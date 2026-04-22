@@ -72,7 +72,6 @@ public:
 	
 	
 	
-	
 	//Components
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Abilities")
@@ -144,6 +143,8 @@ public:
 	bool IsDead() const { return bIsDead; }
 
 protected:
+	bool bIsStop=false;
+	
 	/** 중복 HandleDeath 호출 방지용 서버 전용 플래그 */
 	bool bIsDead = false;
 	
@@ -161,6 +162,8 @@ protected:
 	
 	
 	//Callback
+	
+	void OnStopTagChanged(const FGameplayTag Tag,int32 newCount);
 	void OnWalkSpeedChanged(const struct FOnAttributeChangeData& Data);
 	void OnHealthChanged(const struct FOnAttributeChangeData& Data);
 	UFUNCTION()
