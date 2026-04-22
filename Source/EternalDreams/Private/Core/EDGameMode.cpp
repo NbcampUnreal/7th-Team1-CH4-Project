@@ -958,6 +958,8 @@ void AEDGameMode::OnServerPlayerDataLoaded()
 				if (AEDPlayerCharacter* PlayerCharacter=Cast<AEDPlayerCharacter>( PC->GetCharacter()))
 				{
 					PlayerCharacter->SetPlayer();
+					PC->ClientRPC_LoadComplete();
+					
 				}
 			}
 		}

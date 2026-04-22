@@ -18,6 +18,7 @@ class UEDLootInteractionComponent;
 
 DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
 DECLARE_MULTICAST_DELEGATE(FOnCraftInputTriggered);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLoadedComplete);
 
 /**
  * 플레이어 컨트롤러 클래스
@@ -48,7 +49,14 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_SetPlayerNickname(const FString& InNickname);
-
+	
+	//현석: 로드 완료시 로딩창 삭제
+	UPROPERTY(BlueprintAssignable)
+	FOnLoadedComplete OnAllLoadCompleted;
+	
+	UFUNCTION(Client,Reliable)
+	FORCEINLINE void ClientRPC_LoadComplete();
+	
 #pragma region Input UI
 	// UI 입력 전용 매핑 컨텍스트
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
