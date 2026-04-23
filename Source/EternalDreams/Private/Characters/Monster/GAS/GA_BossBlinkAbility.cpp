@@ -86,7 +86,7 @@ void UGA_BossBlinkAbility::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 
 	// 도착 인디케이터
 	if (IsValid(IndicatorEffect))
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(Monster, IndicatorEffect, BlinkDestination);
+		Monster->Multicast_SpawnEffect(IndicatorEffect, BlinkDestination);
 	// 딜레이 후 점멸 실행
 	UAbilityTask_WaitDelay* WaitTask = UAbilityTask_WaitDelay::WaitDelay(this, BlinkDelay);
 	WaitTask->OnFinish.AddDynamic(this, &UGA_BossBlinkAbility::OnBlinkDelayFinished);

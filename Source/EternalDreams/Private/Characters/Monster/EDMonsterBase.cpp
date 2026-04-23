@@ -10,6 +10,8 @@
 #include "Net/UnrealNetwork.h"
 #include "Engine/AssetManager.h"
 #include "AIController.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 #include "Components/CapsuleComponent.h"
 #include "Core/EDGameDataSubsystem.h"
 #include "Core/EDAssetManager.h"
@@ -18,6 +20,7 @@
 #include "Interaction/Component/EDLootTargetComponent.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "UI/HUD/EDFloatingHealthBarWidgetComponent.h"
+
 
 // Sets default values
 AEDMonsterBase::AEDMonsterBase()
@@ -177,6 +180,12 @@ void AEDMonsterBase::OnRep_MonsterDataId()
 	if (IsValid(DataAsset) == false)
 		return;
 	LoadVisuals(DataAsset);
+}
+
+void AEDMonsterBase::Multicast_SpawnEffect_Implementation(UNiagaraSystem* Effect, FVector Location)
+{
+	if (IsValid(Effect))
+		UNiagaraFunctionLibrary::SpawnSystemAtLocation(this, Effect, Location);
 }
 
 void AEDMonsterBase::LoadVisuals(UEDMonsterDataAsset* InDataAsset)

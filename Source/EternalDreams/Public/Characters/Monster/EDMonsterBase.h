@@ -21,6 +21,7 @@ class UAbilitySystemComponent;
 class UEDInventoryComponent;
 class UEDLootTargetComponent;
 class UEDFloatingHealthBarWidgetComponent;
+class UNiagaraSystem;
 struct FStreamableHandle;
 
 UCLASS()
@@ -39,6 +40,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Data")
 	void InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset);
 	
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnEffect(UNiagaraSystem* Effect, FVector Location);
 	// 수정 전
 	// UFUNCTION(BlueprintCallable, Category= "Data")
 	// UEDMonsterDataAsset* GetDataAsset() const { return DataAsset; }
@@ -74,7 +77,7 @@ protected:
 	
 	UFUNCTION(BlueprintCallable, Category = "Monster")
 	void SetMonsterState(EMonsterState NewState) { if (HasAuthority()) MonsterState = NewState; }
-
+	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 	
