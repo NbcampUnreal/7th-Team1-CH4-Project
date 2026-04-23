@@ -8,7 +8,8 @@ public class EternalDreams : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput",
+		PublicDependencyModuleNames.AddRange(new string[] { 
+			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput",
 			"NavigationSystem",
 			"AIModule",
 			"UMG",
@@ -27,6 +28,15 @@ public class EternalDreams : ModuleRules
 
 		// Slate UI — 로딩 화면 위젯에서 사용
 		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
+		
+		//에디터용 모듈 격리 (패키징시 제외)
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[] {
+				"ToolWidgets", 
+				"InteractiveToolsFramework"
+			});
+		}
 		
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
