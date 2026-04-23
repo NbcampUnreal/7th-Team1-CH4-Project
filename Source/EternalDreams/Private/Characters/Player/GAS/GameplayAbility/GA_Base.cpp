@@ -218,7 +218,7 @@ void UGA_Base::OnNotifyHitEvent(FGameplayEventData HitGameplayEventData)
 		{
 			return;
 		}
-		
+		//데미지 배율
 		const FSkillMulStatus* SkillMulStaus =EDSkillDataSubsystem->GetSkillData(AssetTag);
 		
 		if (SkillMulStaus==nullptr)
@@ -226,7 +226,7 @@ void UGA_Base::OnNotifyHitEvent(FGameplayEventData HitGameplayEventData)
 			return;
 		}
 		
-		
+		//공격자의 총합 데미지
 		float SkillFinalDamage =
 			PlayerAttributeSet->GetStrength() * SkillMulStaus->DamageStrengthMultiplier +
 			PlayerAttributeSet->GetDexterity() * SkillMulStaus->DamageDexterityMultiplier +
@@ -236,4 +236,18 @@ void UGA_Base::OnNotifyHitEvent(FGameplayEventData HitGameplayEventData)
 		SpecHandle.Data->SetSetByCallerMagnitude(FEDGameplayTags::Get().Data_Damage, SkillFinalDamage);
 		PlayerASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
 	}
+	
+	//디버프 GE
+	for (auto DebuffEffectClass: DebuffEffectClassMap)
+	{
+		FGameplayEffectSpecHandle DebuffSpecHandle = PlayerASC->MakeOutgoingSpec(DebuffEffectClass.Key, 1.0f, Context);
+		if (DebuffSpecHandle.IsValid())
+		{
+			DebuffSpecHandle.Data->SetSetByCallerMagnitude(FEDGameplayTags::Get().Data_DebuffTime, DebuffEffectClass.Value);
+			PlayerASC->ApplyGameplayEffectSpecToTarget(*DebuffSpecHandle.Data.Get(), TargetASC);
+		}
+		
+	}
+	
+	
 }

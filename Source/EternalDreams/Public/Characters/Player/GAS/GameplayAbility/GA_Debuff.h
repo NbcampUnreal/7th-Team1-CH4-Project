@@ -5,19 +5,18 @@
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
 #include "Data/Types/EDPlayerTypes.h"
-#include "GA_Base.generated.h"
+#include "GA_Debuff.generated.h"
 
-enum class EPlayerAnimNameType : uint8;
 /**
- * GameplayAbility를 적용하는 애니메이션 몽타주 기반 행동의 부모 클래스
+ * 
  */
-UCLASS(Abstract)
-class ETERNALDREAMS_API UGA_Base : public UGameplayAbility
+UCLASS()
+class ETERNALDREAMS_API UGA_Debuff : public UGameplayAbility
 {
 	GENERATED_BODY()
 	
 public:
-	UGA_Base();
+	UGA_Debuff();
 	virtual bool CanActivateAbility(
 		const FGameplayAbilitySpecHandle Handle, 
 		const FGameplayAbilityActorInfo* ActorInfo, 
@@ -48,29 +47,6 @@ protected:
 	UPROPERTY()
 	UAnimMontage* PlayerAnimMontage=nullptr;
 	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
-	TSubclassOf<UGameplayEffect> DamageEffectClass;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
-	TMap<TSubclassOf<UGameplayEffect>,float> DebuffEffectClassMap;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
-	TSubclassOf<UGameplayEffect> CoolTimeEffectClass;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
-	float CoolTime=0.f;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
-	FGameplayTag CoolTimeTag=FGameplayTag::EmptyTag;
-	
-	//콜백 함수
-protected:
 	UFUNCTION()
-	void OnMontageCompleted();
-	
-	UFUNCTION()
-	void OnMontageCancelled();
-	
-	UFUNCTION()
-	void OnNotifyHitEvent(FGameplayEventData HitGameplayEventData);
+	void OnDebuffTagRemoved();
 };

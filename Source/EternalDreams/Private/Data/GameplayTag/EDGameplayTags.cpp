@@ -251,6 +251,11 @@ FString("SetByCaller용 Dexterity + 증가 Tag")
 FString("SetByCaller용 Intelligence + 증가 Tag")
 );
 	
+	Tags.Data_DebuffTime = Manager.AddNativeGameplayTag(
+FName("Data.DebuffTime"),
+FString("SetByCaller용 디버프 지속시간")
+);
+	
 	
 	Tags.Data_StatMul = Manager.AddNativeGameplayTag(
 		FName("Data.StatMul"),

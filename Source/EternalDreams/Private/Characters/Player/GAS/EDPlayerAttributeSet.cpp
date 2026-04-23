@@ -12,9 +12,9 @@
 UEDPlayerAttributeSet::UEDPlayerAttributeSet()
 {
 	//초기화
-	InitStrength(10.0f);
-	InitDexterity(10.0f);
-	InitIntelligence(10.0f);
+	InitStrength(0.0f);
+	InitDexterity(0.0f);
+	InitIntelligence(0.0f);
 	InitAttackSpeed(1.f);
 	
 	//KSH --- 금지구역시간 초기화 (필요시 수치 변경)
