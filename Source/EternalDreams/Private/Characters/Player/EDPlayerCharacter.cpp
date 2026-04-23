@@ -111,7 +111,7 @@ void AEDPlayerCharacter::BeginPlay()
 	if (DataSubsystem->IsDataReady())
 	{
 		
-		ApplyPlayerDataAsset();
+		// ApplyPlayerDataAsset();
 		if (HasAuthority())
 		{
 			OnSeverLoadedComplete();
@@ -131,7 +131,7 @@ void AEDPlayerCharacter::BeginPlay()
 		{
 			DataSubsystem->OnAllDataLoaded.AddDynamic(this, &AEDPlayerCharacter::NotifyServerPlayerLoadComplete);
 		}
-		DataSubsystem->OnAllDataLoaded.AddDynamic(this, &AEDPlayerCharacter::ApplyPlayerDataAsset);
+		// DataSubsystem->OnAllDataLoaded.AddDynamic(this, &AEDPlayerCharacter::ApplyPlayerDataAsset);
 	}
 	//Inventory Binding
 	if (IsValid(InventoryComponent))
@@ -266,24 +266,42 @@ void AEDPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& O
 
 void AEDPlayerCharacter::ApplyTargetMesh()
 {
+	UE_LOG(LogTemp, Warning, TEXT("[ApplyTargetMesh 진입 초기] TargetMeshId Type: %s, Name: %s"),
+	*TargetMeshId.PrimaryAssetType.ToString(),
+	*TargetMeshId.PrimaryAssetName.ToString());
 	if (!TargetMeshId.IsValid())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter::ApplyTargetMesh] TargetMeshId is Invalid."));
 		return;
 	}
 	
-	const UEDGameDataSubsystem* EDGameplayDataSubsystem=UEDGameDataSubsystem::Get(GetWorld());
+	UEDGameDataSubsystem* EDGameplayDataSubsystem = UEDGameDataSubsystem::Get(GetWorld());
 	if (!EDGameplayDataSubsystem)
 	{
+		UE_LOG(LogTemp, Error, TEXT("[AEDPlayerCharacter::ApplyTargetMesh] EDGameplayDataSubsystem is NULL."));
 		return;
 	}
 	
-	UEDPlayerDataAsset* TargetMesh = 
-			EDGameplayDataSubsystem->GetData<UEDPlayerDataAsset>(TargetMeshId
-				);
+	UEDPlayerDataAsset* TargetMesh = EDGameplayDataSubsystem->GetData<UEDPlayerDataAsset>(TargetMeshId);
 		
 	if (IsValid(TargetMesh))
 	{
-		GetMesh()->SetSkeletalMesh(TargetMesh->SkeletalMesh.LoadSynchronous());
+		USkeletalMesh* LoadedMesh = TargetMesh->SkeletalMesh.LoadSynchronous();
+		if (LoadedMesh)
+		{
+			GetMesh()->SetSkeletalMesh(LoadedMesh);
+			UE_LOG(LogTemp, Log, TEXT("[AEDPlayerCharacter::ApplyTargetMesh] Successfully set SkeletalMesh: %s"), *LoadedMesh->GetName());
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("[AEDPlayerCharacter::ApplyTargetMesh] LoadSynchronous failed for SkeletalMesh in Asset: %s"), *TargetMeshId.ToString());
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("[AEDPlayerCharacter::ApplyTargetMesh] Could not find UEDPlayerDataAsset for ID: %s"), *TargetMeshId.ToString());
+		EDGameplayDataSubsystem->OnAllDataLoaded.AddDynamic(this, &AEDPlayerCharacter::ApplyTargetMesh);
+		return;
 	}
 }
 
@@ -291,22 +309,35 @@ void AEDPlayerCharacter::ApplyTargetABP()
 {
 	if (!TargetABPId.IsValid())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[AEDPlayerCharacter::ApplyTargetABP] TargetABPId is Invalid."));
 		return;
 	}
 	
-	const UEDGameDataSubsystem* EDGameplayDataSubsystem=UEDGameDataSubsystem::Get(GetWorld());
+	const UEDGameDataSubsystem* EDGameplayDataSubsystem = UEDGameDataSubsystem::Get(GetWorld());
 	if (!EDGameplayDataSubsystem)
 	{
+		UE_LOG(LogTemp, Error, TEXT("[AEDPlayerCharacter::ApplyTargetABP] EDGameplayDataSubsystem is NULL."));
 		return;
 	}
 	
-	UEDPlayerDataAsset* TargetABP = 
-			EDGameplayDataSubsystem->GetData<UEDPlayerDataAsset>(TargetABPId
-				);
+	UEDPlayerDataAsset* TargetABP = EDGameplayDataSubsystem->GetData<UEDPlayerDataAsset>(TargetABPId);
 		
 	if (IsValid(TargetABP))
 	{
-		GetMesh()->SetAnimInstanceClass(TargetABP->AnimationBlueprint.LoadSynchronous());
+		UClass* LoadedAnimBPClass = TargetABP->AnimationBlueprint.LoadSynchronous();
+		if (LoadedAnimBPClass)
+		{
+			GetMesh()->SetAnimInstanceClass(LoadedAnimBPClass);
+			UE_LOG(LogTemp, Log, TEXT("[AEDPlayerCharacter::ApplyTargetABP] Successfully set AnimInstanceClass: %s"), *LoadedAnimBPClass->GetName());
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("[AEDPlayerCharacter::ApplyTargetABP] LoadSynchronous failed for AnimationBlueprint in Asset: %s"), *TargetABPId.ToString());
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("[AEDPlayerCharacter::ApplyTargetABP] Could not find UEDPlayerDataAsset for ID: %s"), *TargetABPId.ToString());
 	}
 }
 
@@ -493,7 +524,7 @@ void AEDPlayerCharacter::OnWeaponChanged_Implementation()
 	{
 		LWeaponActor->SetStaticMeshId(FPrimaryAssetId(
 				WeaponCategory, 
-				*UEnum::GetDisplayValueAsText(EWeaponNameType::Bow).ToString()));
+				*UEnum::GetDisplayValueAsText(EWeaponNameType::DA_Bow).ToString()));
 		RWeaponActor->SetStaticMeshId(FPrimaryAssetId());
 		
 		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Bow);
@@ -505,7 +536,7 @@ void AEDPlayerCharacter::OnWeaponChanged_Implementation()
 		LWeaponActor->SetStaticMeshId(FPrimaryAssetId());
 		RWeaponActor->SetStaticMeshId(FPrimaryAssetId(
 		WeaponCategory, 
-		*UEnum::GetDisplayValueAsText(EWeaponNameType::Hammer).ToString()));
+		*UEnum::GetDisplayValueAsText(EWeaponNameType::DA_Hammer).ToString()));
 		
 		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Hammer);
 		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Hammer);
@@ -516,7 +547,7 @@ void AEDPlayerCharacter::OnWeaponChanged_Implementation()
 		LWeaponActor->SetStaticMeshId(FPrimaryAssetId());
 		RWeaponActor->SetStaticMeshId(FPrimaryAssetId(
 		WeaponCategory, 
-		*UEnum::GetDisplayValueAsText(EWeaponNameType::Staff).ToString()));
+		*UEnum::GetDisplayValueAsText(EWeaponNameType::DA_Staff).ToString()));
 		
 		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Staff);
 		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Staff);
@@ -527,7 +558,7 @@ void AEDPlayerCharacter::OnWeaponChanged_Implementation()
 		LWeaponActor->SetStaticMeshId(FPrimaryAssetId());
 		RWeaponActor->SetStaticMeshId(FPrimaryAssetId(
 		WeaponCategory, 
-		*UEnum::GetDisplayValueAsText(EWeaponNameType::Sword).ToString()));
+		*UEnum::GetDisplayValueAsText(EWeaponNameType::DA_Sword).ToString()));
 		
 		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Sword);
 		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Sword);
@@ -548,35 +579,55 @@ void AEDPlayerCharacter::OnPlayerSkinChanged_Implementation(EPlayerNameType Skin
 		return;
 	}
 	
-	FName PlayerSkinCategory= *UEnum::GetDisplayValueAsText(EPlayerDataType::PlayerData).ToString();
+	//
+	// FName PlayerSkinCategory= *UEnum::GetDisplayValueAsText(EPlayerDataType::PlayerData).ToString();
+	//
+	// //타겟 메시 및 애님인스턴스 설정
+	// SetTargetMeshId(FPrimaryAssetId(
+	// 		PlayerSkinCategory,
+	// 		*UEnum::GetDisplayValueAsText(EPlayerNameType::DA_Basic).ToString()
+	// 		));
+	// 	
+	// SetTargetABPId(FPrimaryAssetId(PlayerSkinCategory,
+	// 		*UEnum::GetDisplayValueAsText(EPlayerNameType::DA_Basic).ToString()
+	// 		));
+	// 	
+	//
+	// //플레이어 스킨 변경
+	// UEDPlayerDataAsset* PlayerSkin = EDGameDataSubsystem->GetData<UEDPlayerDataAsset>(
+	// 	FPrimaryAssetId(
+	// 		PlayerSkinCategory,
+	// 		*UEnum::GetDisplayValueAsText(SkinName).ToString()
+	// 		));
+	//
+	// SetRetargetMeshId(FPrimaryAssetId(
+	// 	PlayerSkinCategory,
+	// 	*UEnum::GetDisplayValueAsText(SkinName).ToString()
+	// 	));
+	//
+	// SetRetargetABPId(FPrimaryAssetId(
+	// 	PlayerSkinCategory,
+	// 	*UEnum::GetDisplayValueAsText(SkinName).ToString()
+	// 	));
+
+	const UEnum* DataTypeEnum = StaticEnum<EPlayerDataType>();
+	const UEnum* PlayerNameEnum = StaticEnum<EPlayerNameType>();
+
+	FName PlayerSkinCategory = FName(*DataTypeEnum->GetNameStringByValue((int64)EPlayerDataType::PlayerData));
+
+	FString BasicNameStr = PlayerNameEnum->GetNameStringByValue((int64)EPlayerNameType::DA_Basic);
+
+	SetTargetMeshId(FPrimaryAssetId(PlayerSkinCategory, FName(*BasicNameStr)));
+	SetTargetABPId(FPrimaryAssetId(PlayerSkinCategory, FName(*BasicNameStr)));
 	
-	//타겟 메시 및 애님인스턴스 설정
-	SetTargetMeshId(FPrimaryAssetId(
-			PlayerSkinCategory,
-			*UEnum::GetDisplayValueAsText(EPlayerNameType::Basic).ToString()
-			));
-		
-	SetTargetABPId(FPrimaryAssetId(PlayerSkinCategory,
-			*UEnum::GetDisplayValueAsText(EPlayerNameType::Basic).ToString()
-			));
-		
-	
-	//플레이어 스킨 변경
+	FString SkinNameStr = PlayerNameEnum->GetNameStringByValue((int64)SkinName);
+
 	UEDPlayerDataAsset* PlayerSkin = EDGameDataSubsystem->GetData<UEDPlayerDataAsset>(
-		FPrimaryAssetId(
-			PlayerSkinCategory,
-			*UEnum::GetDisplayValueAsText(SkinName).ToString()
-			));
-	
-	SetRetargetMeshId(FPrimaryAssetId(
-		PlayerSkinCategory,
-		*UEnum::GetDisplayValueAsText(SkinName).ToString()
-		));
-	
-	SetRetargetABPId(FPrimaryAssetId(
-		PlayerSkinCategory,
-		*UEnum::GetDisplayValueAsText(SkinName).ToString()
-		));
+		FPrimaryAssetId(PlayerSkinCategory, FName(*SkinNameStr))
+	);
+
+	SetRetargetMeshId(FPrimaryAssetId(PlayerSkinCategory, FName(*SkinNameStr)));
+	SetRetargetABPId(FPrimaryAssetId(PlayerSkinCategory, FName(*SkinNameStr)));
 }
 
 
@@ -737,7 +788,7 @@ void AEDPlayerCharacter::SetPlayer()
 			RWeaponActor->SetOwner(this);
 			GetCapsuleComponent()->IgnoreActorWhenMoving(RWeaponActor, true);
 			RWeaponActor->AttachToComponent(
-			Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0)),
+			GetMesh(),
 			FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 			RWeaponSocketName
 		);
@@ -753,7 +804,7 @@ void AEDPlayerCharacter::SetPlayer()
 			LWeaponActor->SetOwner(this);
 			GetCapsuleComponent()->IgnoreActorWhenMoving(LWeaponActor, true);
 			LWeaponActor->AttachToComponent(
-			Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0)),
+			GetMesh(),
 			FAttachmentTransformRules::SnapToTargetNotIncludingScale,
 			LWeaponSocketName
 		);

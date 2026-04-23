@@ -54,11 +54,12 @@ void UGA_Base::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FG
 	UEDGameDataSubsystem* EDGameDataSubsystem = UEDGameDataSubsystem::Get(GetWorld());
 	if (IsValid(EDGameDataSubsystem))
 	{
+		const UEnum* AnimNameEnum = StaticEnum<EPlayerAnimNameType>();
+		FString MontageStr = AnimNameEnum->GetNameStringByValue((int64)MontageName);
+		FName AnimCategory = FName("PlayerAnimData");
 		UEDPlayerAnimDataAsset* PlayerAnimData = EDGameDataSubsystem->GetData<UEDPlayerAnimDataAsset>(
-			FPrimaryAssetId(
-				*UEnum::GetDisplayValueAsText(EPlayerDataType::PlayerAnimData).ToString(),
-				*UEnum::GetDisplayValueAsText(MontageName).ToString()
-			));
+			FPrimaryAssetId(AnimCategory, FName(*MontageStr))
+			);
 		UE_LOG(LogTemp,Warning,TEXT("%s %s"),*UEnum::GetDisplayValueAsText(EPlayerDataType::PlayerAnimData).ToString(),*UEnum::GetDisplayValueAsText(MontageName).ToString());
 		
 		if (IsValid(PlayerAnimData))

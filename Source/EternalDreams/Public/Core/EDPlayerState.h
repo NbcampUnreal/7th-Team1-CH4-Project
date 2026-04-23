@@ -77,7 +77,7 @@ public:
 	
 	//현석 : 플레이어 스킨 선택 (디폴트는 드루이드) UI에서 선택 후 설정
 	UPROPERTY(BlueprintReadWrite, Category = "ED|Player", Replicated)
-	EPlayerNameType PlayerSkinName=EPlayerNameType::Druid;
+	EPlayerNameType PlayerSkinName=EPlayerNameType::DA_Druid;
 	
 	UFUNCTION(BlueprintCallable,Server, Reliable)
 	void SetPlayerSkinName(EPlayerNameType InPlayerSkinName);

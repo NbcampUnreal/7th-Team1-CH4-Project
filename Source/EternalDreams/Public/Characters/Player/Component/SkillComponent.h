@@ -82,7 +82,7 @@ public:
 	FORCEINLINE FGameplayTag& GetBasicAttackTag() {return BasicAttackTag;};
 
 	UFUNCTION(BlueprintCallable,Server,Reliable)
-	FORCEINLINE void SetQSkillTag(const FGameplayTag Tag);
+	void SetQSkillTag(const FGameplayTag Tag);
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetQSkillTag() {return QSkillTag;}
 	

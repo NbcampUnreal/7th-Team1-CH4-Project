@@ -5,8 +5,6 @@
 
 #include "AbilitySystemComponent.h"
 #include "EnhancedInputComponent.h"
-#include "SNegativeActionButton.h"
-#include "ToolBuilderUtil.h"
 #include "Characters/Player/EDPlayerCharacter.h"
 #include "Characters/Player/EDPlayerController.h"
 #include "Components/WidgetComponent.h"

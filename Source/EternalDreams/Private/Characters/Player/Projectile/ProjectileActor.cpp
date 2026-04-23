@@ -60,7 +60,7 @@ void AProjectileActor::BeginPlay()
 	{
 		SetStaticMeshId(FPrimaryAssetId(
 			*UEnum::GetDisplayValueAsText(EPlayerDataType::WeaponData).ToString(),
-			*UEnum::GetDisplayValueAsText(EWeaponNameType::Arrow).ToString()
+			*UEnum::GetDisplayValueAsText(EWeaponNameType::DA_Arrow).ToString()
 			));
 	}
 	
