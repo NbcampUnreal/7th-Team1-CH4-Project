@@ -142,7 +142,7 @@ void UEDPhaseInfoWidget::RefreshRemainingTime()
 	const AEDGameState* GameState = CachedGameState.Get();
 	if (IsFinalPhase(*GameState))
 	{
-		TimeText->SetText(LOCTEXT("FinalBattleLabel", "final"));
+		TimeText->SetText(FText::FromString(TEXT("final")));
 		return;
 	}
 
