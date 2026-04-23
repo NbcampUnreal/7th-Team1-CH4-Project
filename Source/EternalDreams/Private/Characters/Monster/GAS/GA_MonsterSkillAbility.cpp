@@ -101,7 +101,7 @@ void UGA_MonsterSkillAbility::OnExplosionEvent(FGameplayEventData Payload)
 	
 	ApplyExplosionDamage(Monster);
 	if (IsValid(ExplosionEffect))
-		UNiagaraFunctionLibrary::SpawnSystemAtLocation(Monster, ExplosionEffect, Monster->GetActorLocation());
+		Monster->Multicast_SpawnEffect(ExplosionEffect, Monster->GetActorLocation());
 }
 
 void UGA_MonsterSkillAbility::ApplyExplosionDamage(AEDMonsterBase* Monster)

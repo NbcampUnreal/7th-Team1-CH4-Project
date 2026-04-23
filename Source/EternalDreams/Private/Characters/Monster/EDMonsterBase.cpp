@@ -11,6 +11,7 @@
 #include "Engine/AssetManager.h"
 #include "AIController.h"
 #include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 #include "Components/CapsuleComponent.h"
 #include "Core/EDGameDataSubsystem.h"
 #include "Core/EDAssetManager.h"
@@ -19,6 +20,7 @@
 #include "Interaction/Component/EDLootTargetComponent.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "UI/HUD/EDFloatingHealthBarWidgetComponent.h"
+
 
 // Sets default values
 AEDMonsterBase::AEDMonsterBase()

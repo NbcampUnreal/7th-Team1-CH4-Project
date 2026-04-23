@@ -13,7 +13,6 @@
 #include "EDMonsterBase.generated.h"
 
 
-class UNiagaraSystem;
 DECLARE_MULTICAST_DELEGATE(FOnMonsterDeath);
 DECLARE_MULTICAST_DELEGATE(FOnAttackFinished);
 DECLARE_MULTICAST_DELEGATE(FOnDataAssetInitialized);
@@ -22,6 +21,7 @@ class UAbilitySystemComponent;
 class UEDInventoryComponent;
 class UEDLootTargetComponent;
 class UEDFloatingHealthBarWidgetComponent;
+class UNiagaraSystem;
 struct FStreamableHandle;
 
 UCLASS()
@@ -40,6 +40,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Data")
 	void InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset);
 	
+	UFUNCTION(NetMulticast, Unreliable)
+	void Multicast_SpawnEffect(UNiagaraSystem* Effect, FVector Location);
 	// 수정 전
 	// UFUNCTION(BlueprintCallable, Category= "Data")
 	// UEDMonsterDataAsset* GetDataAsset() const { return DataAsset; }
@@ -75,9 +77,6 @@ protected:
 	
 	UFUNCTION(BlueprintCallable, Category = "Monster")
 	void SetMonsterState(EMonsterState NewState) { if (HasAuthority()) MonsterState = NewState; }
-	
-	UFUNCTION(NetMulticast, Unreliable)
-	void Multicast_SpawnEffect(UNiagaraSystem* Effect, FVector Location);
 	
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Monster|GAS")
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
