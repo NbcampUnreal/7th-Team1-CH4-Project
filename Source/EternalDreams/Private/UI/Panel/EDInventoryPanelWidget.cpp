@@ -16,6 +16,11 @@
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "UI/Panel/EDInventorySlotWidget.h"
 
+UEDInventoryPanelWidget::UEDInventoryPanelWidget()
+{
+	bSupportsActivationFocus = false;
+}
+
 void UEDInventoryPanelWidget::NativeConstruct()
 {
 	Super::NativeConstruct();

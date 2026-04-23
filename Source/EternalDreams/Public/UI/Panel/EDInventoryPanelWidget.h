@@ -20,6 +20,8 @@ class ETERNALDREAMS_API UEDInventoryPanelWidget : public UCommonActivatableWidge
 	GENERATED_BODY()
 
 public:
+	UEDInventoryPanelWidget();
+
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 	virtual TOptional<FUIInputConfig> GetDesiredInputConfig() const override;

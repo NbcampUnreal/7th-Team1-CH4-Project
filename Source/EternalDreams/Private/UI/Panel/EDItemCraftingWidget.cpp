@@ -45,6 +45,11 @@ FText GetCraftFailureText(EEDInventoryActionFailure Failure)
 }
 }
 
+UEDItemCraftingWidget::UEDItemCraftingWidget()
+{
+	bSupportsActivationFocus = false;
+}
+
 void UEDItemCraftingWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -528,5 +533,4 @@ void UEDItemCraftingWidget::HandleRecipeEntryClicked(FName InRecipeRowId)
 		CraftTreeWidget->RefreshTree();
 	}
 }
-
 

@@ -24,6 +24,8 @@ class ETERNALDREAMS_API UEDItemCraftingWidget : public UCommonActivatableWidget
 	GENERATED_BODY()
 
 public:
+	UEDItemCraftingWidget();
+
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
 	virtual TOptional<FUIInputConfig> GetDesiredInputConfig() const override;

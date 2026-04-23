@@ -558,6 +558,7 @@ void UEDUIManageSubsystem::RefreshInputMode()
 		EMouseLockMode::DoNotLock,
 		false);
 	PlayerController->bShowMouseCursor = true;
+	UWidgetBlueprintLibrary::SetFocusToGameViewport();
 
 	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 열린 패널이 없어 게임 입력 모드와 포커스를 게임 뷰포트로 복구했습니다."));
 }

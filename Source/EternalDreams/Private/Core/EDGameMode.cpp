@@ -431,7 +431,96 @@ void AEDGameMode::OnMatchFinished()
 
 void AEDGameMode::Logout(AController* Exiting)
 {
+	APlayerState* ExitingPlayerState = Exiting ? Exiting->PlayerState : nullptr;
+	int32 ExitingTeamId = EDTeam::None;
+	if (const AEDPlayerState* ExitingPS = Cast<AEDPlayerState>(ExitingPlayerState))
+	{
+		ExitingTeamId = ExitingPS->TeamId;
+	}
+
 	Super::Logout(Exiting);
+
+	if (bMatchFinished) return;
+
+	AEDGameState* CurrentGameState = GetGameState<AEDGameState>();
+	if (!CurrentGameState) return;
+
+	int32 CurrentRemainingPlayers = 0;
+	for (APlayerState* APS : CurrentGameState->PlayerArray)
+	{
+		if (!APS || APS->IsInactive()) continue;
+		if (APS == ExitingPlayerState) continue;
+		++CurrentRemainingPlayers;
+	}
+
+	if (CurrentRemainingPlayers <= 0)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[Match] 남은 인원이 없어 로비로 이동합니다. Map=%s"), *LobbyMapPath);
+		bMatchFinished = true;
+
+		UWorld* World = GetWorld();
+		FString Lmap = LobbyMapPath;
+
+		World->GetTimerManager().SetTimerForNextTick(
+			[WeakW = TWeakObjectPtr<UWorld>(World), Lmap]()
+			{
+				UWorld* World = WeakW.Get();
+				if (!World || World->bIsTearingDown || IsEngineExitRequested())
+				{
+					return;
+				}
+
+				UE_LOG(LogEDCore, Warning, TEXT("ServerTravel"));
+				World->ServerTravel(Lmap, /*bAbsolute=*/true);
+			});
+		return;
+	}
+
+	if (EDTeam::IsPlayerTeam(ExitingTeamId))
+	{
+		bool bHasRemainingTeammate = false;
+
+		for (APlayerState* APS : CurrentGameState->PlayerArray)
+		{
+			const AEDPlayerState* PS = Cast<AEDPlayerState>(APS);
+			if (!PS || APS->IsInactive()) continue;
+			if (APS == ExitingPlayerState) continue;
+			if (PS->TeamId != ExitingTeamId) continue;
+
+			bHasRemainingTeammate = true;
+			break;
+		}
+
+		if (!bHasRemainingTeammate && !CurrentGameState->GetEliminatedTeams().Contains(ExitingTeamId))
+		{
+			CurrentGameState->AddEliminatedTeam(ExitingTeamId);
+		}
+	}
+
+	TArray<int32> RemainingSurvivingTeams;
+	for (APlayerState* APS : CurrentGameState->PlayerArray)
+	{
+		const AEDPlayerState* PS = Cast<AEDPlayerState>(APS);
+		if (!PS || APS->IsInactive()) continue;
+		if (APS == ExitingPlayerState) continue;
+		if (!EDTeam::IsPlayerTeam(PS->TeamId)) continue;
+		if (PS->bEliminated) continue;
+		if (RemainingSurvivingTeams.Contains(PS->TeamId)) continue;
+
+		RemainingSurvivingTeams.Add(PS->TeamId);
+	}
+
+	if (RemainingSurvivingTeams.Num() == 1)
+	{
+		const int32 WinnerTeamId = RemainingSurvivingTeams[0];
+		CurrentGameState->SetWinnerTeamId(WinnerTeamId);
+
+		UE_LOG(LogEDCore, Warning, TEXT("[Match] 플레이어 이탈로 %s 팀이 승리했습니다."),
+			EDTeam::GetTeamName(WinnerTeamId));
+
+		bPhaseSequenceActive = false;
+		OnMatchFinished();
+	}
 
 	// 매치 종료 트래블 진행 중이면 건드리지 않음 (SeamlessTravel 중 Logout 발생 가능)
 	if (bMatchFinished) return;
