@@ -114,7 +114,7 @@ void UEDPauseMenuWidget::ClosePauseMenu() const
 	if (UCommonUIActionRouterBase* ActionRouter = LocalPlayer->GetSubsystem<UCommonUIActionRouterBase>())
 	{
 		ActionRouter->SetActiveUIInputConfig(
-			FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::CapturePermanently_IncludingInitialMouseDown, EMouseLockMode::DoNotLock, false),
+			FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture, EMouseLockMode::DoNotLock, false),
 			this);
 		ActionRouter->FlushInput();
 	}

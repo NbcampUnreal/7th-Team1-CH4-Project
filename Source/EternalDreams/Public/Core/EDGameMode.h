@@ -215,7 +215,7 @@ private:
 
 	/** 사망 몽타주 재생이 끝나기까지 대기 시간(초). 이후 UnPossess + Spectator 전환 */
 	UPROPERTY(EditDefaultsOnly, Category = "ED|Death")
-	float DeathMontageDelay = 2.5f;
+	float DeathMontageDelay = 9.5f;
 
 	/** UnPossess된 사망 Pawn이 월드에서 제거되기까지 대기 시간(초) */
 	UPROPERTY(EditDefaultsOnly, Category = "ED|Death")

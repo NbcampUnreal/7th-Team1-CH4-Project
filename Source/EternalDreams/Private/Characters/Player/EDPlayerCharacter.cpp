@@ -160,6 +160,8 @@ void AEDPlayerCharacter::BeginPlay()
 
 	AbilitySystemComponent->RegisterGameplayTagEvent(FEDGameplayTags::Get().State_Player_Stop,EGameplayTagEventType::NewOrRemoved).
 	AddUObject(this,&AEDPlayerCharacter::OnStopTagChanged);
+	AbilitySystemComponent->RegisterGameplayTagEvent(FEDGameplayTags::Get().State_Dead,EGameplayTagEventType::NewOrRemoved).
+	AddUObject(this,&AEDPlayerCharacter::OnStopTagChanged);
 	
 	
 }
@@ -393,14 +395,10 @@ void AEDPlayerCharacter::StopAnimMove()
 
 void AEDPlayerCharacter::OnStopTagChanged(const FGameplayTag Tag, int32 NewCount)
 {
-	if (NewCount>0)
-	{
-		bIsStop=true;
-	}
-	else
-	{
-		bIsStop=false;
-	}
+	const FEDGameplayTags& GameplayTags = FEDGameplayTags::Get();
+	bIsStop = AbilitySystemComponent
+		&& (AbilitySystemComponent->HasMatchingGameplayTag(GameplayTags.State_Player_Stop)
+			|| AbilitySystemComponent->HasMatchingGameplayTag(GameplayTags.State_Dead));
 }
 
 void AEDPlayerCharacter::OnWalkSpeedChanged(const FOnAttributeChangeData& Data)

@@ -84,7 +84,7 @@ void UEDItemCraftingWidget::NativeDestruct()
 
 TOptional<FUIInputConfig> UEDItemCraftingWidget::GetDesiredInputConfig() const
 {
-	return FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture, EMouseLockMode::DoNotLock, false);
+	return TOptional<FUIInputConfig>();
 }
 
 void UEDItemCraftingWidget::SetInventoryComponent(UEDInventoryComponent* InInventoryComponent)
@@ -533,4 +533,3 @@ void UEDItemCraftingWidget::HandleRecipeEntryClicked(FName InRecipeRowId)
 		CraftTreeWidget->RefreshTree();
 	}
 }
-

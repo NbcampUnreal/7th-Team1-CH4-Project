@@ -605,7 +605,6 @@ void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 	UE_LOG(LogEDCore, Warning, TEXT("[Death] %s 사망 (Day %d, Revives %d)"),
 		*VictimPS->GetPlayerName(), GetCurrentDay(), VictimPS->RemainingRevives);
 
-	// 사망 몽타주 재생 시간을 위해 UnPossess/Spectator 전환을 지연
 	{
 		FTimerHandle& SpectatorHandle = SpectatorEnterTimers.FindOrAdd(Victim);
 		GetWorldTimerManager().ClearTimer(SpectatorHandle);
