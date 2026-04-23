@@ -28,6 +28,14 @@ public class EternalDreams : ModuleRules
 		// Slate UI — 로딩 화면 위젯에서 사용
 		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "SlateCore" });
 		
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(new string[] {
+				"ToolWidgets", 
+				"InteractiveToolsFramework"
+			});
+		}
+		
 		// Uncomment if you are using online features
 		// PrivateDependencyModuleNames.Add("OnlineSubsystem");
 

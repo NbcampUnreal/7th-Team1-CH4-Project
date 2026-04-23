@@ -59,8 +59,8 @@ void AProjectileActor::BeginPlay()
 	if (EDGameplayDataSubsystem)
 	{
 		SetStaticMeshId(FPrimaryAssetId(
-			*UEnum::GetDisplayValueAsText(EPlayerDataType::WeaponData).ToString(),
-			*UEnum::GetDisplayValueAsText(EWeaponNameType::Arrow).ToString()
+			*StaticEnum<EPlayerDataType>()->GetNameStringByValue((int64)EPlayerDataType::WeaponData),
+			*StaticEnum<EWeaponNameType>()->GetNameStringByValue((int64)EWeaponNameType::DA_Arrow)
 			));
 	}
 	

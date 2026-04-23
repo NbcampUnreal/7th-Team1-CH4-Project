@@ -82,7 +82,7 @@ public:
 	FORCEINLINE FGameplayTag& GetBasicAttackTag() {return BasicAttackTag;};
 
 	UFUNCTION(BlueprintCallable,Server,Reliable)
-	FORCEINLINE void SetQSkillTag(const FGameplayTag Tag);
+	void SetQSkillTag(const FGameplayTag Tag);
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetQSkillTag() {return QSkillTag;}
 	
@@ -143,7 +143,7 @@ public:
 
 	//Rep
 	UFUNCTION()
-	FORCEINLINE void OnRep_QSkillTag(){OnQSkillSet.Broadcast(QSkillTag);}
+	void OnRep_QSkillTag(){OnQSkillSet.Broadcast(QSkillTag);}
 	UFUNCTION()
 	void OnRep_ESkillTag(){OnESkillSet.Broadcast(ESkillTag);}
 	UFUNCTION()

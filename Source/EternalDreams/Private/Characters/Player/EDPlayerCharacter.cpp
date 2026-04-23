@@ -490,7 +490,7 @@ void AEDPlayerCharacter::OnWeaponChanged_Implementation()
 	const UEDGameDataSubsystem* DataSubsystem = UEDGameDataSubsystem::Get(GetWorld());
 	if (!DataSubsystem) return;
 
-	FName WeaponCategory=  *UEnum::GetDisplayValueAsText(EPlayerDataType::WeaponData).ToString();
+	FName WeaponCategory= *StaticEnum<EPlayerDataType>()->GetNameStringByValue((int64)EPlayerDataType::WeaponData);
 	
 	FEDGameplayTags EDGameplayTags=FEDGameplayTags::Get();
 	
@@ -498,7 +498,7 @@ void AEDPlayerCharacter::OnWeaponChanged_Implementation()
 	{
 		LWeaponActor->SetStaticMeshId(FPrimaryAssetId(
 				WeaponCategory, 
-				*UEnum::GetDisplayValueAsText(EWeaponNameType::Bow).ToString()));
+				*StaticEnum<EWeaponNameType>()->GetNameStringByValue((int64)EWeaponNameType::DA_Bow)));
 		RWeaponActor->SetStaticMeshId(FPrimaryAssetId());
 		
 		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Bow);
@@ -510,7 +510,7 @@ void AEDPlayerCharacter::OnWeaponChanged_Implementation()
 		LWeaponActor->SetStaticMeshId(FPrimaryAssetId());
 		RWeaponActor->SetStaticMeshId(FPrimaryAssetId(
 		WeaponCategory, 
-		*UEnum::GetDisplayValueAsText(EWeaponNameType::Hammer).ToString()));
+		*StaticEnum<EWeaponNameType>()->GetNameStringByValue((int64)EWeaponNameType::DA_Hammer)));
 		
 		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Hammer);
 		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Hammer);
@@ -521,7 +521,7 @@ void AEDPlayerCharacter::OnWeaponChanged_Implementation()
 		LWeaponActor->SetStaticMeshId(FPrimaryAssetId());
 		RWeaponActor->SetStaticMeshId(FPrimaryAssetId(
 		WeaponCategory, 
-		*UEnum::GetDisplayValueAsText(EWeaponNameType::Staff).ToString()));
+		*StaticEnum<EWeaponNameType>()->GetNameStringByValue((int64)EWeaponNameType::DA_Staff)));
 		
 		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Staff);
 		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Staff);
@@ -532,7 +532,7 @@ void AEDPlayerCharacter::OnWeaponChanged_Implementation()
 		LWeaponActor->SetStaticMeshId(FPrimaryAssetId());
 		RWeaponActor->SetStaticMeshId(FPrimaryAssetId(
 		WeaponCategory, 
-		*UEnum::GetDisplayValueAsText(EWeaponNameType::Sword).ToString()));
+		*StaticEnum<EWeaponNameType>()->GetNameStringByValue((int64)EWeaponNameType::DA_Sword)));
 		
 		PlayerSkillComponent->SetBasicAttackTag(EDGameplayTags.Player_BasicAttack_Sword);
 		PlayerSkillComponent->SetSpaceSkillTag(EDGameplayTags.Player_Evade_Sword);
@@ -553,16 +553,16 @@ void AEDPlayerCharacter::OnPlayerSkinChanged_Implementation(EPlayerNameType Skin
 		return;
 	}
 	
-	FName PlayerSkinCategory= *UEnum::GetDisplayValueAsText(EPlayerDataType::PlayerData).ToString();
+	FName PlayerSkinCategory= *StaticEnum<EPlayerDataType>()->GetNameStringByValue((int64)EPlayerDataType::PlayerData);
 	
 	//타겟 메시 및 애님인스턴스 설정
 	SetTargetMeshId(FPrimaryAssetId(
 			PlayerSkinCategory,
-			*UEnum::GetDisplayValueAsText(EPlayerNameType::Basic).ToString()
+			*StaticEnum<EPlayerNameType>()->GetNameStringByValue((int64)EPlayerNameType::DA_Basic)
 			));
 		
 	SetTargetABPId(FPrimaryAssetId(PlayerSkinCategory,
-			*UEnum::GetDisplayValueAsText(EPlayerNameType::Basic).ToString()
+			*StaticEnum<EPlayerNameType>()->GetNameStringByValue((int64)EPlayerNameType::DA_Basic)
 			));
 		
 	
@@ -570,17 +570,17 @@ void AEDPlayerCharacter::OnPlayerSkinChanged_Implementation(EPlayerNameType Skin
 	UEDPlayerDataAsset* PlayerSkin = EDGameDataSubsystem->GetData<UEDPlayerDataAsset>(
 		FPrimaryAssetId(
 			PlayerSkinCategory,
-			*UEnum::GetDisplayValueAsText(SkinName).ToString()
+			*StaticEnum<EPlayerNameType>()->GetNameStringByValue((int64)SkinName)
 			));
 	
 	SetRetargetMeshId(FPrimaryAssetId(
 		PlayerSkinCategory,
-		*UEnum::GetDisplayValueAsText(SkinName).ToString()
+		*StaticEnum<EPlayerNameType>()->GetNameStringByValue((int64)SkinName)
 		));
 	
 	SetRetargetABPId(FPrimaryAssetId(
 		PlayerSkinCategory,
-		*UEnum::GetDisplayValueAsText(SkinName).ToString()
+		*StaticEnum<EPlayerNameType>()->GetNameStringByValue((int64)SkinName)
 		));
 }
 
@@ -714,16 +714,19 @@ void AEDPlayerCharacter::BroadcastFloatingHealthBarSource()
 void AEDPlayerCharacter::OnRep_bIsReadySetOverlay()
 {
 	APlayerController* LocalPC = GetWorld()->GetFirstPlayerController();
+	UE_LOG(LogTemp,Warning,TEXT("OnRep_bIsReady"));
 	if (LocalPC && LocalPC->PlayerState && GetPlayerState())
 	{
+		UE_LOG(LogTemp,Warning,TEXT("LocalPC, LocalPS, PS is ready"));
 		if (!IsLocallyControlled())
 		{
+			UE_LOG(LogTemp,Warning,TEXT("IsNot Local"));
 			AEDPlayerState* ThisPS=Cast<AEDPlayerState> (GetPlayerState());
 			AEDPlayerState* LocalPS=Cast<AEDPlayerState> (LocalPC->PlayerState);	
 			
 			if (ThisPS&&LocalPS)
 			{
-				UE_LOG(LogTemp,Warning,TEXT("%d %d"),ThisPS->TeamId,LocalPS->TeamId);
+				UE_LOG(LogTemp,Warning,TEXT("Local, This PS is EDPS"));
 				if (GetMesh()&&GetMesh()->GetChildComponent(0))
 				{
 					USkeletalMeshComponent* RetargetMeshComp=Cast<USkeletalMeshComponent>(GetMesh()->GetChildComponent(0));
@@ -734,11 +737,13 @@ void AEDPlayerCharacter::OnRep_bIsReadySetOverlay()
 						if (ThisPS->TeamId!=LocalPS->TeamId)
 						{
 							RetargetMeshComp->SetOverlayMaterial(SkillDataSubsystem->GetEnemyMat());
+							UE_LOG(LogTemp,Warning,TEXT("Enemy Overlay Mat Set"));
 						}
 						//팀 오버레이 머티리얼 설정
 						else
 						{
 							RetargetMeshComp->SetOverlayMaterial(SkillDataSubsystem->GetTeamMat());
+							UE_LOG(LogTemp,Warning,TEXT("Team Overlay Mat Set"));
 						}
 					}
 				}
