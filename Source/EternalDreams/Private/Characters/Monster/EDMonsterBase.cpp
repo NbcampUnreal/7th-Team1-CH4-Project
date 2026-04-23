@@ -75,8 +75,6 @@ void AEDMonsterBase::BeginPlay()
 	
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(UEDBaseAttributeSet::GetHealthAttribute())
 	.AddUObject(this, &AEDMonsterBase::OnHealthChanged);
-
-	BroadcastFloatingHealthBarSource();
 	
 	// UEDMonsterDataAsset* DataAsset = GetDataAsset();
 	// if (IsValid(DataAsset) == false)
@@ -144,6 +142,9 @@ void AEDMonsterBase::InitializeFromDataAsset(UEDMonsterDataAsset* InDataAsset)
 	// InventoryComponent LootTable 세팅
 	InventoryComponent->RandomLootTable = InDataAsset->GetLootTable();
 	InventoryComponent->RandomLootRollCount = InDataAsset->GetLootRollCount();
+	
+	// HP바 바인딩
+	BroadcastFloatingHealthBarSource();
 	
 	// DA 초기화 완료 알림
 	OnDataAssetInitialized.Broadcast();
