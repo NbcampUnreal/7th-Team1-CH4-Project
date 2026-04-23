@@ -6,6 +6,8 @@
 #include "EDItemCraftingWidget.generated.h"
 
 class UButton;
+class AEDPlayerController;
+class APawn;
 class UDataTable;
 class UImage;
 class UPanelWidget;
@@ -28,6 +30,7 @@ public:
 
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+	virtual void NativeOnActivated() override;
 	virtual TOptional<FUIInputConfig> GetDesiredInputConfig() const override;
 
 	// 외부에서 현재 플레이어 인벤토리를 직접 지정
@@ -74,6 +77,9 @@ protected:
 private:
 	// 소유 플레이어에서 인벤토리 컴포넌트 찾기
 	void InitializeInventoryComponent();
+	bool RebindInventoryComponentToCurrentPawn();
+	void BindOwningPawnChanged();
+	void UnbindOwningPawnChanged();
 
 	// 카테고리 버튼 클릭 이벤트 바인딩
 	void BindCategoryTabButtons();
@@ -126,6 +132,7 @@ private:
 	// 인벤토리 변경 시 갱신 처리
 	UFUNCTION()
 	void HandleInventoryChanged();
+	void HandleOwningPawnChanged(APawn* NewPawn);
 
 	// 레시피 카드 클릭 시 상세 보기 대상을 변경
 	void HandleRecipeEntryClicked(FName InRecipeRowId);
@@ -148,4 +155,7 @@ private:
 
 	// 현재 패널에서 상세 보기 중인 레시피 RowId
 	FName DisplayedRecipeRowId = NAME_None;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AEDPlayerController> BoundPlayerController;
 };

@@ -18,6 +18,7 @@ class UEDLootInteractionComponent;
 
 DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
 DECLARE_MULTICAST_DELEGATE(FOnCraftInputTriggered);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDPawnChanged, APawn*);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLoadedComplete);
 
 /**
@@ -40,12 +41,16 @@ class ETERNALDREAMS_API AEDPlayerController : public APlayerController, public I
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
+	virtual void OnUnPossess() override;
+	virtual void OnRep_Pawn() override;
 		// 작성자 : 김동주
     	// Enhanced Input 액션을 실제 처리 함수에 바인딩
 	virtual void SetupInputComponent() override;
 
 public:
 	FOnCraftInputTriggered& GetOnCraftInputTriggered() { return OnCraftInputTriggered; }
+	FOnEDPawnChanged& GetOnEDPawnChanged() { return OnEDPawnChanged; }
 
 	UFUNCTION(Server, Reliable)
 	void Server_SetPlayerNickname(const FString& InNickname);
@@ -199,6 +204,7 @@ private:
 	FOnOtherInput OnCameraScroll;
 	FOnOtherInput OnCameraFocus;
 	FOnCraftInputTriggered OnCraftInputTriggered;
+	FOnEDPawnChanged OnEDPawnChanged;
 
 #pragma endregion
 

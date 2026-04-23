@@ -12,6 +12,71 @@
 #include "Kismet/GameplayStatics.h"
 #include "Environment/EDLightingManager.h"
 #include "Characters/Monster/Spawn/EDMonsterSpawnSubsystem.h"
+#include "Inventory/Component/EDInventoryComponent.h"
+
+namespace
+{
+UEDInventoryComponent* GetInventoryComponentFromController(AController* Controller)
+{
+	APawn* Pawn = Controller ? Controller->GetPawn() : nullptr;
+	return Pawn ? Pawn->FindComponentByClass<UEDInventoryComponent>() : nullptr;
+}
+
+void SavePlayerInventorySnapshot(AController* Controller)
+{
+	AEDPlayerState* PS = Controller ? Controller->GetPlayerState<AEDPlayerState>() : nullptr;
+	if (!PS)
+	{
+		return;
+	}
+
+	UEDInventoryComponent* InventoryComponent = GetInventoryComponentFromController(Controller);
+	if (!InventoryComponent)
+	{
+		PS->bHasSavedInventorySnapshot = false;
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Inventory] Save skipped. InventoryComponent NULL Controller=%s"),
+			*GetNameSafe(Controller));
+		return;
+	}
+
+	InventoryComponent->BuildInventorySnapshot(PS->SavedInventorySnapshot);
+	PS->bHasSavedInventorySnapshot = true;
+
+	UE_LOG(LogEDCore, Log, TEXT("[RespawnDBG][Inventory] Snapshot saved Player=%s Slots=%d"),
+		*PS->GetPlayerName(), PS->SavedInventorySnapshot.InventorySlots.Num());
+}
+
+void RestorePlayerInventorySnapshot(AController* Controller)
+{
+	AEDPlayerState* PS = Controller ? Controller->GetPlayerState<AEDPlayerState>() : nullptr;
+	if (!PS || !PS->bHasSavedInventorySnapshot)
+	{
+		return;
+	}
+
+	UEDInventoryComponent* InventoryComponent = GetInventoryComponentFromController(Controller);
+	if (!InventoryComponent)
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Inventory] Restore failed. InventoryComponent NULL Controller=%s"),
+			*GetNameSafe(Controller));
+		return;
+	}
+
+	const bool bRestored = InventoryComponent->ApplyInventorySnapshot(PS->SavedInventorySnapshot);
+	if (bRestored)
+	{
+		UE_LOG(LogEDCore, Log, TEXT("[RespawnDBG][Inventory] Snapshot restore succeeded Player=%s Slots=%d"),
+			*PS->GetPlayerName(),
+			PS->SavedInventorySnapshot.InventorySlots.Num());
+	}
+	else
+	{
+		UE_LOG(LogEDCore, Warning, TEXT("[RespawnDBG][Inventory] Snapshot restore failed Player=%s Slots=%d"),
+			*PS->GetPlayerName(),
+			PS->SavedInventorySnapshot.InventorySlots.Num());
+	}
+}
+}
 
 AEDGameMode::AEDGameMode()
 {
@@ -591,6 +656,8 @@ void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 		return;
 	}
 
+	SavePlayerInventorySnapshot(Victim);
+
 	VictimPS->bIsDead = true;
 	VictimPS->Deaths++;
 
@@ -656,6 +723,7 @@ void AEDGameMode::EnterSpectator(AController* Victim)
 	// 기존 Pawn 제거
 	if (APawn* OldPawn = Victim->GetPawn())
 	{
+		SavePlayerInventorySnapshot(Victim);
 		Victim->UnPossess();
 		OldPawn->SetLifeSpan(DeathPawnLifeSpan);
 	}
@@ -774,6 +842,7 @@ void AEDGameMode::HandleRespawnRequest(AController* Victim, int32 SelectedZoneId
 		Victim->StartSpot = nullptr;
 	}
 	RestartPlayer(Victim);
+	RestorePlayerInventorySnapshot(Victim);
 
 	if (APawn* NewPawn = Victim->GetPawn())
 	{

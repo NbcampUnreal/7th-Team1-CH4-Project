@@ -112,6 +112,33 @@ struct ETERNALDREAMS_API FEDSkillSlotData
 };
 
 USTRUCT(BlueprintType)
+struct ETERNALDREAMS_API FEDInventorySnapshot
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+    int32 MaxInventorySlots = 0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory")
+    TArray<FEDInventorySlotData> InventorySlots;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Equipment")
+    FEDEquipmentSlotData WeaponSlot;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Equipment")
+    FEDEquipmentSlotData TopArmorSlot;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Equipment")
+    FEDEquipmentSlotData BottomArmorSlot;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Skill")
+    FEDSkillSlotData FirstSkillSlot;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Inventory|Skill")
+    FEDSkillSlotData SecondSkillSlot;
+};
+
+USTRUCT(BlueprintType)
 struct ETERNALDREAMS_API FEDInventoryDropRequest
 {
     GENERATED_BODY()

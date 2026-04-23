@@ -157,6 +157,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     void RequestInitializeInventorySlots();
 
+    void BuildInventorySnapshot(FEDInventorySnapshot& OutSnapshot) const;
+    bool ApplyInventorySnapshot(const FEDInventorySnapshot& Snapshot);
+
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     bool PredicateMoveItemBetweenSlots(int32 FromSlotIndex, int32 ToSlotIndex, EEDInventoryActionFailure& OutFailure, bool bAutoRequestIfValid = true);
 

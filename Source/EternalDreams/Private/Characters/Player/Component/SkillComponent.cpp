@@ -15,7 +15,11 @@ USkillComponent::USkillComponent()
 void USkillComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	AbilitySystemComponent=GetOwner()->FindComponentByClass<UAbilitySystemComponent>();
+	EnsureAbilitySystemComponent();
+
+	OnRep_QSkillCoolTimeTag();
+	OnRep_ESkillCoolTimeTag();
+	OnRep_SpaceSkillCoolTimeTag();
 
 }
 
@@ -71,7 +75,7 @@ void USkillComponent::SetSpaceSkillCoolTimeTag_Implementation(const FGameplayTag
 
 void USkillComponent::ActivateTag(FGameplayTag& Tag)
 {
-	if (IsValid(AbilitySystemComponent))
+	if (EnsureAbilitySystemComponent() && Tag.IsValid())
 	{
 		FGameplayTagContainer AbilityTagContainer;
 		AbilityTagContainer.AddTag(Tag);
@@ -81,6 +85,11 @@ void USkillComponent::ActivateTag(FGameplayTag& Tag)
 
 float USkillComponent::CalculateCoolTime(FGameplayTag& Tag)
 {
+	if (!EnsureAbilitySystemComponent() || !Tag.IsValid())
+	{
+		return 0.f;
+	}
+
 	FGameplayEffectQuery Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(FGameplayTagContainer(Tag));
 	TArray<float> Times = AbilitySystemComponent->GetActiveEffectsTimeRemaining(Query);
 	if (!Times.IsEmpty())
@@ -92,6 +101,11 @@ float USkillComponent::CalculateCoolTime(FGameplayTag& Tag)
 
 float USkillComponent::CalculateMaxCoolTime(FGameplayTag& Tag)
 {
+	if (!EnsureAbilitySystemComponent() || !Tag.IsValid())
+	{
+		return 0.f;
+	}
+
 	FGameplayEffectQuery Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(FGameplayTagContainer(Tag));
 	TArray<float> Times = AbilitySystemComponent->GetActiveEffectsDuration(Query);
 	if (!Times.IsEmpty())
@@ -139,30 +153,89 @@ void USkillComponent::SpaceSkillCoolTime(FGameplayTag Tag, int32 NewCount)
 
 void USkillComponent::OnRep_QSkillCoolTimeTag()
 {
-	if (PastQSkillCoolTimeTag!=FGameplayTag::EmptyTag)
+	if (!EnsureAbilitySystemComponent())
+	{
+		return;
+	}
+
+	if (PastQSkillCoolTimeTag.IsValid() && QSkillCoolTimeHandle.IsValid())
 	{
 		AbilitySystemComponent->RegisterGameplayTagEvent(PastQSkillCoolTimeTag).Remove(QSkillCoolTimeHandle);
+		QSkillCoolTimeHandle.Reset();
 	}
+
+	if (!QSkillCoolTimeTag.IsValid())
+	{
+		PastQSkillCoolTimeTag = FGameplayTag::EmptyTag;
+		OnQSkillCoolTime.Broadcast(0.f, 0.f);
+		return;
+	}
+
 	QSkillCoolTimeHandle=AbilitySystemComponent->RegisterGameplayTagEvent(QSkillCoolTimeTag).AddUObject(this,&USkillComponent::QSkillCoolTime);
 	PastQSkillCoolTimeTag=QSkillCoolTimeTag;
 }
 
 void USkillComponent::OnRep_ESkillCoolTimeTag()
 {
-	if (PastESkillCoolTimeTag!=FGameplayTag::EmptyTag)
+	if (!EnsureAbilitySystemComponent())
+	{
+		return;
+	}
+
+	if (PastESkillCoolTimeTag.IsValid() && ESkillCoolTimeHandle.IsValid())
 	{
 		AbilitySystemComponent->RegisterGameplayTagEvent(PastESkillCoolTimeTag).Remove(ESkillCoolTimeHandle);
+		ESkillCoolTimeHandle.Reset();
 	}
+
+	if (!ESkillCoolTimeTag.IsValid())
+	{
+		PastESkillCoolTimeTag = FGameplayTag::EmptyTag;
+		OnESkillCoolTime.Broadcast(0.f, 0.f);
+		return;
+	}
+
 	ESkillCoolTimeHandle=AbilitySystemComponent->RegisterGameplayTagEvent(ESkillCoolTimeTag).AddUObject(this,&USkillComponent::ESkillCoolTime);
 	PastESkillCoolTimeTag=ESkillCoolTimeTag;
 }
 
 void USkillComponent::OnRep_SpaceSkillCoolTimeTag()
 {
-	if (PastSpaceSkillCoolTimeTag!=FGameplayTag::EmptyTag)
+	if (!EnsureAbilitySystemComponent())
+	{
+		return;
+	}
+
+	if (PastSpaceSkillCoolTimeTag.IsValid() && SpaceSkillCoolTimeHandle.IsValid())
 	{
 		AbilitySystemComponent->RegisterGameplayTagEvent(PastSpaceSkillCoolTimeTag).Remove(SpaceSkillCoolTimeHandle);
+		SpaceSkillCoolTimeHandle.Reset();
 	}
+
+	if (!SpaceSkillCoolTimeTag.IsValid())
+	{
+		PastSpaceSkillCoolTimeTag = FGameplayTag::EmptyTag;
+		OnSpaceSkillCoolTime.Broadcast(0.f, 0.f);
+		return;
+	}
+
 	SpaceSkillCoolTimeHandle=AbilitySystemComponent->RegisterGameplayTagEvent(SpaceSkillCoolTimeTag).AddUObject(this,&USkillComponent::SpaceSkillCoolTime);
 	PastSpaceSkillCoolTimeTag=SpaceSkillCoolTimeTag;
+}
+
+bool USkillComponent::EnsureAbilitySystemComponent()
+{
+	if (IsValid(AbilitySystemComponent))
+	{
+		return true;
+	}
+
+	AActor* Owner = GetOwner();
+	if (!IsValid(Owner))
+	{
+		return false;
+	}
+
+	AbilitySystemComponent = Owner->FindComponentByClass<UAbilitySystemComponent>();
+	return IsValid(AbilitySystemComponent);
 }

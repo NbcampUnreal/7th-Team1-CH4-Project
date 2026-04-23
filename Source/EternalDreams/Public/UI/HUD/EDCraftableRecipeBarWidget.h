@@ -6,6 +6,7 @@
 #include "EDCraftableRecipeBarWidget.generated.h"
 
 class AEDPlayerController;
+class APawn;
 class UPanelWidget;
 class UEDCraftableRecipeSlotWidget;
 class UEDInventoryComponent;
@@ -44,6 +45,9 @@ protected:
 private:
 	// 소유 플레이어에서 인벤토리 컴포넌트를 찾기
 	void InitializeInventoryComponent();
+	bool RebindInventoryComponentToCurrentPawn();
+	void BindOwningPawnChanged();
+	void UnbindOwningPawnChanged();
 
 	// 인벤토리 변경 이벤트 바인딩
 	void BindInventoryChanged();
@@ -63,6 +67,7 @@ private:
 	// 인벤토리 변경 시 바를 갱신
 	UFUNCTION()
 	void HandleInventoryChanged();
+	void HandleOwningPawnChanged(APawn* NewPawn);
 
 	// 제작 핫키 입력 시 바를 갱신
 	void HandleCraftInputTriggered();
@@ -79,4 +84,7 @@ private:
 	// 제작 핫키 입력 델리게이트를 구독 중인 플레이어 컨트롤러
 	UPROPERTY(Transient)
 	TObjectPtr<AEDPlayerController> BoundPlayerController;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AEDPlayerController> BoundPawnChangedPlayerController;
 };
