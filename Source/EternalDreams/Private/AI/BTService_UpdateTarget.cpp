@@ -3,8 +3,11 @@
 
 #include "AI/BTService_UpdateTarget.h"
 #include "AbilitySystemInterface.h"
+#include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Characters/Base/GAS/EDBaseAttributeSet.h"
+#include "Characters/Monster/EDMonsterBase.h"
+#include "Data/EDMonsterDataAsset.h"
 
 UBTService_UpdateTarget::UBTService_UpdateTarget()
 {
@@ -44,6 +47,31 @@ void UBTService_UpdateTarget::TickNode(UBehaviorTreeComponent& OwnerComp, uint8*
 		BB->SetValueAsBool(TEXT("bIsTracking"), false);
 		return;
 	}
-	// TargetActor가 유효하면 추적 중 유지
+	// 감지 범위 이탈 체크
+	AAIController* AIController = OwnerComp.GetAIOwner();
+	if (IsValid(AIController) == false)
+	{
+		// TargetActor가 유효하면 추적 중 유지
+		BB->SetValueAsBool(TEXT("bIsTracking"), true);
+		return;
+	}
+	
+	AEDMonsterBase* Monster = Cast<AEDMonsterBase>(AIController->GetPawn());
+	if (IsValid(Monster) == false || IsValid(Monster->GetDataAsset()) == false)
+	{
+		// TargetActor가 유효하면 추적 중 유지
+		BB->SetValueAsBool(TEXT("bIsTracking"), true);
+		return;
+	}
+	
+	float DetectRange = Monster->GetDataAsset()->GetStat().DetectRange;
+	float Distance = FVector::Dist(Monster->GetActorLocation(), Target->GetActorLocation());
+	if (Distance > DetectRange * 1.5f)
+	{
+		BB->SetValueAsObject(TEXT("TargetActor"), nullptr);
+		BB->SetValueAsBool(TEXT("bIsTracking"), false);
+		return;
+	}
+	
 	BB->SetValueAsBool(TEXT("bIsTracking"), true);
 }

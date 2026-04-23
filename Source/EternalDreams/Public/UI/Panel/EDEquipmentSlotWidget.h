@@ -6,7 +6,9 @@
 #include "EDEquipmentSlotWidget.generated.h"
 
 class UBorder;
+class UImage;
 class UTextBlock;
+class UTexture2D;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDEquipmentSlotDoubleClicked, EEDEquippableType);
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnEDEquipmentSlotClicked, EEDEquippableType);
@@ -21,52 +23,51 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Equipment")
 	void SetEmptyState(const FText& InSlotTypeName);
 
-	// 장비가 장착된 상태로 표시
+	// 장비 아이템이 들어 있는 슬롯 상태로 표시
 	UFUNCTION(BlueprintCallable, Category = "Equipment")
-	void SetItemState(const FText& InSlotTypeName, const FText& InItemName, EEDItemRarity InRarity);
+	void SetItemState(const FText& InSlotTypeName, const FText& InItemName, EEDItemRarity InRarity, UTexture2D* InIconTexture = nullptr);
 
 	// 장비 슬롯 타입 설정
 	void SetSlotType(EEDEquippableType InSlotType);
-	
-	// 선택 여부에 따른 시각 상태 갱신
+
+	// 선택 상태 강조 표시
 	void SetSelectedState(bool bSelected);
-	
-	// 장비 슬롯 클릭 이벤트
+
 	FOnEDEquipmentSlotClicked OnEquipmentSlotClicked;
-	
-	// 장비 슬롯 더블 클릭 이벤트
 	FOnEDEquipmentSlotDoubleClicked OnEquipmentSlotDoubleClicked;
 
 protected:
-	// 슬롯 종류 표시 텍스트
+	// 슬롯 타입명 텍스트
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Equipment")
 	TObjectPtr<UTextBlock> SlotTypeText;
 
-	// 장착된 아이템 이름 표시 텍스트
+	// 장착 아이템 이름 텍스트
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Equipment")
 	TObjectPtr<UTextBlock> ItemNameText;
 
-	// 빈 슬롯 상태 표시 텍스트
+	// 빈 슬롯 안내 텍스트
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Equipment")
 	TObjectPtr<UTextBlock> EmptyText;
 
-	// 희귀도 강조 라인
+	// 장착 아이템 아이콘 이미지
+	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Equipment")
+	TObjectPtr<UImage> ItemIconImage;
+
+	// 희귀도 강조용 테두리
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Equipment")
 	TObjectPtr<UBorder> RarityAccent;
 
-	// 장비 슬롯 선택 강조용 테두리
+	// 선택 상태 강조용 테두리
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Equipment")
 	TObjectPtr<UBorder> SelectionBorder;
 
-	// 마우스 클릭 입력 처리
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-
-	// 마우스 더블 클릭 입력 처리
 	virtual FReply NativeOnMouseButtonDoubleClick(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+
 private:
-	// 현재 장비 슬롯 타입
+	// 현재 슬롯 타입
 	EEDEquippableType SlotType = EEDEquippableType::None;
-	
+
 	// 현재 선택 상태
 	bool bIsSelected = false;
 };

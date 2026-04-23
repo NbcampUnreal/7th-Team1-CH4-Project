@@ -15,16 +15,22 @@ void UEDQuickBarSlotWidget::SetEmptyState()
 {
 	bHasItem = false;
 	CurrentQuantity = 0;
+	QuickBarCurrentItemName = FText::GetEmpty();
+	QuickBarCurrentRarity = EEDItemRarity::Normal;
+	QuickBarCurrentIconTexture = nullptr;
 
 	Super::SetEmptyState();
 }
 
-void UEDQuickBarSlotWidget::SetItemState(const FText& InItemName, int32 InQuantity, EEDItemRarity InRarity)
+void UEDQuickBarSlotWidget::SetItemState(const FText& InItemName, int32 InQuantity, EEDItemRarity InRarity, UTexture2D* InIconTexture)
 {
 	bHasItem = true;
 	CurrentQuantity = InQuantity;
+	QuickBarCurrentItemName = InItemName;
+	QuickBarCurrentRarity = InRarity;
+	QuickBarCurrentIconTexture = InIconTexture;
 
-	Super::SetItemState(InItemName, InQuantity, InRarity);
+	Super::SetItemState(InItemName, InQuantity, InRarity, InIconTexture);
 }
 
 FReply UEDQuickBarSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
@@ -81,15 +87,24 @@ void UEDQuickBarSlotWidget::NativeOnDragDetected(const FGeometry& InGeometry, co
 
 	DragOperation->SourceSlotIndex = SlotIndex;
 	DragOperation->SourceInventoryComponent = GetSourceInventoryComponent();
+	DragOperation->SourceItemName = QuickBarCurrentItemName;
+	DragOperation->SourceItemQuantity = CurrentQuantity;
+	DragOperation->SourceItemRarity = QuickBarCurrentRarity;
+	DragOperation->SourceIconTexture = QuickBarCurrentIconTexture;
 	DragOperation->Pivot = EDragPivot::MouseDown;
 	
-	// 드래그 중 마우스를 따라다닐 비주얼 위젯을 생성
-	if (DragVisualWidgetClass)
+	// 드래그 비주얼은 현재 슬롯 위젯 클래스를 그대로 사용
+	if (UUserWidget* DragVisual = CreateWidget<UUserWidget>(this, GetClass()))
 	{
-		if (UUserWidget* DragVisual = CreateWidget<UUserWidget>(this, DragVisualWidgetClass))
+		if (UEDInventorySlotWidget* DragVisualSlot = Cast<UEDInventorySlotWidget>(DragVisual))
 		{
-			DragOperation->DefaultDragVisual = DragVisual;
+			DragVisualSlot->SetItemState(QuickBarCurrentItemName, CurrentQuantity, QuickBarCurrentRarity, QuickBarCurrentIconTexture);
+			DragVisualSlot->SetSelectedState(false);
+			DragVisualSlot->SetSupportsItemDrag(false);
+			DragVisualSlot->SetSourceInventoryComponent(nullptr);
 		}
+
+		DragOperation->DefaultDragVisual = DragVisual;
 	}
 
 	OutOperation = DragOperation;
@@ -117,10 +132,12 @@ bool UEDQuickBarSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDra
 	// 같은 슬롯에 드롭한 경우는 무시
 	if (DragOperation->SourceSlotIndex == SlotIndex)
 	{
+		DragOperation->bHandledByDropTarget = true;
 		return true;
 	}
 
 	// 다른 슬롯 위에 드롭되면 슬롯 이동 요청을 상위 퀵바로 넘김
+	DragOperation->bHandledByDropTarget = true;
 	OnQuickBarSlotDroppedOnSlot.Broadcast(DragOperation->SourceInventoryComponent, DragOperation->SourceSlotIndex, SlotIndex);
 	return true;
 }
@@ -137,6 +154,11 @@ void UEDQuickBarSlotWidget::NativeOnDragCancelled(const FDragDropEvent& InDragDr
 	}
 
 	if (DragOperation->SourceSlotIndex == INDEX_NONE)
+	{
+		return;
+	}
+
+	if (DragOperation->bHandledByDropTarget)
 	{
 		return;
 	}

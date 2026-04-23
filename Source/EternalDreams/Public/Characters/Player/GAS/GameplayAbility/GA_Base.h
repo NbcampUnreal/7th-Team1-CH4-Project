@@ -52,6 +52,9 @@ protected:
 	TSubclassOf<UGameplayEffect> DamageEffectClass;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
+	TMap<TSubclassOf<UGameplayEffect>,float> DebuffEffectClassMap;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")
 	TSubclassOf<UGameplayEffect> CoolTimeEffectClass;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Skill")

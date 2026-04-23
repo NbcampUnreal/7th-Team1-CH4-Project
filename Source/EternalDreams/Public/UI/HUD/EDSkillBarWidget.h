@@ -10,14 +10,12 @@
 class UAbilitySystemComponent;
 class UEDInventoryComponent;
 class UEDInventoryItemDataAsset;
+class UEDUIManageSubsystem;
 class UEDSkillSlotWidget;
 class USkillComponent;
 class AEDPlayerCharacter;
 class UTexture2D;
 
-/**
- * 플레이어 하단 HUD에 표시될 3칸 스킬 바 위젯
- */
 UCLASS()
 class ETERNALDREAMS_API UEDSkillBarWidget : public UCommonUserWidget
 {
@@ -29,54 +27,73 @@ public:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
 protected:
-	// Q 스킬 슬롯
+	// Q 키 스킬 슬롯
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Skill")
 	TObjectPtr<UEDSkillSlotWidget> QSkillSlot;
 
-	// E 스킬 슬롯
+	// E 키 스킬 슬롯
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Skill")
 	TObjectPtr<UEDSkillSlotWidget> ESkillSlot;
 
-	// Space 스킬 슬롯
+	// Space 키 스킬 슬롯
 	UPROPERTY(meta = (BindWidgetOptional), BlueprintReadOnly, Category = "Skill")
 	TObjectPtr<UEDSkillSlotWidget> SpaceSkillSlot;
 
 private:
-	// 현재 로컬 플레이어를 기준으로 캐릭터 / 인벤토리 / 스킬 컴포넌트를 찾음
+	// 현재 소유 플레이어와 연결된 참조를 한 번 수집
 	void InitializeReferences();
 
-	// Pawn / Inventory / SkillComponent / ASC 참조가 바뀌면 다시 바인딩하고 표시를 갱신
+	// Pawn / 인벤토리 / 스킬 컴포넌트 참조가 바뀌었는지 확인 후 재바인딩
 	void RefreshReferencesIfNeeded();
 
-	// 인벤토리 장착 슬롯 변화 이벤트를 구독
+	// 인벤토리 슬롯 변경 델리게이트 바인딩
 	void BindInventoryDelegates();
-
-	// 기존 인벤토리 이벤트 구독을 해제
 	void UnbindInventoryDelegates();
 
-	// 스킬 쿨타임 델리게이트를 구독
+	// 스킬 쿨타임 델리게이트 바인딩
 	void BindSkillDelegates();
-
-	// 기존 스킬 쿨타임 델리게이트 구독을 해제
 	void UnbindSkillDelegates();
 
-	// 3칸 전체 슬롯 정보를 현재 장착 상태 기준으로 다시 그림
+	// 슬롯 표시와 쿨타임 상태를 함께 갱신
 	void RefreshSkillBar();
 
-	// 현재 장착 중인 첫 번째 스킬 / 두 번째 스킬 / 무기 아이템 아이콘을 다시 읽음
+	// 현재 장착된 아이템 기준으로 Q/E/Space 슬롯 아이콘을 갱신
 	void RefreshSkillSlotDisplay() const;
 
-	// 현재 활성화 중인 쿨타임 태그를 기준으로 각 슬롯 쿨타임 상태를 즉시 동기화
+	// 현재 활성 쿨타임 태그를 조회해 슬롯 오버레이를 갱신
 	void RefreshCooldownState() const;
 
-	// 특정 아이템 에셋 ID로부터 아이콘 데이터를 찾음
+	// PrimaryAssetId로 스킬/무기 아이템 데이터를 조회
 	const UEDInventoryItemDataAsset* ResolveItemData(const FPrimaryAssetId& ItemId) const;
 
-	// 특정 쿨타임 태그의 남은 시간과 최대 시간을 ASC에서 조회
+	// 토스트 표시용 아이템 이름을 해석
+	FText ResolveItemDisplayName(const FPrimaryAssetId& ItemId) const;
+
+	// 쿨타임 태그로 현재 남은 시간과 최대 시간을 조회
 	bool ResolveCooldownFromTag(const FGameplayTag& CooldownTag, float& OutRemainingTime, float& OutMaxCooldownTime) const;
 
-	// 인벤토리 장착 상태 변경을 받은 뒤 다음 Tick에서 표시를 다시 그리도록 요청
+	// Tick에서 안전하게 한 번 더 갱신하도록 플래그 설정
 	void RequestDeferredRefresh();
+
+	// 인벤토리 슬롯에서 드래그한 아이템을 대상 스킬 슬롯으로 장착 시도
+	void HandleSkillSlotDropped(EEDSkillSlotType TargetSkillSlotType, int32 SourceSlotIndex);
+	void HandleFirstSkillSlotDropped(int32 SourceSlotIndex);
+	void HandleSecondSkillSlotDropped(int32 SourceSlotIndex);
+
+	// 스킬 슬롯 더블 클릭 시 인벤토리로 해제 시도
+	void HandleSkillSlotDoubleClicked(EEDSkillSlotType SkillSlotType);
+	void HandleFirstSkillSlotDoubleClicked();
+	void HandleSecondSkillSlotDoubleClicked();
+
+	// 인벤토리 액션 성공/실패 토스트 출력
+	void ShowInventoryFailure(EEDInventoryActionFailure Failure) const;
+	void ShowInventorySuccess(const FText& TargetName, const FText& ActionName) const;
+
+	// 스킬 해제 전에 플레이어 인벤토리에 빈칸이 있는지 확인
+	bool HasEmptyInventorySlot() const;
+
+	// 현재 장착된 스킬 아이템 이름을 슬롯 타입 기준으로 조회
+	FText ResolveSkillItemDisplayName(EEDSkillSlotType SkillSlotType) const;
 
 	UFUNCTION()
 	void HandleWeaponSlotChanged(const FGameplayTagContainer& MainItemTags, const FGameplayTagContainer& SpecialItemTags, const FGameplayTagContainer& SkillItemTags, const FGameplayTagContainer& SkillCooldownTags);
@@ -97,17 +114,22 @@ private:
 	void HandleSpaceSkillCoolTime(float SkillCoolTime, float MaxSkillCoolTime);
 
 private:
+	// 현재 HUD를 소유한 플레이어 캐릭터
 	UPROPERTY(Transient)
 	TObjectPtr<AEDPlayerCharacter> CachedPlayerCharacter;
 
+	// 장착/해제 요청에 사용하는 인벤토리 컴포넌트
 	UPROPERTY(Transient)
 	TObjectPtr<UEDInventoryComponent> CachedInventoryComponent;
 
+	// 현재 스킬 태그와 쿨타임 델리게이트를 제공하는 스킬 컴포넌트
 	UPROPERTY(Transient)
 	TObjectPtr<USkillComponent> CachedSkillComponent;
 
+	// 활성 쿨타임 태그를 조회하기 위한 ASC
 	UPROPERTY(Transient)
 	TObjectPtr<UAbilitySystemComponent> CachedAbilitySystemComponent;
 
+	// 참조 재획득 직후 다음 Tick에서 전체 갱신을 한 번 더 수행
 	bool bDeferredRefreshRequested = false;
 };

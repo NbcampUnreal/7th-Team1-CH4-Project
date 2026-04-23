@@ -213,8 +213,9 @@ void UEDInventoryQuickBarWidget::RefreshQuickSlots()
 			? ItemData->DisplayName
 			: FText::FromName(SlotData.Item.ItemId.PrimaryAssetName);
 		const EEDItemRarity ItemRarity = ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
+		UTexture2D* ItemIconTexture = ItemData ? ItemData->IconTexture : nullptr;
 		
-		SlotWidget->SetItemState(ItemName, SlotData.Item.Quantity, ItemRarity);
+		SlotWidget->SetItemState(ItemName, SlotData.Item.Quantity, ItemRarity, ItemIconTexture);
 	}
 }
 
@@ -235,7 +236,8 @@ void UEDInventoryQuickBarWidget::RefreshEquipmentSlots()
 				? Data->DisplayName
 				: FText::FromName(InventoryComponent->WeaponSlot.EquippedItem.ItemId.PrimaryAssetName);
 			const EEDItemRarity Rarity = Data ? Data->Rarity : EEDItemRarity::Normal;
-			WeaponSlotWidget->SetItemState(FText::FromString(TEXT("Weapon")), ItemName, Rarity);
+			UTexture2D* IconTexture = Data ? Data->IconTexture : nullptr;
+			WeaponSlotWidget->SetItemState(FText::FromString(TEXT("Weapon")), ItemName, Rarity, IconTexture);
 		}
 		else
 		{
@@ -253,7 +255,8 @@ void UEDInventoryQuickBarWidget::RefreshEquipmentSlots()
 				? Data->DisplayName
 				: FText::FromName(InventoryComponent->TopArmorSlot.EquippedItem.ItemId.PrimaryAssetName);
 			const EEDItemRarity Rarity = Data ? Data->Rarity : EEDItemRarity::Normal;
-			TopArmorSlotWidget->SetItemState(FText::FromString(TEXT("Top Armor")), ItemName, Rarity);
+			UTexture2D* IconTexture = Data ? Data->IconTexture : nullptr;
+			TopArmorSlotWidget->SetItemState(FText::FromString(TEXT("Top Armor")), ItemName, Rarity, IconTexture);
 		}
 		else
 		{
@@ -271,7 +274,8 @@ void UEDInventoryQuickBarWidget::RefreshEquipmentSlots()
 				? Data->DisplayName
 				: FText::FromName(InventoryComponent->BottomArmorSlot.EquippedItem.ItemId.PrimaryAssetName);
 			const EEDItemRarity Rarity = Data ? Data->Rarity : EEDItemRarity::Normal;
-			BottomArmorSlotWidget->SetItemState(FText::FromString(TEXT("Bottom Armor")), ItemName, Rarity);
+			UTexture2D* IconTexture = Data ? Data->IconTexture : nullptr;
+			BottomArmorSlotWidget->SetItemState(FText::FromString(TEXT("Bottom Armor")), ItemName, Rarity, IconTexture);
 		}
 		else
 		{
@@ -676,6 +680,33 @@ void UEDInventoryQuickBarWidget::HandleQuickSlotDoubleClicked(int32 InSlotIndex)
 
 		EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
 		const bool bSuccess = InventoryComponent->PredicateEquipItemFromSlot(InSlotIndex, ItemData->EquippableType, Failure);
+		if (!bSuccess)
+		{
+			ShowInventoryFailure(Failure);
+			return;
+		}
+
+		ShowInventorySuccess(ItemData->DisplayName, FText::FromString(TEXT("장착")));
+		return;
+	}
+
+	// 스킬 아이템 - 빈 스킬 슬롯을 우선 사용하고,
+	// 둘 다 차 있으면 FirstSkill 슬롯부터 교체
+	if (ItemData->ItemType == EEDInventoryItemType::Skill)
+	{
+		EEDSkillSlotType TargetSkillSlotType = EEDSkillSlotType::FirstSkill;
+
+		if (!InventoryComponent->FirstSkillSlot.EquippedItem.IsValid())
+		{
+			TargetSkillSlotType = EEDSkillSlotType::FirstSkill;
+		}
+		else if (!InventoryComponent->SecondSkillSlot.EquippedItem.IsValid())
+		{
+			TargetSkillSlotType = EEDSkillSlotType::SecondSkill;
+		}
+
+		EEDInventoryActionFailure Failure = EEDInventoryActionFailure::None;
+		const bool bSuccess = InventoryComponent->PredicateEquipSkillFromSlot(InSlotIndex, TargetSkillSlotType, Failure);
 		if (!bSuccess)
 		{
 			ShowInventoryFailure(Failure);

@@ -284,7 +284,13 @@ void AEDMonsterBase::HandleDeath()
 	// GA_Death 어빌리티 발동
 	FGameplayTagContainer DeathTag;
 	DeathTag.AddTag(FEDGameplayTags::Get().State_Dead);
-	AbilitySystemComponent->TryActivateAbilitiesByTag(DeathTag);
+	// AssetTags 기준으로 Spec을 찾아서 발동
+	TArray<FGameplayAbilitySpec*> MatchingSpecs;
+	AbilitySystemComponent->GetActivatableGameplayAbilitySpecsByAllMatchingTags(DeathTag, MatchingSpecs);
+	for (FGameplayAbilitySpec* Spec : MatchingSpecs)
+	{
+		AbilitySystemComponent->TryActivateAbility(Spec->Handle);
+	}
 	// MonsterDeath 브로드 캐스트
 	OnMonsterDeath.Broadcast();
 	
@@ -295,7 +301,7 @@ void AEDMonsterBase::HandleDeath()
 		{
 			Destroy();
 		}),
-		20.f, false);
+		40.f, false);
 }
 
 void AEDMonsterBase::OnHealthChanged(const FOnAttributeChangeData& Data)

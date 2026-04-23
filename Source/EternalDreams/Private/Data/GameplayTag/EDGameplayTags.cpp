@@ -251,6 +251,11 @@ FString("SetByCaller용 Dexterity + 증가 Tag")
 FString("SetByCaller용 Intelligence + 증가 Tag")
 );
 	
+	Tags.Data_DebuffTime = Manager.AddNativeGameplayTag(
+FName("Data.DebuffTime"),
+FString("SetByCaller용 디버프 지속시간")
+);
+	
 	
 	Tags.Data_StatMul = Manager.AddNativeGameplayTag(
 		FName("Data.StatMul"),
@@ -264,6 +269,11 @@ FString("SetByCaller용 Intelligence + 증가 Tag")
 	Tags.Event_SkillHit = Manager.AddNativeGameplayTag(
 	FName("Event.SkillHit"),
 	FString("Anim Notify Hit Event용 Tag")
+	);
+	
+	Tags.Event_Monster_RageExplosion = Manager.AddNativeGameplayTag(
+	FName("Event.Monster.RageExplosion"),
+	FString("몬스터 분노 폭발 AnimNotify 이벤트용 Tag")
 	);
 	
 	//Inventory-Item

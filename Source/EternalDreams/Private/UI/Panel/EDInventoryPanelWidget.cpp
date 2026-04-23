@@ -121,6 +121,7 @@ void UEDInventoryPanelWidget::CreateInventorySlotWidgets()
 
 		// 슬롯 인덱스를 부여하고 더블 클릭 이동 이벤트 연결
 		SlotWidget->SetSlotIndex(SlotIndex);
+		SlotWidget->SetSupportsItemDrag(false);
 		SlotWidget->OnSlotClicked.AddUObject(this, &UEDInventoryPanelWidget::HandleLootSlotClicked);
 		SlotWidget->OnSlotDoubleClicked.AddUObject(this, &UEDInventoryPanelWidget::HandleLootSlotDoubleClicked);
 	}
@@ -165,10 +166,14 @@ void UEDInventoryPanelWidget::RefreshInventorySlots()
 		       *SlotData.Item.ItemId.ToString(),
 		       SlotData.Item.Quantity);
 
-		const FText ItemName = ResolveItemDisplayName(SlotData.Item.ItemId);
-		const EEDItemRarity ItemRarity = ResolveItemRarity(SlotData.Item.ItemId);
+		const UEDInventoryItemDataAsset* ItemData = ResolveItemData(SlotData.Item.ItemId);
+		const FText ItemName = (ItemData && !ItemData->DisplayName.IsEmpty())
+			? ItemData->DisplayName
+			: FText::FromName(SlotData.Item.ItemId.PrimaryAssetName);
+		const EEDItemRarity ItemRarity = ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
+		UTexture2D* ItemIconTexture = ItemData ? ItemData->IconTexture : nullptr;
 
-		SlotWidget->SetItemState(ItemName, SlotData.Item.Quantity, ItemRarity);
+		SlotWidget->SetItemState(ItemName, SlotData.Item.Quantity, ItemRarity, ItemIconTexture);
 	}
 
 	RefreshCapacityText();
@@ -292,21 +297,27 @@ FText UEDInventoryPanelWidget::ResolveItemDisplayName(const FPrimaryAssetId& Ite
 		return FText::GetEmpty();
 	}
 
-	if (UEDGameDataSubsystem* DS = UEDGameDataSubsystem::Get(this))
+	if (const UEDInventoryItemDataAsset* ItemData = ResolveItemData(ItemId))
 	{
-		if (auto* Data = DS->GetData<UEDInventoryItemDataAsset>(ItemId))
-		{
-			return Data->DisplayName;
-		}
+		return ItemData->DisplayName;
 	}
+
 	return FText::FromName(ItemId.PrimaryAssetName);
 }
 
-EEDItemRarity UEDInventoryPanelWidget::ResolveItemRarity(const FPrimaryAssetId& ItemId) const
+const UEDInventoryItemDataAsset* UEDInventoryPanelWidget::ResolveItemData(const FPrimaryAssetId& ItemId) const
 {
 	if (!ItemId.IsValid())
 	{
-		return EEDItemRarity::Normal;
+		return nullptr;
+	}
+
+	if (const UEDGameDataSubsystem* DS = UEDGameDataSubsystem::Get(this))
+	{
+		if (const UEDInventoryItemDataAsset* Data = DS->GetData<UEDInventoryItemDataAsset>(ItemId))
+		{
+			return Data;
+		}
 	}
 
 	UEDAssetManager& AM = UEDAssetManager::Get();
@@ -315,6 +326,13 @@ EEDItemRarity UEDInventoryPanelWidget::ResolveItemRarity(const FPrimaryAssetId& 
 	{
 		ItemData = AM.LoadPrimaryAssetSync<UEDInventoryItemDataAsset>(ItemId);
 	}
+
+	return ItemData;
+}
+
+EEDItemRarity UEDInventoryPanelWidget::ResolveItemRarity(const FPrimaryAssetId& ItemId) const
+{
+	const UEDInventoryItemDataAsset* ItemData = ResolveItemData(ItemId);
 	return ItemData ? ItemData->Rarity : EEDItemRarity::Normal;
 }
 

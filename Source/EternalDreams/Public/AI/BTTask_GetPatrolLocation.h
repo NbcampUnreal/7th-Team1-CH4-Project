@@ -6,6 +6,8 @@
 #include "BehaviorTree/BTTaskNode.h"
 #include "BTTask_GetPatrolLocation.generated.h"
 
+class AEDRestrictedArea;
+
 /**
  * 
  */
@@ -22,4 +24,7 @@ protected:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Patrol")
 	float PatrolRadius = 500.f;
+	
+private:
+	FVector FindSafePatrolOrigin(UWorld* World, const FVector& CurrentOrigin) const;
 };

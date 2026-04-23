@@ -2,7 +2,10 @@
 #include "UI/HUD/EDCraftableRecipeBarWidget.h"
 
 #include "Characters/Player/EDPlayerController.h"
+#include "Components/CanvasPanelSlot.h"
+#include "Components/HorizontalBoxSlot.h"
 #include "Components/PanelWidget.h"
+#include "Components/WrapBoxSlot.h"
 #include "Core/EDAssetManager.h"
 #include "Engine/AssetManager.h"
 #include "GameFramework/Pawn.h"
@@ -108,7 +111,28 @@ void UEDCraftableRecipeBarWidget::RefreshCraftableRecipeBar()
 		DisplayData.bIsCurrentCraftTarget = (RecipeIndex == 0);
 
 		SlotWidget->SetSlotDisplayData(DisplayData);
-		CraftableRecipeBarContainer->AddChild(SlotWidget);
+		if (UPanelSlot* PanelSlot = CraftableRecipeBarContainer->AddChild(SlotWidget))
+		{
+			if (UCanvasPanelSlot* CanvasSlot = Cast<UCanvasPanelSlot>(PanelSlot))
+			{
+				CanvasSlot->SetAutoSize(false);
+				CanvasSlot->SetSize(FVector2D(44.0f, 44.0f));
+				CanvasSlot->SetPosition(FVector2D(RecipeIndex * 48.0f, 0.0f));
+			}
+			else if (UHorizontalBoxSlot* HorizontalBoxSlot = Cast<UHorizontalBoxSlot>(PanelSlot))
+			{
+				HorizontalBoxSlot->SetPadding(FMargin(0.0f, 0.0f, 4.0f, 0.0f));
+				HorizontalBoxSlot->SetHorizontalAlignment(HAlign_Left);
+				HorizontalBoxSlot->SetVerticalAlignment(VAlign_Center);
+			}
+			else if (UWrapBoxSlot* WrapBoxSlot = Cast<UWrapBoxSlot>(PanelSlot))
+			{
+				WrapBoxSlot->SetPadding(FMargin(0.0f, 0.0f, 4.0f, 0.0f));
+				WrapBoxSlot->SetHorizontalAlignment(HAlign_Left);
+				WrapBoxSlot->SetVerticalAlignment(VAlign_Center);
+			}
+		}
+
 		CraftableRecipeSlotWidgets.Add(SlotWidget);
 	}
 }

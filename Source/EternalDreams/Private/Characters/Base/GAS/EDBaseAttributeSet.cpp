@@ -9,6 +9,8 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "WorldPartition/HLOD/DestructibleHLODComponent.h"
+#include "Perception/AISense_Damage.h"
 
 UEDBaseAttributeSet::UEDBaseAttributeSet()
 {
@@ -82,7 +84,19 @@ void UEDBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCall
 	{
 		// Health가 변경되었을 때
 		SetHealth(FMath::Clamp(GetHealth(), 0.0f, GetMaxHealth()));
-
+		
+		// Damage 감지 이벤트 발생
+		float DamageDone = Data.EvaluatedData.Magnitude * -1.f;
+		if (DamageDone > 0.f)
+		{
+			AActor* DamagedActor = GetOwningActor();
+			AActor* Instigator = Data.EffectSpec.GetContext().GetInstigator();
+			UAISense_Damage::ReportDamageEvent(
+				GetWorld(), DamagedActor, Instigator,
+				DamageDone, Instigator ? Instigator->GetActorLocation() : FVector::ZeroVector,
+				DamagedActor->GetActorLocation()
+				);
+		}
 		// HP 0 감지 → Target 타입별 사망 진입점 호출
 		if (GetHealth() <= 0.0f)
 		{

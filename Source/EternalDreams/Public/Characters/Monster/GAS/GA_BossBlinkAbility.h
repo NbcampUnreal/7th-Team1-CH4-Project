@@ -56,7 +56,9 @@ protected:
 	// 점멸 착지 시 이펙트
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Blink|Effect")
 	TObjectPtr<UNiagaraSystem> BlinkArrivalEffect;
-
+	// 점멸 착지 시 사운드
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Skill")
+	TObjectPtr<USoundBase> BlinkArrivalSound;
 private:
 	UFUNCTION()
 	void OnBlinkDelayFinished();
