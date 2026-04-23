@@ -217,6 +217,8 @@ void UEDInventoryQuickBarWidget::RefreshQuickSlots()
 		
 		SlotWidget->SetItemState(ItemName, SlotData.Item.Quantity, ItemRarity, ItemIconTexture);
 	}
+
+	RefreshSelectedSlotState();
 }
 
 void UEDInventoryQuickBarWidget::RefreshEquipmentSlots()
