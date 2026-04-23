@@ -12,6 +12,7 @@
 #include "Inventory/BP/EDInventoryBlueprintLibrary.h"
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Inventory/Core/EDInventoryTypes.h"
+#include "Input/UIActionBindingHandle.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
 #include "UI/Panel/EDInventorySlotWidget.h"
 
@@ -45,6 +46,11 @@ void UEDInventoryPanelWidget::NativeDestruct()
 	Super::NativeDestruct();
 
 	UE_LOG(LogTemp, Log, TEXT("EDInventoryPanelWidget: 루팅 패널이 닫혔습니다."));
+}
+
+TOptional<FUIInputConfig> UEDInventoryPanelWidget::GetDesiredInputConfig() const
+{
+	return FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture, EMouseLockMode::DoNotLock, false);
 }
 
 void UEDInventoryPanelWidget::SetDisplayedInventoryComponent(UEDInventoryComponent* InInventoryComponent)

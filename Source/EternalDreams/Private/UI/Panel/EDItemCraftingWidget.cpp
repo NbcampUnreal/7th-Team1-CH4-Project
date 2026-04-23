@@ -14,6 +14,7 @@
 #include "Inventory/Component/EDInventoryComponent.h"
 #include "Item/Data/EDItemDataRows.h"
 #include "Item/Data/EDInventoryItemDataAsset.h"
+#include "Input/UIActionBindingHandle.h"
 #include "UI/Message/EDUserFacingMessage.h"
 #include "UI/HUD/EDCraftRecipeEntryWidget.h"
 #include "UI/Panel/EDCraftTreeWidget.h"
@@ -74,6 +75,11 @@ void UEDItemCraftingWidget::NativeDestruct()
 	}
 
 	Super::NativeDestruct();
+}
+
+TOptional<FUIInputConfig> UEDItemCraftingWidget::GetDesiredInputConfig() const
+{
+	return FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture, EMouseLockMode::DoNotLock, false);
 }
 
 void UEDItemCraftingWidget::SetInventoryComponent(UEDInventoryComponent* InInventoryComponent)
@@ -522,6 +528,5 @@ void UEDItemCraftingWidget::HandleRecipeEntryClicked(FName InRecipeRowId)
 		CraftTreeWidget->RefreshTree();
 	}
 }
-
 
 

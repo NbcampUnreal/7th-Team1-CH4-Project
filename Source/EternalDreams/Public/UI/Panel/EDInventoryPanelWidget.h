@@ -22,6 +22,7 @@ class ETERNALDREAMS_API UEDInventoryPanelWidget : public UCommonActivatableWidge
 public:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+	virtual TOptional<FUIInputConfig> GetDesiredInputConfig() const override;
 
 	// 패널이 표시할 외부 인벤토리 컴포넌트 설정
 	UFUNCTION(BlueprintCallable, Category = "Inventory")

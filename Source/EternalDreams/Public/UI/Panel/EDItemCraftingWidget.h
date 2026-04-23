@@ -26,6 +26,7 @@ class ETERNALDREAMS_API UEDItemCraftingWidget : public UCommonActivatableWidget
 public:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
+	virtual TOptional<FUIInputConfig> GetDesiredInputConfig() const override;
 
 	// 외부에서 현재 플레이어 인벤토리를 직접 지정
 	UFUNCTION(BlueprintCallable, Category = "Craft")
