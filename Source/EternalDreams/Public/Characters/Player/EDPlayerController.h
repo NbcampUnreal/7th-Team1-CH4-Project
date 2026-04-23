@@ -117,6 +117,9 @@ public:
 	 */
 	UFUNCTION(Client, Reliable, Category = "ED|Match")
 	void ClientShowMatchResult(const TArray<int32>& TeamRankings);
+	
+	
+	bool bIsLoadedFirst=false;
 
 public:
 #pragma region Input Player

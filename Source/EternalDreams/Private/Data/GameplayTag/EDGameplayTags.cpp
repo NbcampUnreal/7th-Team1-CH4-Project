@@ -85,6 +85,10 @@ void FEDGameplayTags::InitializeNativeTags()
 	FName("Player.Skill.BasicKnockBack"),
 	FString("스킬: 베이직넉백")
 );
+	Tags.Player_Skill_BasicStun = Manager.AddNativeGameplayTag(
+FName("Player.Skill.BasicStun"),
+FString("스킬: 베이직스턴")
+);
 	
 	//CoolDown
 	Tags.CoolDown_Evade_Hammer = Manager.AddNativeGameplayTag(
@@ -122,6 +126,11 @@ void FEDGameplayTags::InitializeNativeTags()
 	FString("쿨다운: 베이직넉백")
 );
 	
+	Tags.CoolDown_Skill_BasicStun = Manager.AddNativeGameplayTag(
+FName("CoolDown.Skill.BasicStun"),
+FString("쿨다운: 베이직스턴")
+);
+	
 	Tags.CoolDown_Monster_Skill = Manager.AddNativeGameplayTag(
 	FName("CoolDown.Monster.Skill"),
 	FString("쿨다운: 몬스터 스킬")
@@ -131,6 +140,7 @@ void FEDGameplayTags::InitializeNativeTags()
 		FName("CoolDown.Monster.Blink"),
 		FString("쿨다운: 보스 점멸")
 	);
+	
 	//Effect_Debuff
 	Tags.Effect_Debuff_Slow = Manager.AddNativeGameplayTag(
 		FName("Effect.Debuff.Slow"),
@@ -169,6 +179,11 @@ void FEDGameplayTags::InitializeNativeTags()
 	Tags.State_Player_Stop = Manager.AddNativeGameplayTag(
 	FName("State.Player.Stop"),
 	FString("이동 불가 상태")
+);
+	
+	Tags.State_Player_Stun = Manager.AddNativeGameplayTag(
+FName("State.Player.Stun"),
+FString("스턴 상태")
 );
 
 	Tags.State_Player_RestrictedArea = Manager.AddNativeGameplayTag(

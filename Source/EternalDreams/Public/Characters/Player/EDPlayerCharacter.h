@@ -294,10 +294,14 @@ private:
 	
 	//Server Sync
 public:
+	UPROPERTY(ReplicatedUsing=OnRep_bIsReadySetOverlay)
+	bool bIsReadySetOverlay=false;
+	
+	UFUNCTION()
+	void OnRep_bIsReadySetOverlay();
+	
 	UFUNCTION()
 	void SetPlayer();
-	UFUNCTION(NetMulticast,Reliable)
-	void SetOverlayMaterial();
 	UFUNCTION(Server,Reliable)
 	void NotifyServerPlayerLoadComplete();
 	UFUNCTION()
