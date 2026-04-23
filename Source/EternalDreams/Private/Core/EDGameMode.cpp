@@ -605,7 +605,19 @@ void AEDGameMode::HandlePlayerDeath(AController* Victim, AController* Killer)
 	UE_LOG(LogEDCore, Warning, TEXT("[Death] %s 사망 (Day %d, Revives %d)"),
 		*VictimPS->GetPlayerName(), GetCurrentDay(), VictimPS->RemainingRevives);
 
-	EnterSpectator(Victim);
+	{
+		FTimerHandle& SpectatorHandle = SpectatorEnterTimers.FindOrAdd(Victim);
+		GetWorldTimerManager().ClearTimer(SpectatorHandle);
+
+		TWeakObjectPtr<AController> WeakVictim(Victim);
+		GetWorldTimerManager().SetTimer(SpectatorHandle, [this, WeakVictim]()
+		{
+			if (AController* C = WeakVictim.Get())
+			{
+				EnterSpectator(C);
+			}
+		}, DeathMontageDelay, false);
+	}
 
 	const int32 Day = GetCurrentDay();
 	const bool bCanRevive = (Day >= 1 && Day <= 2) && VictimPS->RemainingRevives > 0;

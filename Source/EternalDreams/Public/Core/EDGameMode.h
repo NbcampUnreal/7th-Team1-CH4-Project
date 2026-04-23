@@ -213,9 +213,16 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "ED|Death")
 	float RespawnZoneSelectDelay = 10.f;
 
+	/** 사망 몽타주 재생이 끝나기까지 대기 시간(초). 이후 UnPossess + Spectator 전환 */
+	UPROPERTY(EditDefaultsOnly, Category = "ED|Death")
+	float DeathMontageDelay = 9.5f;
+
 	/** UnPossess된 사망 Pawn이 월드에서 제거되기까지 대기 시간(초) */
 	UPROPERTY(EditDefaultsOnly, Category = "ED|Death")
 	float DeathPawnLifeSpan = 10.f;
+
+	/** 사망 몽타주 종료 후 EnterSpectator 예약 타이머 (Victim별) */
+	TMap<TWeakObjectPtr<AController>, FTimerHandle> SpectatorEnterTimers;
 
 	/** 사망한 플레이어의 ZoneSelect 오픈 타이머 핸들 */
 	TMap<TWeakObjectPtr<AController>, FTimerHandle> RespawnTimers;

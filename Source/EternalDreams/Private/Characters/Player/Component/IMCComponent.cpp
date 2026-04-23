@@ -37,6 +37,9 @@ void UIMCComponent::SetupPlayerInput(UInputComponent* PlayerInputComponent)
 	PlayerCharacter->GetAbilitySystemComponent()->
 	RegisterGameplayTagEvent(FEDGameplayTags::Get().State_Player_Stop,EGameplayTagEventType::NewOrRemoved).
 	AddUObject(this,&UIMCComponent::OnStopTagChanged);
+	PlayerCharacter->GetAbilitySystemComponent()->
+	RegisterGameplayTagEvent(FEDGameplayTags::Get().State_Dead,EGameplayTagEventType::NewOrRemoved).
+	AddUObject(this,&UIMCComponent::OnStopTagChanged);
 	
 	PlayerController = Cast<AEDPlayerController>(PlayerCharacter->GetController());
 	if (!PlayerController)
@@ -106,14 +109,11 @@ void UIMCComponent::SetupPlayerInput(UInputComponent* PlayerInputComponent)
 
 void UIMCComponent::OnStopTagChanged(const FGameplayTag Tag, int32 NewCount)
 {
-	if (NewCount>0)
-	{
-		bIsStop=true;
-	}
-	else
-	{
-		bIsStop=false;
-	}
+	const FEDGameplayTags& GameplayTags = FEDGameplayTags::Get();
+	UAbilitySystemComponent* ASC = PlayerCharacter ? PlayerCharacter->GetAbilitySystemComponent() : nullptr;
+	bIsStop = ASC
+		&& (ASC->HasMatchingGameplayTag(GameplayTags.State_Player_Stop)
+			|| ASC->HasMatchingGameplayTag(GameplayTags.State_Dead));
 }
 
 void UIMCComponent::PlayerMove(const FInputActionValue& value)
