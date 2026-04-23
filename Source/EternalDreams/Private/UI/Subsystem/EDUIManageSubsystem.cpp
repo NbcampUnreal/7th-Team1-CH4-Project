@@ -6,6 +6,7 @@
 #include "Components/OverlaySlot.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
+#include "Input/CommonUIActionRouterBase.h"
 #include "UI/HUD/EDHUDLayout.h"
 #include "UI/Types/EDUIWidgetIds.h"
 
@@ -129,12 +130,34 @@ void UEDUIManageSubsystem::ClosePanel(FName PanelId)
 		return;
 	}
 
+	const EEDUILayer ClosedPanelLayer = GetPanelLayer(PanelId);
+
 	// 비활성화 후 숨김 처리
 	(*FoundPanel)->DeactivateWidget();
 	(*FoundPanel)->SetVisibility(ESlateVisibility::Collapsed);
 
 	// 패널이 닫힌 뒤 현재 UI 상태에 맞는 입력 모드로 갱신
 	RefreshInputMode();
+
+	const bool bClosedBlockingLayer = ClosedPanelLayer == EEDUILayer::Menu || ClosedPanelLayer == EEDUILayer::Modal;
+	const bool bHasOpenBlockingLayer =
+		!FindOpenPanelInLayer(EEDUILayer::Modal).IsNone()
+		|| !FindOpenPanelInLayer(EEDUILayer::Menu).IsNone();
+	if (bClosedBlockingLayer && !bHasOpenBlockingLayer)
+	{
+		if (ULocalPlayer* LocalPlayer = GetLocalPlayer())
+		{
+			if (UCommonUIActionRouterBase* ActionRouter = LocalPlayer->GetSubsystem<UCommonUIActionRouterBase>())
+			{
+				ActionRouter->SetActiveUIInputConfig(
+					FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::CapturePermanently_IncludingInitialMouseDown, EMouseLockMode::DoNotLock, false),
+					this);
+				ActionRouter->FlushInput();
+			}
+		}
+
+		UWidgetBlueprintLibrary::SetFocusToGameViewport();
+	}
 
 	UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 패널 닫힘"));
 }
