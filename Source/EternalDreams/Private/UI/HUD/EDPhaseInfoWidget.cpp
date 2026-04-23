@@ -2,6 +2,7 @@
 
 #include "Components/TextBlock.h"
 #include "Core/EDGameState.h"
+#include "Data/GameplayTag/EDGameplayTags.h"
 #include "Engine/World.h"
 #include "TimerManager.h"
 
@@ -16,6 +17,11 @@ namespace
 		const int32 Seconds = FMath::FloorToInt(FMath::Fmod(RemainingTime, 60.0f));
 
 		return FText::FromString(FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds));
+	}
+
+	bool IsFinalPhase(const AEDGameState& GameState)
+	{
+		return GameState.GetCurrentPhase() == FEDGameplayTags::Get().Phase_Day4_Night;
 	}
 }
 
@@ -133,7 +139,14 @@ void UEDPhaseInfoWidget::RefreshRemainingTime()
 		return;
 	}
 
-	TimeText->SetText(FormatRemainingTimeText(CachedGameState->GetPhaseRemainingTime()));
+	const AEDGameState* GameState = CachedGameState.Get();
+	if (IsFinalPhase(*GameState))
+	{
+		TimeText->SetText(FText::FromString(TEXT("final")));
+		return;
+	}
+
+	TimeText->SetText(FormatRemainingTimeText(GameState->GetPhaseRemainingTime()));
 }
 
 void UEDPhaseInfoWidget::ApplyDefaultTexts() const
