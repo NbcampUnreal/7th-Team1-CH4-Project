@@ -4,7 +4,11 @@
 #include "Characters/Player/GAS/GameplayAbility/GA_SelfEffect.h"
 
 #include "AbilitySystemComponent.h"
+
+#if WITH_EDITOR
 #include "SNegativeActionButton.h"
+#endif
+
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "AI/NavigationModifier.h"
 #include "Data/GameplayTag/EDGameplayTags.h"

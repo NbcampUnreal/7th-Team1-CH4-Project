@@ -561,6 +561,13 @@ void AEDPlayerCharacter::OnPlayerSkinChanged_Implementation(EPlayerNameType Skin
 	SetTargetABPId(FPrimaryAssetId(PlayerSkinCategory,
 			*UEnum::GetDisplayValueAsText(EPlayerNameType::Basic).ToString()
 			));
+			
+	// 메시 생성 적용
+                    ApplyTargetMesh();
+                    ApplyTargetABP();
+                    ApplyRetargetMesh();
+                    ApplyRetargetABP();
+
 		
 	
 	//플레이어 스킨 변경

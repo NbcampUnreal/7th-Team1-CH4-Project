@@ -16,7 +16,7 @@ class UInputAction;
 class UEDCraftingInteractionComponent;
 class UEDLootInteractionComponent;
 
-DECLARE_DELEGATE_OneParam(FOnOtherInput,FInputActionValue);
+DECLARE_DELEGATE_OneParam(FOnOtherInput, FInputActionValue);
 DECLARE_MULTICAST_DELEGATE(FOnCraftInputTriggered);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnLoadedComplete);
 
@@ -40,8 +40,8 @@ class ETERNALDREAMS_API AEDPlayerController : public APlayerController, public I
 
 protected:
 	virtual void BeginPlay() override;
-		// 작성자 : 김동주
-    	// Enhanced Input 액션을 실제 처리 함수에 바인딩
+	// 작성자 : 김동주
+	// Enhanced Input 액션을 실제 처리 함수에 바인딩
 	virtual void SetupInputComponent() override;
 
 public:
@@ -49,19 +49,24 @@ public:
 
 	UFUNCTION(Server, Reliable)
 	void Server_SetPlayerNickname(const FString& InNickname);
-	
+
 	//현석: 로드 완료시 로딩창 삭제
 	UPROPERTY(BlueprintAssignable)
 	FOnLoadedComplete OnAllLoadCompleted;
-	
+
+	//BUILD--- RPC 함수 패키징시 FORCEINLINE 사용하면 오류남
+	/*
 	UFUNCTION(Client,Reliable)
 	FORCEINLINE void ClientRPC_LoadComplete();
-	
+	*/
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_LoadComplete();
+
 #pragma region Input UI
 	// UI 입력 전용 매핑 컨텍스트
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
 	TObjectPtr<UInputMappingContext> UIInputMappingContext = nullptr;
-	
+
 	// 루팅 인벤토리 패널 열기/닫기 입력 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|UI")
 	TObjectPtr<UInputAction> ToggleLootInventoryAction = nullptr;
@@ -117,45 +122,47 @@ public:
 #pragma region Input Player
 	//IMC_Player
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
-	TObjectPtr<UInputMappingContext> PlayerInputMappingContext=nullptr;
-  // IA_Player
+	TObjectPtr<UInputMappingContext> PlayerInputMappingContext = nullptr;
+	// IA_Player
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
-	TObjectPtr<UInputAction> MoveAction=nullptr;
+	TObjectPtr<UInputAction> MoveAction = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
-	TObjectPtr<UInputAction> LookAction=nullptr;
+	TObjectPtr<UInputAction> LookAction = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
-	TObjectPtr<UInputAction> BasicAttackAction=nullptr;
+	TObjectPtr<UInputAction> BasicAttackAction = nullptr;
 
 	// 제작 실행 입력 액션
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
 	TObjectPtr<UInputAction> CraftItemAction = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
-	TObjectPtr<UInputAction> QSkillAction=nullptr;
+	TObjectPtr<UInputAction> QSkillAction = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
-	TObjectPtr<UInputAction> ESkillAction=nullptr;
+	TObjectPtr<UInputAction> ESkillAction = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Player")
-	TObjectPtr<UInputAction> SpaceSkillAction=nullptr;
+	TObjectPtr<UInputAction> SpaceSkillAction = nullptr;
 #pragma endregion
 #pragma region Input Camera
 	//IMC_Camera
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Camera")
-	TObjectPtr<UInputMappingContext> CameraInputMappingContext=nullptr;
+	TObjectPtr<UInputMappingContext> CameraInputMappingContext = nullptr;
 	// IA_Camera
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Camera")
-	TObjectPtr<UInputAction> WheelAction=nullptr;
+	TObjectPtr<UInputAction> WheelAction = nullptr;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Input|Camera")
-	TObjectPtr<UInputAction> KeyboardCAction=nullptr;
+	TObjectPtr<UInputAction> KeyboardCAction = nullptr;
 #pragma endregion
 #pragma region Input Bindings
+
 public:
 	UFUNCTION()
 	void CameraZoom(const FInputActionValue& value);
-	
+
 	UFUNCTION()
 	void CameraFocus(const FInputActionValue& value);
 
 #pragma endregion
 #pragma region Spawn Actor
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category="Actor")
 	TSubclassOf<AEDCursorActor> CursorActorClass;
@@ -173,8 +180,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta=(AllowPrivateAccess="true"))
 	TObjectPtr<UEDCraftingInteractionComponent> CraftingInteractionComponent;
 #pragma endregion
+
 private:
-#pragma region UI 
+#pragma region UI
 	// 루팅 인벤토리 패널 열기/닫기 입력 처리
 	void HandleToggleLootInventory();
 
@@ -192,7 +200,7 @@ private:
 
 	// 사망 / 부활 / 매치 결과 UI가 열려 있을 때 HUD 입력을 막음
 	bool ShouldBlockHUDInput() const;
-	
+
 #pragma endregion 김동주
 
 #pragma region Delegate
@@ -203,5 +211,4 @@ private:
 #pragma endregion
 
 	FGenericTeamId CachedTeamId;
-	
 };

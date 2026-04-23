@@ -81,8 +81,15 @@ public:
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetBasicAttackTag() {return BasicAttackTag;};
 
+	//BUILD RPC 함수 패키징시 FORCEINLINE 사용하면 오류남
+	/*
 	UFUNCTION(BlueprintCallable,Server,Reliable)
 	FORCEINLINE void SetQSkillTag(const FGameplayTag Tag);
+	*/
+	UFUNCTION(BlueprintCallable,Server,Reliable)
+	void SetQSkillTag(const FGameplayTag Tag);
+	
+	
 	UFUNCTION()
 	FORCEINLINE FGameplayTag& GetQSkillTag() {return QSkillTag;}
 	
