@@ -55,7 +55,7 @@ void UEDInventoryPanelWidget::NativeDestruct()
 
 TOptional<FUIInputConfig> UEDInventoryPanelWidget::GetDesiredInputConfig() const
 {
-	return FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture, EMouseLockMode::DoNotLock, false);
+	return TOptional<FUIInputConfig>();
 }
 
 void UEDInventoryPanelWidget::SetDisplayedInventoryComponent(UEDInventoryComponent* InInventoryComponent)

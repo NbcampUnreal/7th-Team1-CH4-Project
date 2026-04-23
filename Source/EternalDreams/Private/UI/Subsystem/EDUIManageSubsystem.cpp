@@ -6,6 +6,8 @@
 #include "Components/OverlaySlot.h"
 #include "Engine/LocalPlayer.h"
 #include "GameFramework/PlayerController.h"
+#include "Input/CommonUIActionRouterBase.h"
+#include "Input/UIActionBindingHandle.h"
 #include "UI/HUD/EDHUDLayout.h"
 #include "UI/Types/EDUIWidgetIds.h"
 
@@ -108,9 +110,19 @@ UCommonActivatableWidget* UEDUIManageSubsystem::OpenPanel(FName PanelId)
 		return nullptr;
 	}
 
-	// CommonUI 활성 상태 전환
-	PanelInstance->SetVisibility(ESlateVisibility::Visible);
-	PanelInstance->ActivateWidget();
+	const EEDUILayer PanelLayer = GetPanelLayer(PanelId);
+
+	// Game 레이어 패널은 HUD 오버레이처럼 동작하므로 CommonUI 활성 트리에 올리지 않음
+	if (PanelLayer == EEDUILayer::Game)
+	{
+		// 패널 창 내부 자식만 입력을 받고, 창 바깥 빈 영역은 아래 HUD로 통과시킨다.
+		PanelInstance->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	}
+	else
+	{
+		PanelInstance->SetVisibility(ESlateVisibility::Visible);
+		PanelInstance->ActivateWidget();
+	}
 
 	// 패널이 열린 뒤 현재 UI 상태에 맞는 입력 모드로 갱신
 	RefreshInputMode();
@@ -129,8 +141,13 @@ void UEDUIManageSubsystem::ClosePanel(FName PanelId)
 		return;
 	}
 
-	// 비활성화 후 숨김 처리
-	(*FoundPanel)->DeactivateWidget();
+	const EEDUILayer PanelLayer = GetPanelLayer(PanelId);
+
+	// Game 레이어 패널은 CommonUI 비활성화 없이 가시성만 전환
+	if (PanelLayer != EEDUILayer::Game)
+	{
+		(*FoundPanel)->DeactivateWidget();
+	}
 	(*FoundPanel)->SetVisibility(ESlateVisibility::Collapsed);
 
 	// 패널이 닫힌 뒤 현재 UI 상태에 맞는 입력 모드로 갱신
@@ -156,6 +173,11 @@ bool UEDUIManageSubsystem::IsPanelOpen(FName PanelId) const
 	if (!FoundPanel || !(*FoundPanel))
 	{
 		return false;
+	}
+
+	if (GetPanelLayer(PanelId) == EEDUILayer::Game)
+	{
+		return (*FoundPanel)->GetVisibility() != ESlateVisibility::Collapsed;
 	}
 
 	return (*FoundPanel)->IsActivated();
@@ -441,8 +463,12 @@ FName UEDUIManageSubsystem::FindOpenPanelInLayer(EEDUILayer Layer) const
 			continue;
 		}
 
-		if (PanelInstance->IsActivated()
-			&& PanelInstance->GetVisibility() != ESlateVisibility::Collapsed)
+		const bool bIsOpen =
+			Layer == EEDUILayer::Game
+				? PanelInstance->GetVisibility() != ESlateVisibility::Collapsed
+				: PanelInstance->IsActivated() && PanelInstance->GetVisibility() != ESlateVisibility::Collapsed;
+
+		if (bIsOpen)
 		{
 			return PanelId;
 		}
@@ -512,6 +538,15 @@ void UEDUIManageSubsystem::RefreshInputMode()
 	if (bShouldBlockGameLayerInput)
 	{
 		const FName FocusPanelId = !OpenModalPanel.IsNone() ? OpenModalPanel : OpenMenuPanel;
+
+		if (UCommonUIActionRouterBase* ActionRouter = LocalPlayer->GetSubsystem<UCommonUIActionRouterBase>())
+		{
+			ActionRouter->SetActiveUIInputConfig(
+				FUIInputConfig(ECommonInputMode::Menu, EMouseCaptureMode::NoCapture, EMouseLockMode::DoNotLock, false),
+				this);
+			ActionRouter->FlushInput();
+		}
+
 		UWidgetBlueprintLibrary::SetInputMode_UIOnlyEx(PlayerController, nullptr, EMouseLockMode::DoNotLock);
 		PlayerController->bShowMouseCursor = true;
 
@@ -521,6 +556,13 @@ void UEDUIManageSubsystem::RefreshInputMode()
 
 	if (bIsLootInventoryPanelOpen)
 	{
+		if (UCommonUIActionRouterBase* ActionRouter = LocalPlayer->GetSubsystem<UCommonUIActionRouterBase>())
+		{
+			ActionRouter->SetActiveUIInputConfig(
+				FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture, EMouseLockMode::DoNotLock, false),
+				this);
+		}
+
 		UCommonActivatableWidget* LootInventoryPanel = nullptr;
 		if (const TObjectPtr<UCommonActivatableWidget>* FoundPanel = PanelInstances.Find(EDUIWidgetIds::Panel_LootInventory))
 		{
@@ -541,6 +583,13 @@ void UEDUIManageSubsystem::RefreshInputMode()
 	// Game 레이어 패널은 HUD 오버레이처럼 동작하므로 게임 입력을 유지
 	if (!OpenGamePanel.IsNone())
 	{
+		if (UCommonUIActionRouterBase* ActionRouter = LocalPlayer->GetSubsystem<UCommonUIActionRouterBase>())
+		{
+			ActionRouter->SetActiveUIInputConfig(
+				FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture, EMouseLockMode::DoNotLock, false),
+				this);
+		}
+
 		UWidgetBlueprintLibrary::SetInputMode_GameAndUIEx(
 			PlayerController,
 			nullptr,
@@ -550,6 +599,13 @@ void UEDUIManageSubsystem::RefreshInputMode()
 
 		UE_LOG(LogTemp, Log, TEXT("EDUIManageSubsystem: 게임 레이어 패널이 열려 있어 게임 입력 모드를 유지합니다."));
 		return;
+	}
+
+	if (UCommonUIActionRouterBase* ActionRouter = LocalPlayer->GetSubsystem<UCommonUIActionRouterBase>())
+	{
+		ActionRouter->SetActiveUIInputConfig(
+			FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::NoCapture, EMouseLockMode::DoNotLock, false),
+			this);
 	}
 
 	UWidgetBlueprintLibrary::SetInputMode_GameAndUIEx(

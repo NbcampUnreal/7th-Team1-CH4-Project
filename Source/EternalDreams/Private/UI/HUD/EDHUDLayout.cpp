@@ -1,8 +1,8 @@
 // Copyright Epic Games, Inc. All Rights Reserved.
 #include "Public/UI/HUD/EDHUDLayout.h"
 
-#include "Components/PanelWidget.h"
 #include "Components/OverlaySlot.h"
+#include "Components/PanelWidget.h"
 #include "UI/HUD/EDToastMessageWidget.h"
 #include "UI/Types/EDUITypes.h"
 
@@ -28,22 +28,23 @@ void UEDHUDLayout::HideLayout()
 
 void UEDHUDLayout::SetGameLayerInputEnabled(bool bEnabled)
 {
-	if (!GameLayerSlot)
+	UPanelWidget* TargetHUDLayer = PersistentHUDLayerSlot ? PersistentHUDLayerSlot.Get() : GameLayerSlot.Get();
+	if (!TargetHUDLayer)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EDHUDLayout: GameLayerSlot이 없어 HUD 가시성을 전환할 수 없습니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDHUDLayout: 숨길 HUD 레이어가 없어 가시성을 전환할 수 없습니다."));
 		return;
 	}
 
-	// Modal / Menu UI가 열려 있을 때는 Game 레이어 HUD를 숨겨
-	// 마우스 입력이 아래 HUD 슬롯으로 전달되지 않게 함
-	GameLayerSlot->SetVisibility(bEnabled ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+	// Menu / Modal UI가 열려 있을 때는 항상 표시되는 HUD 레이어를 숨겨 입력 충돌을 막는다.
+	TargetHUDLayer->SetVisibility(bEnabled ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
 
 	UE_LOG(
 		LogTemp,
 		Log,
-		TEXT("EDHUDLayout: GameLayerSlot 가시성을 전환했습니다. bEnabled=%s, ChildCount=%d"),
+		TEXT("EDHUDLayout: HUD 레이어 가시성을 전환했습니다. bEnabled=%s, ChildCount=%d, Layer=%s"),
 		bEnabled ? TEXT("true") : TEXT("false"),
-		GameLayerSlot->GetChildrenCount());
+		TargetHUDLayer->GetChildrenCount(),
+		PersistentHUDLayerSlot ? TEXT("PersistentHUDLayerSlot") : TEXT("GameLayerSlot"));
 }
 
 UPanelWidget* UEDHUDLayout::GetLayerSlot(EEDUILayer Layer) const
@@ -60,7 +61,7 @@ UPanelWidget* UEDHUDLayout::GetLayerSlot(EEDUILayer Layer) const
 		return ModalLayerSlot;
 
 	default:
-		UE_LOG(LogTemp, Warning, TEXT("EDHUDLayout: 알 수 없는 UI 레이어입니다."));
+		UE_LOG(LogTemp, Warning, TEXT("EDHUDLayout: 지원하지 않는 UI 레이어입니다."));
 		return nullptr;
 	}
 }
