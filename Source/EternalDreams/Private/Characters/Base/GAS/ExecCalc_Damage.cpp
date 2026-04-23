@@ -71,7 +71,7 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
     );
 	
 	
-    float FinalDamage = RawDamage - Defense;
+    float FinalDamage = RawDamage/(1.00f+(Defense*0.01f));
     FinalDamage = FMath::Max(FinalDamage, 0.f);
 
 	

@@ -93,6 +93,7 @@ public:
 	FGameplayTag Data_StatAdd_Dexterity;
 	FGameplayTag Data_StatAdd_Intelligence;
 	FGameplayTag Data_StatMul;
+	FGameplayTag Data_DebuffTime;
 	//Event
 	FGameplayTag Event_SkillHit;
 	FGameplayTag Event_Monster_RageExplosion;
