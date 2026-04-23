@@ -1,6 +1,7 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/Panel/EDItemCraftingWidget.h"
 
+#include "Characters/Player/EDPlayerController.h"
 #include "Components/Button.h"
 #include "Components/Image.h"
 #include "Components/PanelWidget.h"
@@ -57,11 +58,13 @@ void UEDItemCraftingWidget::NativeConstruct()
 	InitializeInventoryComponent();
 	BindCategoryTabButtons();
 	BindInventoryChanged();
+	BindOwningPawnChanged();
 	RefreshCraftRecipes();
 }
 
 void UEDItemCraftingWidget::NativeDestruct()
 {
+	UnbindOwningPawnChanged();
 	UnbindInventoryChanged();
 
 	if (WeaponCategoryButton)
@@ -80,6 +83,16 @@ void UEDItemCraftingWidget::NativeDestruct()
 	}
 
 	Super::NativeDestruct();
+}
+
+void UEDItemCraftingWidget::NativeOnActivated()
+{
+	Super::NativeOnActivated();
+
+	if (RebindInventoryComponentToCurrentPawn())
+	{
+		RefreshCraftRecipes();
+	}
 }
 
 TOptional<FUIInputConfig> UEDItemCraftingWidget::GetDesiredInputConfig() const
@@ -167,6 +180,54 @@ void UEDItemCraftingWidget::InitializeInventoryComponent()
 	}
 
 	InventoryComponent = UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(OwningPawn);
+}
+
+bool UEDItemCraftingWidget::RebindInventoryComponentToCurrentPawn()
+{
+	APawn* OwningPawn = GetOwningPlayerPawn();
+	UEDInventoryComponent* CurrentInventoryComponent = OwningPawn
+		? UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(OwningPawn)
+		: nullptr;
+
+	if (InventoryComponent == CurrentInventoryComponent)
+	{
+		return false;
+	}
+
+	UnbindInventoryChanged();
+	InventoryComponent = CurrentInventoryComponent;
+	BindInventoryChanged();
+
+	if (CraftTreeWidget)
+	{
+		CraftTreeWidget->SetInventoryComponent(InventoryComponent);
+	}
+
+	return true;
+}
+
+void UEDItemCraftingWidget::BindOwningPawnChanged()
+{
+	AEDPlayerController* PlayerController = GetOwningPlayer<AEDPlayerController>();
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	BoundPlayerController = PlayerController;
+	BoundPlayerController->GetOnEDPawnChanged().RemoveAll(this);
+	BoundPlayerController->GetOnEDPawnChanged().AddUObject(this, &UEDItemCraftingWidget::HandleOwningPawnChanged);
+}
+
+void UEDItemCraftingWidget::UnbindOwningPawnChanged()
+{
+	if (!BoundPlayerController)
+	{
+		return;
+	}
+
+	BoundPlayerController->GetOnEDPawnChanged().RemoveAll(this);
+	BoundPlayerController = nullptr;
 }
 
 void UEDItemCraftingWidget::BindCategoryTabButtons()
@@ -512,6 +573,14 @@ void UEDItemCraftingWidget::HandleBottomArmorCategoryClicked()
 void UEDItemCraftingWidget::HandleInventoryChanged()
 {
 	RefreshCraftRecipes();
+}
+
+void UEDItemCraftingWidget::HandleOwningPawnChanged(APawn* NewPawn)
+{
+	if (RebindInventoryComponentToCurrentPawn())
+	{
+		RefreshCraftRecipes();
+	}
 }
 
 void UEDItemCraftingWidget::HandleRecipeEntryClicked(FName InRecipeRowId)

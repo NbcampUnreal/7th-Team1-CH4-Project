@@ -49,5 +49,7 @@ void AEDPlayerState::CopyProperties(APlayerState* PlayerState)
 		PS->Kills = Kills;
 		PS->Deaths = Deaths;
 		PS->PlayerSkinName = PlayerSkinName;
+		PS->bHasSavedInventorySnapshot = bHasSavedInventorySnapshot;
+		PS->SavedInventorySnapshot = SavedInventorySnapshot;
 	}
 }

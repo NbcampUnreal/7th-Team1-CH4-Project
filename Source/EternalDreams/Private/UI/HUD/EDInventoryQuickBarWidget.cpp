@@ -1,5 +1,6 @@
 ﻿// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/HUD/EDInventoryQuickBarWidget.h"
+#include "Characters/Player/EDPlayerController.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
 #include "GameFramework/Pawn.h"
@@ -24,6 +25,7 @@ void UEDInventoryQuickBarWidget::NativeConstruct()
 	InitializeInventoryComponent();
 	CreateQuickSlotWidgets();
 	BindInventoryChanged();
+	BindOwningPawnChanged();
 	UEDGameDataSubsystem* DS = UEDGameDataSubsystem::Get(this);
 	if (!DS) return;
 	
@@ -83,6 +85,7 @@ void UEDInventoryQuickBarWidget::NativeConstruct()
 
 void UEDInventoryQuickBarWidget::NativeDestruct()
 {
+	UnbindOwningPawnChanged();
 	UnbindInventoryChanged();
 	
 	if (UEDGameDataSubsystem* DS = UEDGameDataSubsystem::Get(this))
@@ -113,6 +116,54 @@ void UEDInventoryQuickBarWidget::InitializeInventoryComponent()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("EDInventoryQuickBarWidget: InventoryComponent를 찾을 수 없습니다."));
 	}
+}
+
+bool UEDInventoryQuickBarWidget::RebindInventoryComponentToCurrentPawn()
+{
+	APawn* OwningPawn = GetOwningPlayerPawn();
+	UEDInventoryComponent* CurrentInventoryComponent = OwningPawn
+		? UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(OwningPawn)
+		: nullptr;
+
+	if (InventoryComponent == CurrentInventoryComponent)
+	{
+		return false;
+	}
+
+	UnbindInventoryChanged();
+	InventoryComponent = CurrentInventoryComponent;
+	BindInventoryChanged();
+
+	if (!InventoryComponent)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDInventoryQuickBarWidget: Current pawn InventoryComponent를 찾을 수 없습니다."));
+	}
+
+	return true;
+}
+
+void UEDInventoryQuickBarWidget::BindOwningPawnChanged()
+{
+	AEDPlayerController* PlayerController = GetOwningPlayer<AEDPlayerController>();
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	BoundPlayerController = PlayerController;
+	BoundPlayerController->GetOnEDPawnChanged().RemoveAll(this);
+	BoundPlayerController->GetOnEDPawnChanged().AddUObject(this, &UEDInventoryQuickBarWidget::HandleOwningPawnChanged);
+}
+
+void UEDInventoryQuickBarWidget::UnbindOwningPawnChanged()
+{
+	if (!BoundPlayerController)
+	{
+		return;
+	}
+
+	BoundPlayerController->GetOnEDPawnChanged().RemoveAll(this);
+	BoundPlayerController = nullptr;
 }
 
 void UEDInventoryQuickBarWidget::BindInventoryChanged()
@@ -297,6 +348,14 @@ void UEDInventoryQuickBarWidget::HandleInventoryChanged()
 	GetWorld()->GetTimerManager().SetTimerForNextTick(
 		FTimerDelegate::CreateUObject(this, &UEDInventoryQuickBarWidget::DoRefresh)
 	);
+}
+
+void UEDInventoryQuickBarWidget::HandleOwningPawnChanged(APawn* NewPawn)
+{
+	if (RebindInventoryComponentToCurrentPawn())
+	{
+		DoRefresh();
+	}
 }
 
 bool UEDInventoryQuickBarWidget::TryGetQuickSlotData(int32 QuickIndex, FEDInventorySlotData& OutSlotData) const

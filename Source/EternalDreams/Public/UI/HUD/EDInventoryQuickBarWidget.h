@@ -8,6 +8,8 @@
 
 enum class EEDInventoryActionFailure : uint8;
 struct FEDInventorySlotData;
+class AEDPlayerController;
+class APawn;
 class UUniformGridPanel;
 class UEDInventoryComponent;
 class UEDEquipmentSlotWidget;
@@ -67,6 +69,9 @@ protected:
 
 private:
 	void InitializeInventoryComponent();
+	bool RebindInventoryComponentToCurrentPawn();
+	void BindOwningPawnChanged();
+	void UnbindOwningPawnChanged();
 	void BindInventoryChanged();
 	void UnbindInventoryChanged();
 
@@ -76,6 +81,7 @@ private:
 
 	UFUNCTION()
 	void HandleInventoryChanged();
+	void HandleOwningPawnChanged(APawn* NewPawn);
 	
 	// 현재 선택된 퀵바 슬롯 인덱스
 	int32 SelectedSlotIndex = INDEX_NONE;
@@ -159,4 +165,7 @@ private:
 	
 	// GC방지용 핸들
 	TSharedPtr<FStreamableHandle> PreloadHandle;
+
+	UPROPERTY(Transient)
+	TObjectPtr<AEDPlayerController> BoundPlayerController;
 };

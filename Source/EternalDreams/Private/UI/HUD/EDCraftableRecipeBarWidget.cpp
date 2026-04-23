@@ -38,6 +38,7 @@ void UEDCraftableRecipeBarWidget::NativeConstruct()
 
 	InitializeInventoryComponent();
 	BindInventoryChanged();
+	BindOwningPawnChanged();
 	BindCraftInputTriggered();
 	RefreshCraftableRecipeBar();
 }
@@ -45,6 +46,7 @@ void UEDCraftableRecipeBarWidget::NativeConstruct()
 void UEDCraftableRecipeBarWidget::NativeDestruct()
 {
 	UnbindCraftInputTriggered();
+	UnbindOwningPawnChanged();
 	UnbindInventoryChanged();
 
 	Super::NativeDestruct();
@@ -148,6 +150,48 @@ void UEDCraftableRecipeBarWidget::InitializeInventoryComponent()
 	InventoryComponent = UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(OwningPawn);
 }
 
+bool UEDCraftableRecipeBarWidget::RebindInventoryComponentToCurrentPawn()
+{
+	APawn* OwningPawn = GetOwningPlayerPawn();
+	UEDInventoryComponent* CurrentInventoryComponent = OwningPawn
+		? UEDInventoryBlueprintLibrary::GetInventoryComponentFromActor(OwningPawn)
+		: nullptr;
+
+	if (InventoryComponent == CurrentInventoryComponent)
+	{
+		return false;
+	}
+
+	UnbindInventoryChanged();
+	InventoryComponent = CurrentInventoryComponent;
+	BindInventoryChanged();
+	return true;
+}
+
+void UEDCraftableRecipeBarWidget::BindOwningPawnChanged()
+{
+	AEDPlayerController* PlayerController = GetOwningPlayer<AEDPlayerController>();
+	if (!PlayerController)
+	{
+		return;
+	}
+
+	BoundPawnChangedPlayerController = PlayerController;
+	BoundPawnChangedPlayerController->GetOnEDPawnChanged().RemoveAll(this);
+	BoundPawnChangedPlayerController->GetOnEDPawnChanged().AddUObject(this, &UEDCraftableRecipeBarWidget::HandleOwningPawnChanged);
+}
+
+void UEDCraftableRecipeBarWidget::UnbindOwningPawnChanged()
+{
+	if (!BoundPawnChangedPlayerController)
+	{
+		return;
+	}
+
+	BoundPawnChangedPlayerController->GetOnEDPawnChanged().RemoveAll(this);
+	BoundPawnChangedPlayerController = nullptr;
+}
+
 void UEDCraftableRecipeBarWidget::BindInventoryChanged()
 {
 	if (!InventoryComponent)
@@ -209,6 +253,14 @@ bool UEDCraftableRecipeBarWidget::ResolveRecipeDisplayData(const FEDCraftableRec
 void UEDCraftableRecipeBarWidget::HandleInventoryChanged()
 {
 	RefreshCraftableRecipeBar();
+}
+
+void UEDCraftableRecipeBarWidget::HandleOwningPawnChanged(APawn* NewPawn)
+{
+	if (RebindInventoryComponentToCurrentPawn())
+	{
+		RefreshCraftableRecipeBar();
+	}
 }
 
 void UEDCraftableRecipeBarWidget::HandleCraftInputTriggered()

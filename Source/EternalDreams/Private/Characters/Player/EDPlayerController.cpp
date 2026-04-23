@@ -56,6 +56,24 @@ ETeamAttitude::Type AEDPlayerController::GetTeamAttitudeTowards(const AActor& Ot
 		       : ETeamAttitude::Hostile;
 }
 
+void AEDPlayerController::OnPossess(APawn* InPawn)
+{
+	Super::OnPossess(InPawn);
+	OnEDPawnChanged.Broadcast(InPawn);
+}
+
+void AEDPlayerController::OnUnPossess()
+{
+	Super::OnUnPossess();
+	OnEDPawnChanged.Broadcast(nullptr);
+}
+
+void AEDPlayerController::OnRep_Pawn()
+{
+	Super::OnRep_Pawn();
+	OnEDPawnChanged.Broadcast(GetPawn());
+}
+
 void AEDPlayerController::BeginPlay()
 {
 	Super::BeginPlay();

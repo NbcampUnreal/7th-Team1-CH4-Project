@@ -652,6 +652,51 @@ void UEDInventoryComponent::RequestInitializeInventorySlots()
     OnInventoryChanged.Broadcast();
 }
 
+void UEDInventoryComponent::BuildInventorySnapshot(FEDInventorySnapshot& OutSnapshot) const
+{
+    OutSnapshot.MaxInventorySlots = MaxInventorySlots;
+    OutSnapshot.InventorySlots = InventorySlots;
+    OutSnapshot.WeaponSlot = WeaponSlot;
+    OutSnapshot.TopArmorSlot = TopArmorSlot;
+    OutSnapshot.BottomArmorSlot = BottomArmorSlot;
+    OutSnapshot.FirstSkillSlot = FirstSkillSlot;
+    OutSnapshot.SecondSkillSlot = SecondSkillSlot;
+}
+
+bool UEDInventoryComponent::ApplyInventorySnapshot(const FEDInventorySnapshot& Snapshot)
+{
+    if (!GetOwner() || !GetOwner()->HasAuthority())
+    {
+        return false;
+    }
+
+    MaxInventorySlots = FMath::Max(0, Snapshot.MaxInventorySlots);
+    InventorySlots = Snapshot.InventorySlots;
+    InventorySlots.SetNum(MaxInventorySlots);
+
+    WeaponSlot = Snapshot.WeaponSlot;
+    TopArmorSlot = Snapshot.TopArmorSlot;
+    BottomArmorSlot = Snapshot.BottomArmorSlot;
+    FirstSkillSlot = Snapshot.FirstSkillSlot;
+    SecondSkillSlot = Snapshot.SecondSkillSlot;
+
+    WeaponSlot.SlotType = EEDEquippableType::Weapon;
+    TopArmorSlot.SlotType = EEDEquippableType::TopArmor;
+    BottomArmorSlot.SlotType = EEDEquippableType::BottomArmor;
+    FirstSkillSlot.SlotType = EEDSkillSlotType::FirstSkill;
+    SecondSkillSlot.SlotType = EEDSkillSlotType::SecondSkill;
+
+    SyncEquipEffectForSlot(EEDEquippableType::Weapon);
+    SyncEquipEffectForSlot(EEDEquippableType::TopArmor);
+    SyncEquipEffectForSlot(EEDEquippableType::BottomArmor);
+    BroadcastWeaponSlotChanged();
+    BroadcastSkillSlotChanged(EEDSkillSlotType::FirstSkill);
+    BroadcastSkillSlotChanged(EEDSkillSlotType::SecondSkill);
+    OnInventoryChanged.Broadcast();
+
+    return true;
+}
+
 FEDEquipmentSlotData* UEDInventoryComponent::GetEquipmentSlotData(EEDEquippableType SlotType)
 {
     switch (SlotType)

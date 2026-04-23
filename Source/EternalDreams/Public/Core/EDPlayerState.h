@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Data/Types/EDPlayerTypes.h"
 #include "GameFramework/PlayerState.h"
+#include "Inventory/Core/EDInventoryTypes.h"
 #include "EDPlayerState.generated.h"
 
 enum class EPlayerNameType : uint8;
@@ -104,4 +105,10 @@ public:
 	/** 데스 수 */
 	UPROPERTY(Replicated, BlueprintReadOnly, Category = "ED|Score")
 	int32 Deaths = 0;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "ED|Inventory")
+	bool bHasSavedInventorySnapshot = false;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "ED|Inventory")
+	FEDInventorySnapshot SavedInventorySnapshot;
 };

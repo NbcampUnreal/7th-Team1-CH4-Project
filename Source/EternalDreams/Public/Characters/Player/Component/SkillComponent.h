@@ -162,6 +162,7 @@ protected:
 	
 	float CalculateCoolTime(FGameplayTag& Tag);
 	float CalculateMaxCoolTime(FGameplayTag& Tag);
+	bool EnsureAbilitySystemComponent();
 	
 	
 };
