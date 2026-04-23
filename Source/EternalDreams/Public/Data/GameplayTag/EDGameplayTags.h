@@ -45,6 +45,7 @@ public:
 	FGameplayTag Player_Skill_Whirlwind;
 	FGameplayTag Player_Skill_Whirllaser;
 	FGameplayTag Player_Skill_BasicKnockBack;
+	FGameplayTag Player_Skill_BasicStun;
 	//CoolDown
 	FGameplayTag CoolDown_Evade_Hammer;
 	FGameplayTag CoolDown_Evade_Sword;
@@ -53,6 +54,7 @@ public:
 	FGameplayTag CoolDown_Skill_Whirlwind;
 	FGameplayTag CoolDown_Skill_Whirllaser;
 	FGameplayTag CoolDown_Skill_BasicKnockBack;
+	FGameplayTag CoolDown_Skill_BasicStun;
 	FGameplayTag CoolDown_Monster_Skill;
 	FGameplayTag CoolDown_Monster_Blink;
 	//Effect_Debuff
@@ -67,6 +69,7 @@ public:
 	FGameplayTag State_Player_Invincible;
 	FGameplayTag State_Player_Unstoppable;
 	FGameplayTag State_Player_Stop;
+	FGameplayTag State_Player_Stun;
 	
 	FGameplayTag State_Player_RestrictedArea;
 	FGameplayTag State_Debuff_RestrictedArea;

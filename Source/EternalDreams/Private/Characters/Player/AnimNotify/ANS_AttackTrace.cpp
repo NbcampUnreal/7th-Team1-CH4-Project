@@ -19,6 +19,10 @@ void UANS_AttackTrace::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequen
                                    const FAnimNotifyEventReference& EventReference)
 {
 	Super::NotifyBegin(MeshComp, Animation, TotalDuration, EventReference);
+	if (!MeshComp||!MeshComp->GetOwner())
+	{
+		return;
+	}
 	if (MeshComp->GetOwner()->HasAuthority()==false)
 	{
 		return;
@@ -42,6 +46,10 @@ void UANS_AttackTrace::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenc
 	const FAnimNotifyEventReference& EventReference)
 {
 	Super::NotifyTick(MeshComp, Animation, FrameDeltaTime, EventReference);
+	if (!MeshComp||!MeshComp->GetOwner())
+	{
+		return;
+	}
 	//서버가 아니면 반환
 	if (MeshComp->GetOwner()->HasAuthority()==false)
 	{

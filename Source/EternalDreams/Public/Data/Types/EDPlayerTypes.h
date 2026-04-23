@@ -58,6 +58,10 @@ enum class EPlayerAnimNameType : uint8
 	Player_Skill_Whirlwind         UMETA(DisplayName = "DA_Skill_Whirlwind"),
 	Player_Skill_Whirllaser        UMETA(DisplayName = "DA_Skill_Whirllaser"),
 	Player_Skill_BasicKnockBack    UMETA(DisplayName = "DA_Skill_BasicKnockBack"),
+	Player_Skill_BasicStun		   UMETA(DisplayName = "DA_Skill_BasicStun"),
+	
+	//State
+	State_Player_Stun				UMETA(DisplayName = "DA_Status_Stun"),
 	NONE						   
 };
 

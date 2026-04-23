@@ -1113,11 +1113,26 @@ void AEDGameMode::OnServerPlayerDataLoaded()
 				{
 					PlayerCharacter->SetPlayer();
 					PC->ClientRPC_LoadComplete();
-					if (PhaseSequence.Num() > 0)
+				}
+			}
+		}
+		if (PhaseSequence.Num() > 0)
+		{
+			bool bIsFirstLoaded=false;
+			for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+			{
+				if (AEDPlayerController* PC = Cast<AEDPlayerController>(It->Get()))
+				{
+					if (PC->bIsLoadedFirst==false)
 					{
-						StartPhaseSequence();
+						bIsFirstLoaded=true;
+						PC->bIsLoadedFirst=true;
 					}
 				}
+			}
+			if (bIsFirstLoaded)
+			{
+				StartPhaseSequence();
 			}
 		}
 	}
