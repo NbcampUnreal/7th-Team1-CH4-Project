@@ -171,6 +171,11 @@ void USkillComponent::OnRep_QSkillCoolTimeTag()
 		return;
 	}
 
+	if (QSkillCoolTimeTag==FGameplayTag::EmptyTag)
+	{
+		return;
+	}
+	
 	QSkillCoolTimeHandle=AbilitySystemComponent->RegisterGameplayTagEvent(QSkillCoolTimeTag).AddUObject(this,&USkillComponent::QSkillCoolTime);
 	PastQSkillCoolTimeTag=QSkillCoolTimeTag;
 }
@@ -195,6 +200,11 @@ void USkillComponent::OnRep_ESkillCoolTimeTag()
 		return;
 	}
 
+	if (ESkillCoolTimeTag==FGameplayTag::EmptyTag)
+	{
+		return;
+	}
+	
 	ESkillCoolTimeHandle=AbilitySystemComponent->RegisterGameplayTagEvent(ESkillCoolTimeTag).AddUObject(this,&USkillComponent::ESkillCoolTime);
 	PastESkillCoolTimeTag=ESkillCoolTimeTag;
 }
@@ -219,6 +229,11 @@ void USkillComponent::OnRep_SpaceSkillCoolTimeTag()
 		return;
 	}
 
+	if (SpaceSkillCoolTimeTag==FGameplayTag::EmptyTag)
+	{
+		return;
+	}
+	
 	SpaceSkillCoolTimeHandle=AbilitySystemComponent->RegisterGameplayTagEvent(SpaceSkillCoolTimeTag).AddUObject(this,&USkillComponent::SpaceSkillCoolTime);
 	PastSpaceSkillCoolTimeTag=SpaceSkillCoolTimeTag;
 }

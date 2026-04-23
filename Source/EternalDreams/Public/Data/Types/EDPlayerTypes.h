@@ -61,7 +61,7 @@ enum class EPlayerAnimNameType : uint8
 	Player_Skill_BasicStun		   UMETA(DisplayName = "DA_Skill_BasicStun"),
 	
 	//State
-	State_Player_Stun				UMETA(DisplayName = "DA_Status_Stun"),
+	State_Player_Stun				UMETA(DisplayName = "DA_State_Stun"),
 	NONE						   
 };
 
