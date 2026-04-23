@@ -18,7 +18,6 @@ public:
 	AEDGameState();
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-	virtual void Tick(float DeltaSeconds) override;
 	virtual void BeginPlay() override;
 
 	// -------------------------------------------------------
