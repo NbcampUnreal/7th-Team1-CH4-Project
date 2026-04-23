@@ -1,55 +1,62 @@
-﻿// Copyright Epic Games, Inc. All Rights Reserved.
+// Copyright Epic Games, Inc. All Rights Reserved.
 #include "UI/Panel/EDPauseMenuWidget.h"
-#include "Input/Reply.h"
-#include "InputCoreTypes.h"
-#include "Engine/LocalPlayer.h"
-#include "UI/Subsystem/EDUIManageSubsystem.h"
+#include "Blueprint/WidgetBlueprintLibrary.h"
+#include "Components/Button.h"
 #include "Components/TextBlock.h"
+#include "Engine/LocalPlayer.h"
+#include "GameFramework/PlayerController.h"
+#include "Input/CommonUIActionRouterBase.h"
+#include "Input/Reply.h"
+#include "Input/UIActionBindingHandle.h"
+#include "InputCoreTypes.h"
+#include "UI/Subsystem/EDUIManageSubsystem.h"
 #include "UI/Types/EDUIWidgetIds.h"
 
 void UEDPauseMenuWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	UE_LOG(LogTemp, Log, TEXT("EDPauseMenuWidget: 일시정지 메뉴 패널이 생성되었습니다."));
+	if (ResumeButton)
+	{
+		ResumeButton->OnClicked.AddDynamic(this, &UEDPauseMenuWidget::HandleResumeButtonClicked);
+	}
+
+	if (QuitButton)
+	{
+		QuitButton->OnClicked.AddDynamic(this, &UEDPauseMenuWidget::HandleQuitButtonClicked);
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("EDPauseMenuWidget: Pause menu constructed."));
 }
 
 void UEDPauseMenuWidget::NativeOnActivated()
 {
 	Super::NativeOnActivated();
 
-	SetKeyboardFocus();
+	if (ResumeButton)
+	{
+		ResumeButton->SetKeyboardFocus();
+	}
+	else
+	{
+		SetKeyboardFocus();
+	}
 
-	UE_LOG(LogTemp, Log, TEXT("EDPauseMenuWidget: 일시정지 메뉴 패널이 열렸습니다."));
+	UE_LOG(LogTemp, Log, TEXT("EDPauseMenuWidget: Pause menu activated."));
 }
 
 void UEDPauseMenuWidget::NativeOnDeactivated()
 {
 	Super::NativeOnDeactivated();
 
-	UE_LOG(LogTemp, Log, TEXT("EDPauseMenuWidget: 일시정지 메뉴 패널이 닫혔습니다."));
+	UE_LOG(LogTemp, Log, TEXT("EDPauseMenuWidget: Pause menu deactivated."));
 }
 
 FReply UEDPauseMenuWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
 	if (InKeyEvent.GetKey() == EKeys::Escape)
 	{
-		ULocalPlayer* LocalPlayer = GetOwningLocalPlayer();
-		if (!LocalPlayer)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("EDPauseMenuWidget: LocalPlayer가 없어 ESC 입력을 처리할 수 없습니다."));
-			return FReply::Handled();
-		}
-
-		UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
-		if (!UIManageSubsystem)
-		{
-			UE_LOG(LogTemp, Warning, TEXT("EDPauseMenuWidget: UIManageSubsystem이 없어 ESC 입력을 처리할 수 없습니다."));
-			return FReply::Handled();
-		}
-
-		UE_LOG(LogTemp, Log, TEXT("EDPauseMenuWidget: ESC 입력으로 일시정지 메뉴를 닫습니다."));
-		UIManageSubsystem->ClosePanel(EDUIWidgetIds::Panel_PauseMenu);
+		ClosePauseMenu();
 		return FReply::Handled();
 	}
 
@@ -60,5 +67,57 @@ void UEDPauseMenuWidget::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
 {
 	Super::NativeOnFocusLost(InFocusEvent);
 
-	UE_LOG(LogTemp, Warning, TEXT("EDPauseMenuWidget: 포커스를 잃었습니다."));
+	UE_LOG(LogTemp, Warning, TEXT("EDPauseMenuWidget: Focus lost."));
+}
+
+TOptional<FUIInputConfig> UEDPauseMenuWidget::GetDesiredInputConfig() const
+{
+	return FUIInputConfig(ECommonInputMode::Menu, EMouseCaptureMode::NoCapture, EMouseLockMode::DoNotLock, false);
+}
+
+void UEDPauseMenuWidget::HandleResumeButtonClicked()
+{
+	ClosePauseMenu();
+}
+
+void UEDPauseMenuWidget::HandleQuitButtonClicked()
+{
+	APlayerController* OwningPlayer = GetOwningPlayer();
+	if (!OwningPlayer)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPauseMenuWidget: OwningPlayer is null."));
+		return;
+	}
+
+	ClosePauseMenu();
+	OwningPlayer->ConsoleCommand(TEXT("disconnect"));
+}
+
+void UEDPauseMenuWidget::ClosePauseMenu() const
+{
+	ULocalPlayer* LocalPlayer = GetOwningLocalPlayer();
+	if (!LocalPlayer)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPauseMenuWidget: LocalPlayer is null."));
+		return;
+	}
+
+	UEDUIManageSubsystem* UIManageSubsystem = LocalPlayer->GetSubsystem<UEDUIManageSubsystem>();
+	if (!UIManageSubsystem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EDPauseMenuWidget: UIManageSubsystem is null."));
+		return;
+	}
+
+	UIManageSubsystem->ClosePanel(EDUIWidgetIds::Panel_PauseMenu);
+
+	if (UCommonUIActionRouterBase* ActionRouter = LocalPlayer->GetSubsystem<UCommonUIActionRouterBase>())
+	{
+		ActionRouter->SetActiveUIInputConfig(
+			FUIInputConfig(ECommonInputMode::All, EMouseCaptureMode::CapturePermanently_IncludingInitialMouseDown, EMouseLockMode::DoNotLock, false),
+			this);
+		ActionRouter->FlushInput();
+	}
+
+	UWidgetBlueprintLibrary::SetFocusToGameViewport();
 }
