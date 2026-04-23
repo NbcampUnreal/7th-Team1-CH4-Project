@@ -85,7 +85,7 @@ AEDGameMode::AEDGameMode()
 	PlayerControllerClass = AEDPlayerController::StaticClass();
 
 	PrimaryActorTick.bCanEverTick = true;
-	bUseSeamlessTravel = true;
+	bUseSeamlessTravel = false;
 }
 
 void AEDGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
