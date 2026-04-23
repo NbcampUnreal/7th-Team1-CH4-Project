@@ -35,7 +35,7 @@ void UEDQuickBarSlotWidget::SetItemState(const FText& InItemName, int32 InQuanti
 
 FReply UEDQuickBarSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
 {
-	if (SlotIndex == INDEX_NONE || !bHasItem || CurrentQuantity <= 0)
+	if (SlotIndex == INDEX_NONE)
 	{
 		return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
 	}
@@ -44,7 +44,13 @@ FReply UEDQuickBarSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometr
 	if (InMouseEvent.GetEffectingButton() == EKeys::LeftMouseButton)
 	{
 		OnQuickBarSlotClicked.Broadcast(SlotIndex);
-		return FReply::Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
+
+		if (bHasItem && CurrentQuantity > 0)
+		{
+			return FReply::Handled().DetectDrag(TakeWidget(), EKeys::LeftMouseButton);
+		}
+
+		return FReply::Handled();
 	}
 
 	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
