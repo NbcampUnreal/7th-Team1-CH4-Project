@@ -9,6 +9,7 @@
 class UButton;
 class UEditableTextBox;
 class UTextBlock;
+class UWidgetSwitcher;
 
 /**
  * Simple lobby test UI.
@@ -23,6 +24,15 @@ protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UWidgetSwitcher> EntrySwitcher;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ED|TestEntry")
+	int32 JoinPanelIndex = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "ED|TestEntry")
+	int32 LobbyPanelIndex = 1;
+
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UEditableTextBox> NicknameInput;
 
@@ -34,9 +44,6 @@ protected:
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> ReadyButton;
-
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UTextBlock> StatusText;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> ReadyStatusText;
@@ -80,6 +87,10 @@ protected:
 
 private:
 	bool TrySaveNickname();
+	bool ShouldShowLobbyPanel() const;
+	void UpdateActivePanel();
 	void UpdateTeamListUI();
 	void RequestChangeTeam(int32 NewTeamId);
+
+	int32 LastActivePanelIndex = INDEX_NONE;
 };

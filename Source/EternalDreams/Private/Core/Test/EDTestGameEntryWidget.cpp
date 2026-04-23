@@ -7,33 +7,47 @@
 #include "Components/Button.h"
 #include "Components/EditableTextBox.h"
 #include "Components/TextBlock.h"
+#include "Components/WidgetSwitcher.h"
 #include "GameFramework/GameStateBase.h"
 
 void UEDTestGameEntryWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
 
-	if (!NicknameInput || !ServerIPInput || !JoinButton || !ReadyButton || !StatusText || !ReadyStatusText)
+	if (NicknameInput)
 	{
-		return;
+		NicknameInput->SetText(FText::FromString(TEXT("Player")));
+	}
+	if (ServerIPInput)
+	{
+		ServerIPInput->SetText(FText::FromString(TEXT("127.0.0.1:17777")));
 	}
 
-	NicknameInput->SetText(FText::FromString(TEXT("Player")));
-	ServerIPInput->SetText(FText::FromString(TEXT("127.0.0.1:17777")));
-
-	JoinButton->OnClicked.AddDynamic(this, &UEDTestGameEntryWidget::OnJoinClicked);
-	ReadyButton->OnClicked.AddDynamic(this, &UEDTestGameEntryWidget::OnReadyClicked);
+	if (JoinButton) JoinButton->OnClicked.AddDynamic(this, &UEDTestGameEntryWidget::OnJoinClicked);
+	if (ReadyButton) ReadyButton->OnClicked.AddDynamic(this, &UEDTestGameEntryWidget::OnReadyClicked);
 
 	if (TeamAButton) TeamAButton->OnClicked.AddDynamic(this, &UEDTestGameEntryWidget::OnTeamAClicked);
 	if (TeamBButton) TeamBButton->OnClicked.AddDynamic(this, &UEDTestGameEntryWidget::OnTeamBClicked);
 	if (TeamCButton) TeamCButton->OnClicked.AddDynamic(this, &UEDTestGameEntryWidget::OnTeamCClicked);
 
-	ReadyStatusText->SetText(FText::FromString(TEXT("Not Ready")));
+	if (ReadyStatusText)
+	{
+		ReadyStatusText->SetText(FText::FromString(TEXT("Not Ready")));
+	}
+
+	UpdateActivePanel();
 }
 
 void UEDTestGameEntryWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	UpdateActivePanel();
+
+	if (!ShouldShowLobbyPanel())
+	{
+		return;
+	}
 
 	AEDPlayerState* PS = GetOwningPlayerState<AEDPlayerState>();
 	if (PS && ReadyStatusText)
@@ -47,6 +61,38 @@ void UEDTestGameEntryWidget::NativeTick(const FGeometry& MyGeometry, float InDel
 	UpdateTeamListUI();
 }
 
+bool UEDTestGameEntryWidget::ShouldShowLobbyPanel() const
+{
+	const UWorld* World = GetWorld();
+	if (!World)
+	{
+		return false;
+	}
+
+	const ENetMode NetMode = World->GetNetMode();
+	return NetMode == NM_Client;
+}
+
+void UEDTestGameEntryWidget::UpdateActivePanel()
+{
+	if (!EntrySwitcher)
+	{
+		return;
+	}
+
+	const int32 DesiredPanelIndex = ShouldShowLobbyPanel() ? LobbyPanelIndex : JoinPanelIndex;
+	if (DesiredPanelIndex == LastActivePanelIndex)
+	{
+		return;
+	}
+
+	if (EntrySwitcher->GetWidgetAtIndex(DesiredPanelIndex))
+	{
+		EntrySwitcher->SetActiveWidgetIndex(DesiredPanelIndex);
+		LastActivePanelIndex = DesiredPanelIndex;
+	}
+}
+
 bool UEDTestGameEntryWidget::TrySaveNickname()
 {
 	if (!NicknameInput)
@@ -57,10 +103,6 @@ bool UEDTestGameEntryWidget::TrySaveNickname()
 	const FString Nickname = NicknameInput->GetText().ToString().TrimStartAndEnd();
 	if (Nickname.IsEmpty())
 	{
-		if (StatusText)
-		{
-			StatusText->SetText(FText::FromString(TEXT("닉네임을 입력해주세요.")));
-		}
 		return false;
 	}
 
@@ -89,10 +131,6 @@ void UEDTestGameEntryWidget::OnJoinClicked()
 	const FString IP = ServerIPInput->GetText().ToString().TrimStartAndEnd();
 	if (IP.IsEmpty())
 	{
-		if (StatusText)
-		{
-			StatusText->SetText(FText::FromString(TEXT("서버 IP를 입력해주세요.")));
-		}
 		return;
 	}
 
@@ -100,11 +138,6 @@ void UEDTestGameEntryWidget::OnJoinClicked()
 	if (!GI)
 	{
 		return;
-	}
-
-	if (StatusText)
-	{
-		StatusText->SetText(FText::FromString(FString::Printf(TEXT("%s 접속중입니다.."), *IP)));
 	}
 
 	GI->JoinGame(IP);
@@ -115,10 +148,6 @@ void UEDTestGameEntryWidget::OnReadyClicked()
 	AEDLobbyPlayerController* PC = Cast<AEDLobbyPlayerController>(GetOwningPlayer());
 	if (!PC)
 	{
-		if (StatusText)
-		{
-			StatusText->SetText(FText::FromString(TEXT("PlayerController is not available.")));
-		}
 		return;
 	}
 
