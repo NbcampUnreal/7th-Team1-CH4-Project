@@ -464,7 +464,7 @@ void AEDPlayerController::Server_RequestRespawn_Implementation(int32 SelectedZon
 	GM->HandleRespawnRequest(this, SelectedZoneId);
 }
 
-void AEDPlayerController::ClientShowMatchResult_Implementation(const TArray<int32>& TeamRankings)
+void AEDPlayerController::ClientShowMatchResult_Implementation(const TArray<int32>& TeamRankings, float CountdownSeconds)
 {
 	ULocalPlayer* LP = GetLocalPlayer();
 	if (!LP) return;
@@ -485,5 +485,6 @@ void AEDPlayerController::ClientShowMatchResult_Implementation(const TArray<int3
 			MyTeamId = PS->TeamId;
 		}
 		ResultWidget->SetResult(TeamRankings, MyTeamId);
+		ResultWidget->StartCountdown(CountdownSeconds);
 	}
 }

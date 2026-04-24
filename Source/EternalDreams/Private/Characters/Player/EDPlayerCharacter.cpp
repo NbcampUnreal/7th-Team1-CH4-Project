@@ -173,21 +173,24 @@ void AEDPlayerCharacter::BeginPlay()
 void AEDPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	
-	FHitResult HitResult;
-	if (UGameplayStatics::GetPlayerController(GetWorld(),0)->GetHitResultUnderCursor(ECC_Visibility,false, HitResult))
+
+	if (IsLocallyControlled() && !bIsStop)
 	{
-		if (!bIsStop&&IsLocallyControlled())
+		if (APlayerController* LocalPC = Cast<APlayerController>(GetController()))
 		{
-			FVector TargetLocation = HitResult.ImpactPoint;
-			FVector StartLocation = GetActorLocation();
-		
-			// 방향 Rotator 계산(Yaw만 사용)
-			FRotator LookAtRotation = FRotationMatrix::MakeFromX(TargetLocation - StartLocation).Rotator();
-			LookAtRotation.Pitch = 0.0f;
-			LookAtRotation.Roll = 0.0f;
-		
-			UGameplayStatics::GetPlayerController(GetWorld(),0)->SetControlRotation(LookAtRotation);
+			FHitResult HitResult;
+			if (LocalPC->GetHitResultUnderCursor(ECC_Visibility, false, HitResult))
+			{
+				const FVector TargetLocation = HitResult.ImpactPoint;
+				const FVector StartLocation = GetActorLocation();
+
+				// 방향 Rotator 계산(Yaw만 사용)
+				FRotator LookAtRotation = FRotationMatrix::MakeFromX(TargetLocation - StartLocation).Rotator();
+				LookAtRotation.Pitch = 0.0f;
+				LookAtRotation.Roll = 0.0f;
+
+				LocalPC->SetControlRotation(LookAtRotation);
+			}
 		}
 	}
 	

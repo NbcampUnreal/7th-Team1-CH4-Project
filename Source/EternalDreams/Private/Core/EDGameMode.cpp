@@ -477,7 +477,7 @@ void AEDGameMode::OnMatchFinished()
 	{
 		if (AEDPlayerController* PC = Cast<AEDPlayerController>(It->Get()))
 		{
-			PC->ClientShowMatchResult(TeamRankings);
+			PC->ClientShowMatchResult(TeamRankings, MatchEndDelay);
 		}
 	}
 

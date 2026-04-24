@@ -116,7 +116,7 @@ public:
 	 * UIManager의 Panel_MatchResult를 열고 SetResult로 전달.
 	 */
 	UFUNCTION(Client, Reliable, Category = "ED|Match")
-	void ClientShowMatchResult(const TArray<int32>& TeamRankings);
+	void ClientShowMatchResult(const TArray<int32>& TeamRankings, float CountdownSeconds);
 	
 	
 	bool bIsLoadedFirst=false;
