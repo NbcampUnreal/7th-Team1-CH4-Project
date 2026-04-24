@@ -183,22 +183,21 @@ EternalDreams.uproject
 
 ## 📸 스크린샷
 
-> 아래 영역은 스크린샷 교체용 자리입니다. 파일 업로드 후 경로만 교체해서 사용하세요.
-
 ### 로비
 
-![로비 스크린샷 자리](./docs/images/placeholder-lobby.png)
+![로비 스크린샷 자리](./Screenshot/Lobby.png)
 
 ### 전투
 
-![전투 스크린샷 자리](./docs/images/placeholder-combat.png)
+![전투 스크린샷 자리](./Screenshot/Battle.png)
 
 ### 인벤토리 / 크래프팅
 
-![인벤토리 스크린샷 자리](./docs/images/placeholder-inventory.png)
+![인벤토리 스크린샷 자리](./Screenshot/Inv.png)
+![인벤토리 스크린샷 자리](./Screenshot/InvOther.png)
 
-### UI / HUD
+### 승리
 
-![HUD 스크린샷 자리](./docs/images/placeholder-ui.png)
+![승리 스크린샷 자리](./Screenshot/Victory.png)
 
 ---
