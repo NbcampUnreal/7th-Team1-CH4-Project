@@ -47,7 +47,7 @@ void UANS_HitScanAttack::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequ
 		WarningActor->SetOwner(MeshComp->GetOwner());
 		WarningActor->FinishSpawning(Player->SpawnTransform);
 		WarningActor->SetLifeSpan(TotalDuration);
-		WarningActor->SetActorScale3D(FVector(1.f,1.f,AttackDistance));
+		WarningActor->SetActorScale3D(FVector(AttackRadius,AttackRadius,AttackDistance));
 		UE_LOG(LogTemp,Warning,TEXT("WarningActor Spawn"));
 	}
 	
@@ -82,7 +82,7 @@ void UANS_HitScanAttack::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequen
 		ShootActor->SetOwner(MeshComp->GetOwner());
 		ShootActor->SetLifeSpan(ShootActorLifeSpan);
 		ShootActor->FinishSpawning(Player->SpawnTransform);
-		ShootActor->SetActorScale3D(FVector(1.f,1.f,AttackDistance));
+		ShootActor->SetActorScale3D(FVector(AttackRadius,AttackRadius,AttackDistance));
 		UE_LOG(LogTemp,Warning,TEXT("ShootActor Spawn"));
 	}
 	
@@ -96,10 +96,11 @@ void UANS_HitScanAttack::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequen
 	FVector EndLocation=StartLocation+Player->SocketDirection*AttackDistance;
 	
 	
-	bool bHit = UKismetSystemLibrary::LineTraceSingle(
+	bool bHit = UKismetSystemLibrary::SphereTraceSingle(
 		Player->GetWorld(),
 		StartLocation,
 		EndLocation,
+		AttackRadius,
 		//Pawn만 Trace 처리
 		UEngineTypes::ConvertToTraceType(ECC_Pawn),
 		false, // bTraceComplex

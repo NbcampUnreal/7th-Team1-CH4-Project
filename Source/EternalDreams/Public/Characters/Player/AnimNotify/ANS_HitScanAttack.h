@@ -33,6 +33,8 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
 	float AttackDistance=1000.f;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
+	float AttackRadius=1.f;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Damage")
 	float ShootActorLifeSpan=2.0f;
